@@ -1,0 +1,56 @@
+# .gitignore
+
+# 虛擬環境 (Virtual Environments)
+# 忽略整個 venv 資料夾
+/venv/
+/env/
+/.venv/
+/.env/
+__pypackages__/
+
+# Python 暫存檔與快取
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# 執行時期檔案
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.spec
+
+# Jupyter & IPython Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE / 編輯器設定檔
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 作業系統檔案
+.DS_Store
+Thumbs.db
+
+# 日誌與資料庫檔案
+*.log
+*.db
+*.sqlite3
+
+# --- 專案特定忽略項目 ---
+
+# 環境變數檔案 (包含敏感金鑰)
+.env
+
+# 報告輸出目錄
+# 根據您的設定，忽略這個資料夾的內容
+/Dashboard_snapshot/
+
+# 測試報告與覆蓋率
+.pytest_cache/
+.coverage
+htmlcov/
