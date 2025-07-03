@@ -77,14 +77,13 @@ def main():
         fig_main_analysis = main_chart.plot_tick_analysis(df, txf_prev_close, taiex_prev_close)
 
         # 4. 生成 HTML 報告
-        report_title = f"TXF-Charts_{config.START_DATETIME.strftime('%Y-%m-%d_%H%M')}"
-        output_file = config.OUTPUT_DIR / f"{report_title}.html"
+        output_file = config.OUTPUT_DIR / f"{config.Report_TITLE}.html"
         
         report_generator.generate_html_report(
             figures=[fig_candlestick, fig_main_analysis],
             stats_html=stats_html,
             output_path=output_file,
-            report_title=report_title,
+            report_title=config.Report_TITLE,
             refresh_interval=config.REFRESH_INTERVAL_SECONDS
         )
 
