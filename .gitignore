@@ -1,5 +1,8 @@
 # .gitignore
 
+# 忽略 tests 資料夾及其下的所有內容
+tests/
+
 # 虛擬環境 (Virtual Environments)
 # 忽略整個 venv 資料夾
 /venv/
