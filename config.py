@@ -21,11 +21,11 @@ KAFKA_GROUP_ID = 'tick-consumer-group'
 # ==== 時區與時間區間設定 ====
 TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 # 日盤
-START_DATETIME = datetime(2025, 7, 3,  8, 30, 0, 0, tzinfo=TAIWAN_TZ)
-END_DATETIME   = datetime(2025, 7, 3, 13, 45, 0, 0, tzinfo=TAIWAN_TZ)
+START_DATETIME = datetime(2025, 7, 2,  8, 30, 0, 0, tzinfo=TAIWAN_TZ)
+END_DATETIME   = datetime(2025, 7, 2, 13, 45, 0, 0, tzinfo=TAIWAN_TZ)
 # 夜盤
-# START_DATETIME = datetime(2025, 7, 1, 14, 50, 0, 0, tzinfo=TAIWAN_TZ)
-# END_DATETIME   = datetime(2025, 7, 2,  5,  0, 0, 0, tzinfo=TAIWAN_TZ)
+# START_DATETIME = datetime(2025, 7, 2, 14, 50, 0, 0, tzinfo=TAIWAN_TZ)
+# END_DATETIME   = datetime(2025, 7, 3,  5,  0, 0, 0, tzinfo=TAIWAN_TZ)
 
 # ==== 繪圖與輸出設定 ====
 # True: 使用上面設定的固定結束時間; False: 使用當前時間作為結束時間
@@ -39,4 +39,5 @@ REFRESH_INTERVAL_SECONDS = 120000
 # 報告標題
 Report_TITLE = f"TXF-Charts_{START_DATETIME.strftime('%Y-%m-%d_%H%M')}"
 # HTML 報告輸出路徑
-OUTPUT_DIR = Path("/Users/gtai/Library/CloudStorage/GoogleDrive-gtai.quant@gmail.com/My Drive/Trading/Dashboard_snapshot")
+# OUTPUT_DIR = Path("/Users/gtai/Library/CloudStorage/GoogleDrive-gtai.quant@gmail.com/My Drive/Trading/Dashboard_snapshot")  # MAC
+OUTPUT_DIR = Path(r"G:\我的雲端硬碟\Trading\Dashboard_snapshot")  # WINDOWS
