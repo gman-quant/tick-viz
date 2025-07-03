@@ -20,9 +20,10 @@
 ---
 
 ## 📸 儀表板預覽
-![示意圖1](1.png)
-![示意圖2](2.png)
-![示意圖3](3.png)
+![1](image.png)
+![2](image-1.png)
+![3](image-2.png)
+![4](image-3.png)
 
 ---
 
@@ -73,9 +74,10 @@ SHIOAJI_SECRET_KEY="YOUR_SECRET_KEY"
 # Kafka broker and topic
 KAFKA_BROKER='kafka_address:9092'
 KAFKA_TOPIC='topic_name_for_realtime-ticks'
-
+```
 
 修改config.py 設定參考如下:
+```python
 # tick-viz/config.py
 
 # ==== 時區與時間區間設定 ====
