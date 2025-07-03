@@ -29,7 +29,7 @@ tick-viz/
 
 1.  **克隆專案**
     ```bash
-    git clone <your-repo-url> tick-viz
+    git clone https://github.com/gman-quant/tick-viz.git
     cd tick-viz
     ```
 
@@ -37,21 +37,35 @@ tick-viz/
     建議在虛擬環境中執行：
     ```bash
     python -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    ```
+    ```bash
+    # linux/mac
+    source venv/bin/activate  
+    ```
+    ```bash
+    # windows 
+    source venv\Scripts\activate
+    ```
+    ```bash
     pip install -r requirements.txt
     ```
 
 3.  **設定環境變數**
-    複製 `.env.example` (如果有的話) 或手動建立一個名為 `.env` 的檔案，並填入您的 Shioaji API 金鑰：
+    建立一個名為 `.env` 的檔案，並填入以下資訊：
     ```
-    # .env
-    API_KEY="YOUR_API_KEY"
-    SECRET_KEY="YOUR_SECRET_KEY"
+    # tick-viz/.env
+
+    # Shioaji API credentials
+    SHIOAJI_API_KEY="YOUR_API_KEY"
+    SHIOAJI_SECRET_KEY="YOUR_SECRET_KEY"
+
+    # Kafka broker and topic
+    KAFKA_BROKER="YOUR_KAFKA_ADDRESS:9092"
+    KAFKA_TOPIC="YOUR_TOPIC_NAME"
     ```
 
 4.  **修改設定**
     開啟 `config.py` 檔案，根據您的需求修改以下參數：
-    -   Kafka 相關設定 (`KAFKA_BROKER`, `KAFKA_TOPIC`)
     -   分析的時間區間 (`START_DATETIME`, `END_DATETIME`)
     -   HTML 報告的輸出路徑 (`OUTPUT_DIR`)
 
