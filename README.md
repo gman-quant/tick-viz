@@ -94,15 +94,6 @@ END_DATETIME   = datetime(2025, 7, 4,  5,  0, 0, 0, tzinfo=TAIWAN_TZ)
 USE_FIXED_END_TIME = False 
 # Volume Bar 成交量基準 (例如: 每 450 口產生一根 K棒)
 VOLUME_PER_BAR = 450
-# HTML 報告自動刷新秒數
-REFRESH_INTERVAL_SECONDS = 120000 if USE_FIXED_END_TIME else 15
-
-# ==== 報告生成設定 ====
-# 報告標題
-Report_TITLE = f"TXF-Charts_{START_DATETIME.strftime('%Y-%m-%d_%H%M')}" if USE_FIXED_END_TIME else "TXF-Charts-Live"
-# HTML 報告輸出路徑
-OUTPUT_DIR = Path(r"G:\我的雲端硬碟\Trading\Dashboard_snapshot")  # WINDOWS
-# OUTPUT_DIR = Path("/Users/gtai/Library/CloudStorage/GoogleDrive-gtai.quant@gmail.com/My Drive/Trading/Dashboard_snapshot")  # MAC
 ```
 
 ## 💡 使用方式
