@@ -21,8 +21,8 @@ KAFKA_GROUP_ID = 'tick-consumer-group'
 # ==== 時區與時間區間設定 ====
 TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 # 日盤
-START_DATETIME = datetime(2025, 6, 22,  8, 30, 0, 0, tzinfo=TAIWAN_TZ)
-END_DATETIME   = datetime(2025, 6, 22, 13, 45, 0, 0, tzinfo=TAIWAN_TZ)
+START_DATETIME = datetime(2025, 7, 3,  8, 30, 0, 0, tzinfo=TAIWAN_TZ)
+END_DATETIME   = datetime(2025, 7, 3, 13, 45, 0, 0, tzinfo=TAIWAN_TZ)
 # 夜盤
 # START_DATETIME = datetime(2025, 7, 1, 14, 50, 0, 0, tzinfo=TAIWAN_TZ)
 # END_DATETIME   = datetime(2025, 7, 2,  5,  0, 0, 0, tzinfo=TAIWAN_TZ)
