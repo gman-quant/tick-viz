@@ -5,7 +5,7 @@ def generate_stats_html(df):
     print("當前價格統計與波動資訊")
 
     max_high, min_low = df.iloc[-1].high, df.iloc[-1].low
-    o, c = df.iloc[-1].open, df.iloc[-1].close
+    o, c = df.iloc[0].close, df.iloc[-1].close
 
     price_change = int(round(c - o))
     intraday_range = int(round(max_high - min_low))

@@ -58,16 +58,23 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
 
 def _configure_layout(fig: go.Figure):
     """設定圖表的整體佈局、標題與圖例。"""
+    # 1. 更新圖表的整體佈局
     fig.update_layout(
         title=dict(text="價格走勢與淨主動成交量", y=0.95),
         template='plotly_dark',
         height=2000,
         showlegend=True,
         legend=dict(x=0.5, y=1.1, orientation="h", xanchor="center", yanchor="bottom"),
-        xaxis=dict(rangeslider_visible=False, showspikes=True, spikemode='across', spikesnap='cursor', showline=True),
-        xaxis2=dict(showspikes=True, spikemode='across', spikesnap='cursor', showline=True),
-        xaxis3=dict(showspikes=True, spikemode='across', spikesnap='cursor', showline=True),
-        xaxis4=dict(showspikes=True, spikemode='across', spikesnap='cursor', showline=True),
+    )
+
+    # 2. 將通用設定一次性應用到所有 X 軸上
+    fig.update_xaxes(
+        showspikes=True, 
+        spikemode='across', 
+        spikesnap='cursor', 
+        showline=True,
+        # 【關鍵修改】強制顯示所有子圖的 x 軸刻度標籤
+        showticklabels=True 
     )
 
 

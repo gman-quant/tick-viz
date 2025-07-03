@@ -1,80 +1,144 @@
-# Tick-Viz: Real-Time Tick Analyzer
+# 📈 台指期貨即時盤中分析儀表板 (Real-Time TXF Intraday Analysis Dashboard)
 
-本專案旨在將一個用於分析台指期 (TXF) Tick 資料的 Jupyter Notebook 模組化，以便於維護、重用和部署。
+[![Python Version](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-它從 Kafka 消費即時 Tick 數據，結合 Shioaji API 獲取的前日收盤價，生成包含價格走勢、成交量分析、折溢價等多維度圖表的 HTML 報告。
+本專案旨在提供一個視覺化的儀表板，用於即時（或歷史回測）分析台灣指數期貨（TXF）的 tick 級別數據流，並從中洞察盤中多空狀態。
 
-## 功能
+---
 
--   從 Kafka 即時消費 Tick 資料。
--   使用 Shioaji API 獲取歷史收盤價。
--   生成固定成交量 K棒 (Volume Bars)。
--   計算期貨與現貨的折溢價、淨主動成交量等衍生指標。
--   繪製多圖合一的綜合分析圖表。
--   將分析結果生成可自動刷新的 HTML 報告。
+## ✨ 主要功能
 
-## 專案結構
+-   **雙模式數據源**：支援從 `Kafka` 即時消費 tick 數據，或透過 `Shioaji API` 抓取歷史 tick 數據進行分析。
+-   **多維度指標計算**：即時計算 **VWAP** (成交量加權平均價)、**盤中高低價**、**累計買賣盤成交量**、**淨主動成交量**以及**期現貨價差**等關鍵指標。
+-   **進階圖表視覺化**：
+    -   **主分析圖**：整合價格、VWAP、價差、淨成交量於一體的四合一互動式圖表。
+    -   **量價K棒圖**：以固定成交口數生成「等量K棒 (Volume Bars)」，並在K棒上標示買賣盤的成交量差 (Volume Delta)。
+-   **自動化報告生成**：將所有圖表與統計數據整合為單一的 `HTML` 報告，並支援在即時模式下**自動定時刷新**頁面。
+-   **高效率終端監控**：在終端機中提供一個乾淨、會原地更新的狀態面板，方便監控程式運行狀態。
 
+---
+
+## 📸 儀表板預覽
+![示意圖1](1.png)
+![示意圖2](2.png)
+![示意圖3](3.png)
+
+---
+
+## 🛠️ 技術棧
+
+-   **核心語言**: Python 3.9+
+-   **數據處理**: Pandas
+-   **圖表繪製**: Plotly
+-   **即時數據**: Confluent-Kafka for Python
+-   **歷史數據**: Shioaji (永豐金證券 API)
+
+---
+
+## 🚀 安裝與設定
+
+#### 1. 複製本專案
+```bash
+git clone https://your-repository-url/tick-viz.git
+cd tick-viz
 ```
-tick-viz/
-├── .env                  # API 金鑰
-├── config.py             # 全域設定
-├── main.py               # 主程式入口
-├── requirements.txt      # Python 依賴
-├── src/                  # 核心原始碼
-└── README.md             # 專案說明
+
+#### 2. 建立並啟用虛擬環境 (建議)
+```bash
+# Windows (Git Bash)
+python -m venv venv
+source venv/Scripts/activate
+
+# macOS / Linux
+python -m venv venv
+source venv/bin/activate
 ```
 
-## 安裝與設定
+#### 3. 安裝相依套件
+```bash
+pip install -r requirements.txt
+```
 
-1.  **克隆專案**
-    ```bash
-    git clone https://github.com/gman-quant/tick-viz.git
-    cd tick-viz
-    ```
+#### 4. 進行環境設定
+建立.env 設定參考如下:
 
-2.  **安裝 Python 依賴**
-    建議在虛擬環境中執行：
-    ```bash
-    python -m venv venv
-    ```
-    ```bash
-    # linux/mac
-    source venv/bin/activate  
-    ```
-    ```bash
-    # windows 
-    source venv\Scripts\activate
-    ```
-    ```bash
-    pip install -r requirements.txt
-    ```
+```python
+# tick-viz/.env
 
-3.  **設定環境變數**
-    建立一個名為 `.env` 的檔案，並填入以下資訊：
-    ```
-    # tick-viz/.env
+# Shioaji API credentials
+SHIOAJI_API_KEY="YOUR_API_KEY"
+SHIOAJI_SECRET_KEY="YOUR_SECRET_KEY"
 
-    # Shioaji API credentials
-    SHIOAJI_API_KEY="YOUR_API_KEY"
-    SHIOAJI_SECRET_KEY="YOUR_SECRET_KEY"
+# Kafka broker and topic
+KAFKA_BROKER='kafka_address:9092'
+KAFKA_TOPIC='topic_name_for_realtime-ticks'
 
-    # Kafka broker and topic
-    KAFKA_BROKER="YOUR_KAFKA_ADDRESS:9092"
-    KAFKA_TOPIC="YOUR_TOPIC_NAME"
-    ```
 
-4.  **修改設定**
-    開啟 `config.py` 檔案，根據您的需求修改以下參數：
-    -   分析的時間區間 (`START_DATETIME`, `END_DATETIME`)
-    -   HTML 報告的輸出路徑 (`OUTPUT_DIR`)
+修改config.py 設定參考如下:
+# tick-viz/config.py
 
-## 如何執行
+# ==== 時區與時間區間設定 ====
+TAIWAN_TZ = ZoneInfo("Asia/Taipei")
+# 日盤
+# START_DATETIME = datetime(2025, 7, 3,  8, 45, 0, 0, tzinfo=TAIWAN_TZ)
+# END_DATETIME   = datetime(2025, 7, 3, 13, 45, 0, 0, tzinfo=TAIWAN_TZ)
+# 夜盤
+START_DATETIME = datetime(2025, 7, 3, 15, 0, 0, 0, tzinfo=TAIWAN_TZ)
+END_DATETIME   = datetime(2025, 7, 4,  5,  0, 0, 0, tzinfo=TAIWAN_TZ)
 
-完成設定後，在終端機中執行 `main.py` 即可：
+# ==== 繪圖與輸出設定 ====
+# True: 使用上面設定的固定結束時間; False: 使用當前時間作為結束時間,即時更新資料與畫面
+USE_FIXED_END_TIME = False 
+# Volume Bar 成交量基準 (例如: 每 450 口產生一根 K棒)
+VOLUME_PER_BAR = 450
+# HTML 報告自動刷新秒數
+REFRESH_INTERVAL_SECONDS = 120000 if USE_FIXED_END_TIME else 15
+
+# ==== 報告生成設定 ====
+# 報告標題
+Report_TITLE = f"TXF-Charts_{START_DATETIME.strftime('%Y-%m-%d_%H%M')}" if USE_FIXED_END_TIME else "TXF-Charts-Live"
+# HTML 報告輸出路徑
+OUTPUT_DIR = Path(r"G:\我的雲端硬碟\Trading\Dashboard_snapshot")  # WINDOWS
+# OUTPUT_DIR = Path("/Users/gtai/Library/CloudStorage/GoogleDrive-gtai.quant@gmail.com/My Drive/Trading/Dashboard_snapshot")  # MAC
+```
+
+## 💡 使用方式
+
+完成設定後，直接運行主程式即可。
 
 ```bash
 python main.py
 ```
 
-程式將會開始初始化，連接 Kafka 和 Shioaji，獲取資料並在 `config.py` 中指定的 `OUTPUT_DIR` 路徑下生成 HTML 分析報告。
+-   **即時模式** (`USE_FIXED_END_TIME = False`)：
+    -   程式會持續運行，終端機畫面會定時刷新狀態。
+    -   HTML 報告會根據 `config.py` 中設定的 `REFRESH_INTERVAL_SECONDS` 自動刷新。
+-   **歷史模式** (`USE_FIXED_END_TIME = True`)：
+    -   程式會抓取指定時間區間的資料，生成一次性報告後自動結束。
+
+生成的報告會存放於 `output/` 資料夾下（可在 `config.py` 中修改路徑）。
+
+---
+
+## 📁 專案結構
+
+```
+TXF-Intraday-Dashboard/
+├── src/                      # 核心原始碼
+│   ├── data_sourcing/      # 數據獲取模組 (Kafka, Shioaji)
+│   ├── processing/         # 數據處理模組 (指標計算, K棒生成)
+│   └── visualization/      # 視覺化模組 (圖表, 報告生成)
+├── output/                   # 預設報告輸出資料夾
+├── docs/                     # 存放文件與截圖
+├── main.py                   # 專案主執行檔
+├── config.py                 # 環境設定檔
+├── requirements.txt          # Python 相依套件列表
+└── README.md                 # 專案說明文件
+```
+
+---
+
+## 📄 授權條款
+
+本專案採用 [MIT License](LICENSE) 授權。

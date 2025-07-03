@@ -35,8 +35,8 @@ GROUP_ID = 'tick-consumer-group'
 
 # ==== 時區與時間區間設定 ====
 TAIWAN_TZ = ZoneInfo("Asia/Taipei")
-start_datetime     = datetime(2025, 6, 2,  8, 30, 0, 0, tzinfo=TAIWAN_TZ)
-fixed_end_datetime = datetime(2025, 6, 2, 13, 45, 0, 0, tzinfo=TAIWAN_TZ) # datetime.now(tz=TAIWAN_TZ)
+start_datetime     = datetime(2025, 7, 2,  8, 30, 0, 0, tzinfo=TAIWAN_TZ)
+fixed_end_datetime = datetime(2025, 7, 2, 13, 45, 0, 0, tzinfo=TAIWAN_TZ) # datetime.now(tz=TAIWAN_TZ)
 # start_datetime       = datetime(2025, 7, 1, 14, 50, 0, 0, tzinfo=TAIWAN_TZ)
 # fixed_end_datetime   = datetime(2025, 7, 2,  5,  0, 0, 0, tzinfo=TAIWAN_TZ) # datetime.now(tz=TAIWAN_TZ)
 
