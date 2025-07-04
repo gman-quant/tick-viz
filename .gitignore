@@ -1,5 +1,9 @@
 # .gitignore
 
+
+# html 報告
+*.html
+
 # 忽略 tests 資料夾及其下的所有內容
 /tests/
 
@@ -58,5 +62,3 @@ Thumbs.db
 .coverage
 htmlcov/
 
-# html 報告
-.html
