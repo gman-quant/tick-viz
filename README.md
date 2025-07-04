@@ -1,7 +1,10 @@
-# 📈 台指期貨即時盤中分析儀表板 (Real-Time TXF Intraday Analysis Dashboard)
+# 📈 台指期貨盤中動態分析儀表板 (TXF Intraday Dynamic Analysis Dashboard)
 
-[![Python Version](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Python](https://img.shields.io/badge/python-3.9%2B-blue) 
+![Apache Kafka](https://img.shields.io/badge/Kafka-required-orange) 
+![Shioaji](https://img.shields.io/badge/Shioaji-required-orange) 
+![License: MIT](https://img.shields.io/badge/License-MIT-green)
+
 
 本專案旨在提供一個視覺化的儀表板，用於即時（或歷史回測）分析台灣指數期貨（TXF）的 tick 級別數據流，並從中洞察盤中多空狀態。
 
