@@ -7,7 +7,6 @@ import os
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from pathlib import Path
 from dotenv import load_dotenv
 
 # ==== 載入環境變數 ====
