@@ -41,7 +41,7 @@
 
 #### 1. 複製本專案
 ```bash
-git clone https://your-repository-url/tick-viz.git
+git clone https://github.com/gman-quant/tick-viz.git
 cd tick-viz
 ```
 
@@ -79,30 +79,29 @@ KAFKA_TOPIC='topic_name_for_realtime-ticks'
 修改config.py 設定參考如下:
 ```python
 # tick-viz/config.py
-
+.
+.
+.
 # ==== 時區與時間區間設定 ====
 TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 # 日盤
-# START_DATETIME = datetime(2025, 7, 3,  8, 45, 0, 0, tzinfo=TAIWAN_TZ)
-# END_DATETIME   = datetime(2025, 7, 3, 13, 45, 0, 0, tzinfo=TAIWAN_TZ)
+START_DATETIME = datetime(2025, 7, 4,  8, 45, 0, 0, tzinfo=TAIWAN_TZ)
+END_DATETIME   = datetime(2025, 7, 4, 13, 45, 0, 0, tzinfo=TAIWAN_TZ)
 # 夜盤
-START_DATETIME = datetime(2025, 7, 3, 15, 0, 0, 0, tzinfo=TAIWAN_TZ)
-END_DATETIME   = datetime(2025, 7, 4,  5,  0, 0, 0, tzinfo=TAIWAN_TZ)
+# START_DATETIME = datetime(2025, 7, 3, 15, 0, 0, 0, tzinfo=TAIWAN_TZ)
+# END_DATETIME   = datetime(2025, 7, 4,  5,  0, 0, 0, tzinfo=TAIWAN_TZ)
 
 # ==== 繪圖與輸出設定 ====
-# True: 使用上面設定的固定結束時間; False: 使用當前時間作為結束時間,即時更新資料與畫面
+# True: 使用上面設定的固定結束時間; False: 使用當前時間作為結束時間
 USE_FIXED_END_TIME = False 
 # Volume Bar 成交量基準 (例如: 每 450 口產生一根 K棒)
 VOLUME_PER_BAR = 450
+.
+.
+.
 ```
 
 ## 💡 使用方式
-
-完成設定後，直接運行主程式即可。
-
-```bash
-python main.py
-```
 
 -   **即時模式** (`USE_FIXED_END_TIME = False`)：
     -   程式會持續運行，終端機畫面會定時刷新狀態。
@@ -112,12 +111,18 @@ python main.py
 
 生成的報告會存放於 `output/` 資料夾下（可在 `config.py` 中修改路徑）。
 
+完成設定後，直接運行主程式即可。
+
+```bash
+python main.py
+```
+
 ---
 
 ## 📁 專案結構
 
 ```
-TXF-Intraday-Dashboard/
+TICK-VIZ/
 ├── src/                      # 核心原始碼
 │   ├── data_sourcing/      # 數據獲取模組 (Kafka, Shioaji)
 │   ├── processing/         # 數據處理模組 (指標計算, K棒生成)
