@@ -1,7 +1,5 @@
 # .gitignore
 
-# ignore after final version
-config.py
 
 # html 報告
 *.html
