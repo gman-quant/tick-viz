@@ -40,6 +40,6 @@ REFRESH_INTERVAL_SECONDS = 999999 if USE_FIXED_END_TIME else 15
 
 # ==== 報告生成設定 ====
 # 報告標題
-Report_TITLE = f"TXF-Charts_{START_DATETIME.strftime('%Y-%m-%d_%H%M')}" if USE_FIXED_END_TIME else "TXF-Charts-Live"
+REPORT_TITLE = f"TXF-Charts_{START_DATETIME.strftime('%Y-%m-%d_%H%M')}" if USE_FIXED_END_TIME else "TXF-Charts-Live"
 # HTML 報告輸出路徑
 OUTPUT_DIR = Path(r"G:\我的雲端硬碟\Trading\Dashboard_snapshot") # Path(__file__).parent / "output"
