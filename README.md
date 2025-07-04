@@ -45,7 +45,7 @@ git clone https://github.com/gman-quant/tick-viz.git
 cd tick-viz
 ```
 
-#### 2. 建立並啟用虛擬環境 (建議)
+#### 2. 建立並啟用虛擬環境
 ```bash
 # Windows (Git Bash)
 python -m venv venv
