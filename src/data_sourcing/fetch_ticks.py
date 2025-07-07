@@ -59,7 +59,7 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
             [df, df.iloc[[-1]].assign(datetime=config.END_DATETIME.astimezone(None))],
             ignore_index=True
         )
-        df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601')
+        df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601', errors='coerce')
         df.sort_values(by='datetime', inplace=True)
 
     print(f"✅ 共取得 {len(df)} 筆資料")

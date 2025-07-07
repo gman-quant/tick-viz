@@ -1,5 +1,7 @@
 # src/visualization/main_chart.py
 
+from datetime import datetime, timedelta, time as dt_time
+
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -69,6 +71,13 @@ def _configure_layout(fig: go.Figure):
         legend=dict(x=0.5, y=1.1, orientation="h", xanchor="center", yanchor="bottom"),
     )
 
+
+    st_dt, ed_dt = config.START_DATETIME, config.END_DATETIME
+    if st_dt.time() == dt_time(8, 30):
+        st_dt += timedelta(minutes=15)
+    else:
+        st_dt += timedelta(minutes=10)
+    
     # 2. 將通用設定一次性應用到所有 X 軸上
     fig.update_xaxes(
         showspikes=True, 
@@ -77,7 +86,7 @@ def _configure_layout(fig: go.Figure):
         showline=True,
         # 【關鍵修改】強制顯示所有子圖的 x 軸刻度標籤
         showticklabels=True,
-        range=[config.START_DATETIME, config.END_DATETIME],
+        range=[st_dt, ed_dt],
         autorange=False
     )
 

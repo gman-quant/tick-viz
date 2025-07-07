@@ -74,11 +74,11 @@ async def data_loop():
         print(f"模式: {'當盤即時動態' if config.IS_REALTIME_MODE else '歷史資料'}")
 
         if config.IS_REALTIME_MODE:
-            dt_now = datetime.now(config.TAIWAN_TZ)
+            dt_now = datetime.now()
             now_date, now_time = dt_now.date(), dt_now.time()
             day_session = is_day_session(now_time)
             
-            start_dt, end_dt = get_datetimes(now_date, day_session, config.TAIWAN_TZ)
+            start_dt, end_dt = get_datetimes(now_date, day_session, config.IS_REALTIME_MODE, config.TAIWAN_TZ)
             config.START_DATETIME = start_dt
             config.END_DATETIME = end_dt
 
@@ -137,11 +137,12 @@ async def init_app():
     return app
 
 async def main():
-    app = await init_app()
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, 'localhost', 8080)
-    await site.start()
+    if config.IS_REALTIME_MODE:
+        app = await init_app()
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, 'localhost', 8080)
+        await site.start()
     # 同時執行資料迴圈
     await data_loop()
 
