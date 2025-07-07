@@ -36,9 +36,9 @@ def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close:
     # === 衍生欄位計算 ===
     # rrp: Relative Reference Price，由現貨價推估的期貨理論價
     processed_df['rrp_by_taiex'] = processed_df["underlying_price"] / taiex_prev_close * txf_prev_close
-    processed_df['ave'] = (processed_df['rrp_by_taiex'] + processed_df["underlying_price"]) / 2
     processed_df["fut_premium"] = processed_df["close"] - processed_df["underlying_price"]
     processed_df["fut_to_rrp_premium"] = processed_df["close"] - processed_df['rrp_by_taiex']
+    processed_df['fut_to_vwap_premium'] = processed_df["close"] - processed_df['avg_price']
     processed_df["cumu_net_agg_vol"] = processed_df["bid_side_total_vol"] - processed_df["ask_side_total_vol"]
     
     return processed_df
