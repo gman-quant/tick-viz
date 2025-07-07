@@ -113,10 +113,10 @@ OUTPUT_DIR = Path(__file__).parent / "output"
 
 ## 💡 使用方式
 
--   **即時模式** (`USE_FIXED_END_TIME = False`)：
+-   **即時模式** (`IS_REALTIME_MODE = True`)：
     -   程式會持續運行，終端機畫面會定時刷新狀態。
-    -   HTML 報告會根據 `config.py` 中設定的 `REFRESH_INTERVAL_SECONDS` 自動刷新。
--   **歷史模式** (`USE_FIXED_END_TIME = True`)：
+    -   HTML 報告會根據 `config.py` 中設定的 `UPDATE_INTERVAL` 自動刷新。
+-   **歷史模式** (`IS_REALTIME_MODE = False`)：
     -   程式會抓取指定時間區間的資料，生成一次性報告後自動結束。
 
 生成的報告會存放於 `output/` 資料夾下（可在 `config.py` 中修改路徑）。
