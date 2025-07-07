@@ -1,8 +1,10 @@
 # tick-viz/src/data_sourcing/market_data.py
 
-import shioaji as sj
-import pandas as pd
+
 from datetime import date, timedelta, time as dt_time
+
+import pandas as pd
+import shioaji as sj
 
 def find_previous_close(api_key: str, secret_key: str, target_date: date, max_lookback: int = 20) -> tuple[float, float]:
     """

@@ -3,7 +3,7 @@
 # === Standard Library ===
 import asyncio
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta, time as dt_time
 
 # === Third-Party Libraries ===
 from aiohttp import web
@@ -54,10 +54,14 @@ async def data_loop():
     fixed_offsets = consumer.offsets_for_times(topic_partitions)
     current_offsets = fixed_offsets.copy()
 
+
+    st_dt = config.START_DATETIME
+    if not is_day_session(st_dt.time()):
+        st_dt += timedelta(days=1)
     txf_prev_close, taiex_prev_close = market_data.find_previous_close(
         api_key=config.SHIOAJI_API_KEY, 
         secret_key=config.SHIOAJI_SECRET_KEY, 
-        target_date=config.START_DATETIME.date()
+        target_date=st_dt.date()
     )
 
     df = None
