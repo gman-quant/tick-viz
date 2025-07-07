@@ -1,5 +1,7 @@
 # src/visualization/stats_table.py
 
+from datetime import datetime
+
 def generate_stats_html(df):
     """輸出當盤價格統計與波動資訊（含漲跌幅與日內區間），百分比保留兩位小數，其他數字取整數並用中文表示"""
     print("當前價格統計與波動資訊")
@@ -22,7 +24,14 @@ def generate_stats_html(df):
     
     stats_html_content = f"""
     <div style="font-family: 'Inter', sans-serif; margin: 20px; padding: 15px; border: 1px solid #555; border-radius: 8px; background-color: #000000; color: #ffffff; box-shadow: 0 2px 4px rgba(255,255,255,0.1);">
-        <h3 style="margin-top: 0; color: #ffffff; text-align: center;">當前價格與波動資訊</h3>
+        <div style="position: relative; width: 100%; color: #ffffff; margin-top: 0; margin-bottom: 20px;">
+            <div style="text-align: center; font-size: 20px; font-weight: bold;">
+                當前價格與波動摘要
+            </div>
+            <div style="position: absolute; right: 0; top: 0; font-size: 14px; color: #cccccc;">
+                更新: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+            </div>
+        </div>
         
         <table style="width: 100%; border-collapse: collapse; font-family: 'monospace', 'Inter', sans-serif; text-align: center; color: #ffffff;">
             <colgroup>

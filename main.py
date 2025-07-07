@@ -10,7 +10,7 @@ import config
 
 # 導入各模組功能
 from src.data_sourcing import fetch_ticks, market_data
-from src.processing import volume_bars, metrics
+from src.processing import volume_bars
 from src.visualization import main_chart, candlestick_chart, stats_table, report_generator
 
 def main():

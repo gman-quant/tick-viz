@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, time as dt_time
 from confluent_kafka import Consumer, KafkaError
 from src.utils.time_parser import parse_tick_datetime
 import shioaji as sj
+from config import END_DATETIME
 
 
 def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: datetime, end_datetime: datetime, tick_dict: dict) -> tuple[pd.DataFrame, list]:
@@ -53,6 +54,10 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
 
     df = pd.DataFrame(tick_dict.values())
     if not df.empty:
+        df = pd.concat(
+            [df, df.iloc[[-1]].assign(datetime=END_DATETIME.astimezone(None))],
+            ignore_index=True
+        )
         df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601')
         df.sort_values(by='datetime', inplace=True)
 
