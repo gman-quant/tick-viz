@@ -1,24 +1,44 @@
-# tick-viz/main.py
+# main.py
+
+# === Standard Library ===
+import asyncio
 import os
-import time
 from datetime import datetime, timezone
 
+# === Third-Party Libraries ===
+from aiohttp import web
 from confluent_kafka import Consumer, TopicPartition
 
-# 從設定檔導入參數
+# === Local Application Imports ===
 import config
-
-# 導入各模組功能
 from src.data_sourcing import fetch_ticks, market_data
 from src.processing import volume_bars
-from src.visualization import main_chart, candlestick_chart, stats_table, report_generator
+from src.visualization import main_chart, candlestick_chart, report_generator, stats_table
+from src.utils.session_time import get_datetimes, is_day_session
 
-def main():
-    """主執行函式"""
-    # ==== 1. 初始化 ====
-    print("🚀 專案初始化...")
-    
-    # 建立 Kafka Consumer
+clients = set()
+
+# WebSocket handler
+async def websocket_handler(request):
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+    clients.add(ws)
+    print("📡 WebSocket client connected")
+    try:
+        async for msg in ws:
+            pass  # 這裡目前沒用到前端訊息
+    finally:
+        clients.remove(ws)
+        print("📡 WebSocket client disconnected")
+    return ws
+
+async def notify_clients():
+    if clients:
+        await asyncio.gather(*[ws.send_str("reload") for ws in clients])
+
+# 資料抓取與報告生成的主迴圈
+async def data_loop():
+    # Kafka Consumer 建立
     consumer = Consumer({
         'bootstrap.servers': config.KAFKA_BROKER,
         'group.id': config.KAFKA_GROUP_ID,
@@ -26,7 +46,6 @@ def main():
         'enable.partition.eof': True
     })
 
-    # 查詢 Kafka 起始 offset
     start_dt_utc = config.START_DATETIME.astimezone(timezone.utc)
     timestamp_ms = int(start_dt_utc.timestamp() * 1000)
     metadata = consumer.list_topics(config.KAFKA_TOPIC)
@@ -35,84 +54,96 @@ def main():
     fixed_offsets = consumer.offsets_for_times(topic_partitions)
     current_offsets = fixed_offsets.copy()
 
-    # 讀取前一日收盤價
     txf_prev_close, taiex_prev_close = market_data.find_previous_close(
         api_key=config.SHIOAJI_API_KEY, 
         secret_key=config.SHIOAJI_SECRET_KEY, 
         target_date=config.START_DATETIME.date()
     )
 
-    # 初始化資料容器
     df = None
     tick_dict = {}
+
     print("✅ 初始化完成。\n")
 
-    # ==== 2. 主執行迴圈 ====
-    # while True: # 若要實現即時更新，可取消註解此行與底部的 time.sleep
     while True:
-        os.system('cls' if os.name == 'nt' else 'clear')
+        if config.CLEAR_SCREEN_EACH_CYCLE:
+            os.system('cls' if os.name == 'nt' else 'clear')
         
-        # 設定目標結束時間
-        end_datetime = config.END_DATETIME if config.USE_FIXED_END_TIME else datetime.now(tz=config.TAIWAN_TZ)
-        print(f"模式: {'固定時間' if config.USE_FIXED_END_TIME else '即時'} | 目標結束時間: {end_datetime}")
+        day_session = config.DAY_SESSION
+
+        print(f"模式: {'當盤即時動態' if config.IS_REALTIME_MODE else '歷史資料'}")
+
+        if config.IS_REALTIME_MODE:
+            dt_now = datetime.now(config.TAIWAN_TZ)
+            now_date, now_time = dt_now.date(), dt_now.time()
+            day_session = is_day_session(now_time)
+            
+            start_dt, end_dt = get_datetimes(now_date, day_session, config.TAIWAN_TZ)
+            config.START_DATETIME = start_dt
+            config.END_DATETIME = end_dt
+
+        if day_session is not None:
+            print(f"🕒 時段判斷: {'日盤' if day_session else '夜盤'}")
+            print(f"🔄 資料區間: {config.START_DATETIME} ~ {config.END_DATETIME}")
 
         try:
-            # 1. 獲取 Tick 資料
-            if config.USE_FIXED_END_TIME:
-                # 從 Shioaji
-                df = fetch_ticks.fetch_ticks_from_shioaji(
-                    api_key=config.SHIOAJI_API_KEY, 
-                    secret_key=config.SHIOAJI_SECRET_KEY, 
-                    start_datetime=config.START_DATETIME, 
-                    end_datetime=end_datetime
-                )
-            else:
-                # 從 Kafka
+            if config.IS_REALTIME_MODE:
                 df, current_offsets = fetch_ticks.fetch_ticks_from_kafka(
                     consumer=consumer, 
                     offsets=current_offsets, 
                     start_datetime=config.START_DATETIME, 
-                    end_datetime=end_datetime, 
+                    end_datetime=config.END_DATETIME, 
                     tick_dict=tick_dict
+                )
+            else:
+                df = fetch_ticks.fetch_ticks_from_shioaji(
+                    api_key=config.SHIOAJI_API_KEY, 
+                    secret_key=config.SHIOAJI_SECRET_KEY,
                 )
 
             if not df.empty:
-                print("資料獲取完畢,準備繪圖...\n")
+                print("📊 資料獲取完畢，準備處理與繪圖...\n")
 
-                # 2. 資料處理與分析
-                print("🛠️ 開始進行資料處理與圖表繪製...")
-                # (這裡省略了原始碼中 metrics 和 main_chart 的呼叫，因為它們被整合在 report_generator 中)
                 df_vol_kbars = volume_bars.generate_volume_bars(df, volume_per_bar=config.VOLUME_PER_BAR)
-
-                # 3. 產生視覺化元件
-                stats_html = stats_table.generate_stats_html(df) # 假設已將 print_intraday_stats 改名
+                stats_html = stats_table.generate_stats_html(df)
                 fig_candlestick = candlestick_chart.plot_candlestick_with_volume_delta(df_vol_kbars)
-                
-                # 假設 plot_tick_analysis 已修改為只回傳 fig 物件
                 fig_main_analysis = main_chart.plot_tick_analysis(df, txf_prev_close, taiex_prev_close)
 
-                # 4. 生成 HTML 報告
                 output_file = config.OUTPUT_DIR / f"{config.REPORT_TITLE}.html"
-                
                 report_generator.generate_html_report(
                     figures=[fig_candlestick, fig_main_analysis],
                     stats_html=stats_html,
                     output_path=output_file,
                     report_title=config.REPORT_TITLE,
-                    refresh_interval=config.REFRESH_INTERVAL_SECONDS
                 )
+                # 通知前端自動更新
+                await notify_clients()
             else:
-                print("⚠️ 未獲取到任何資料，請檢查時間範圍或資料來源。")
+                print("⚠️ 沒有新資料，請確認時間或來源。")
 
         except Exception as e:
-            print(f"❌ 發生未預期的錯誤: {e}")
+            print(f"❌ 發生錯誤: {e}")
 
-        if config.USE_FIXED_END_TIME:
+        if not config.IS_REALTIME_MODE:
             break
-        
-        time.sleep(config.REFRESH_INTERVAL_SECONDS - 3)
 
-        
+        await asyncio.sleep(config.UPDATE_INTERVAL)
+
+async def init_app():
+    app = web.Application()
+    app.router.add_get('/ws', websocket_handler)
+    # 靜態檔案路徑，對應 output 資料夾
+    app.router.add_static('/', path=str(config.OUTPUT_DIR.resolve()), name='static')
+    return app
+
+async def main():
+    app = await init_app()
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, 'localhost', 8080)
+    await site.start()
+    # 同時執行資料迴圈
+    await data_loop()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

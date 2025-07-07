@@ -82,26 +82,33 @@ KAFKA_TOPIC='topic_name_for_realtime-ticks'
 修改config.py 設定參考如下:
 ```python
 # tick-viz/config.py
-.
-.
-.
-# ==== 時區與時間區間設定 ====
-TAIWAN_TZ = ZoneInfo("Asia/Taipei")
-# 日盤
-START_DATETIME = datetime(2025, 7, 4,  8, 45, 0, 0, tzinfo=TAIWAN_TZ)
-END_DATETIME   = datetime(2025, 7, 4, 13, 45, 0, 0, tzinfo=TAIWAN_TZ)
-# 夜盤
-# START_DATETIME = datetime(2025, 7, 3, 15, 0, 0, 0, tzinfo=TAIWAN_TZ)
-# END_DATETIME   = datetime(2025, 7, 4,  5,  0, 0, 0, tzinfo=TAIWAN_TZ)
 
-# ==== 繪圖與輸出設定 ====
-# True: 使用上面設定的固定結束時間; False: 使用當前時間作為結束時間
-USE_FIXED_END_TIME = False 
-# Volume Bar 成交量基準 (例如: 每 450 口產生一根 K棒)
-VOLUME_PER_BAR = 450
-.
-.
-.
+# === Time and session configuration ===
+TAIWAN_TZ = ZoneInfo("Asia/Taipei") # 時區
+
+IS_REALTIME_MODE = True # 設定為 True 進入即時模式，False 為歷史模式
+
+# 歷史資料查詢設定 (僅在 IS_REALTIME_MODE = False 時生效)
+DATE         = date(2025, 7, 7) # 設定歷史模式的日期
+DAY_SESSION  = False  # True = 08:30–13:45 (日盤), False = 14:50–05:00 (夜盤)
+
+# === Chart and output settings ===
+
+CLEAR_SCREEN_EACH_CYCLE = True # 是否在每次更新後清除終端機畫面
+VOLUME_PER_BAR = 450 # 每多少口數產生一根等量 K 棒
+UPDATE_INTERVAL = 12 # 資料更新與前端刷新間隔 (秒)
+
+# === Report generation settings ===
+
+# 報告名稱
+REPORT_TITLE = (
+    "TXF-Charts-Live"
+    if IS_REALTIME_MODE
+    else f"TXF-Charts_{START_DATETIME.strftime('%Y-%m-%d_%H%M')}"
+)
+
+# HTML 報告輸出路徑
+OUTPUT_DIR = Path(__file__).parent / "output" 
 ```
 
 ## 💡 使用方式
@@ -129,12 +136,14 @@ TICK-VIZ/
 ├── src/                      # 核心原始碼
 │   ├── data_sourcing/      # 數據獲取模組 (Kafka, Shioaji)
 │   ├── processing/         # 數據處理模組 (指標計算, K棒生成)
+│   ├── utils/              # 工具函式模組 (時間處理)
 │   └── visualization/      # 視覺化模組 (圖表, 報告生成)
 ├── output/                   # 預設報告輸出資料夾
 ├── docs/                     # 存放文件與截圖
 ├── main.py                   # 專案主執行檔
 ├── config.py                 # 環境設定檔
 ├── requirements.txt          # Python 相依套件列表
+├── .env.example              # .env 範例檔案
 └── README.md                 # 專案說明文件
 ```
 

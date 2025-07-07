@@ -1,45 +1,58 @@
 # tick-viz/config.py
-# 不再追蹤: git update-index --assume-unchanged config.py
-# 恢復追蹤: git update-index --no-assume-unchanged config.py
-
 
 import os
-from datetime import datetime
+from datetime import datetime, date, timedelta, time as dt_time
 from pathlib import Path
+
 from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 
-# ==== 載入環境變數 ====
+from src.utils.session_time import get_datetimes
+
+# === Load environment variables ===
 load_dotenv()
 
-# ==== Shioaji API 金鑰 ====
+# === Shioaji API credentials ===
 SHIOAJI_API_KEY    = os.environ.get('SHIOAJI_API_KEY')
 SHIOAJI_SECRET_KEY = os.environ.get('SHIOAJI_SECRET_KEY')
 
-# ==== Kafka 參數設定 ====
+# === Kafka connection settings ===
 KAFKA_BROKER   = os.environ.get('KAFKA_BROKER')
 KAFKA_TOPIC    = os.environ.get('KAFKA_TOPIC')
 KAFKA_GROUP_ID = 'tick-consumer-group'
 
-# ==== 時區與時間區間設定 ====
+# === Time and session configuration ===
 TAIWAN_TZ = ZoneInfo("Asia/Taipei")
-# 日盤
-# START_DATETIME = datetime(2025, 7, 4,  8, 45, 0, 0, tzinfo=TAIWAN_TZ)
-# END_DATETIME   = datetime(2025, 7, 4, 13, 45, 0, 0, tzinfo=TAIWAN_TZ)
-# 夜盤
-START_DATETIME = datetime(2025, 7, 4, 15, 0, 0, 0, tzinfo=TAIWAN_TZ)
-END_DATETIME   = datetime(2025, 7, 5,  5,  0, 0, 0, tzinfo=TAIWAN_TZ)
 
-# ==== 繪圖與輸出設定 ====
-# True: 使用上面設定的固定結束時間; False: 使用當前時間作為結束時間。
-USE_FIXED_END_TIME = False 
-# Volume Bar 成交量基準 (例如: 每 450 口產生一根 K棒)
+# Toggle between real-time mode and historical mode
+# True  → constantly update report using current time
+# False → generate one-time report for a fixed time window
+IS_REALTIME_MODE = True
+
+# Base date and session type for historical mode
+DATE         = date(2025, 7, 7)
+DAY_SESSION  = False  # True = 08:30–13:45, False = 14:50–05:00
+START_DATETIME, END_DATETIME = get_datetimes(DATE, DAY_SESSION, TAIWAN_TZ)
+
+# === Chart and output settings ===
+
+# Whether to clear terminal screen after each update cycle
+CLEAR_SCREEN_EACH_CYCLE = True
+
+# Number of contracts per volume-based bar
 VOLUME_PER_BAR = 450
-# HTML 報告自動刷新秒數
-REFRESH_INTERVAL_SECONDS = 999999 if USE_FIXED_END_TIME else 15
 
-# ==== 報告生成設定 ====
-# 報告標題
-REPORT_TITLE = f"TXF-Charts_{START_DATETIME.strftime('%Y-%m-%d_%H%M')}" if USE_FIXED_END_TIME else "TXF-Charts-Live"
-# HTML 報告輸出路徑
-OUTPUT_DIR = Path(r"G:\我的雲端硬碟\Trading\Dashboard_snapshot") # Path(__file__).parent / "output"
+# Interval (in seconds) to update data and trigger frontend auto-refresh
+UPDATE_INTERVAL = 12
+
+# === Report generation settings ===
+
+# Report title (also used as output file name)
+REPORT_TITLE = (
+    "TXF-Charts-Live"
+    if IS_REALTIME_MODE
+    else f"TXF-Charts_{START_DATETIME.strftime('%Y-%m-%d_%H%M')}"
+)
+
+# Output directory for HTML report
+OUTPUT_DIR = Path(__file__).parent / "output"

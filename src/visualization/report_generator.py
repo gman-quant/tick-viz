@@ -1,16 +1,18 @@
 # src/visualization/report_generator.py
 
+from datetime import datetime
 from pathlib import Path
 from typing import List
+
 import plotly.graph_objects as go
 import plotly.io as pio
+
 
 def generate_html_report(
     figures: List[go.Figure], 
     stats_html: str, 
     output_path: Path, 
     report_title: str,
-    refresh_interval: int
 ):
     """
     將多個 Plotly 圖表和統計數據的 HTML 字串，合併成一個完整的 HTML 報告檔案。
@@ -36,13 +38,16 @@ def generate_html_report(
             # full_html=False -> 只產生圖表的 <div> 區塊，不產生完整的 <html> 結構
             charts_html_body += pio.to_html(fig, include_plotlyjs='cdn', full_html=False)
 
+    # 用當下時間當作「更新標記」
+    last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     # 使用 f-string 組合出最終的完整 HTML 結構
     full_html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8">
-        <meta http-equiv="refresh" content="{refresh_interval}">
+        <meta name="last-updated" content="{last_updated}">
         <title>{report_title}</title>
         <style>
             /* 您可以在這裡定義一些 CSS 樣式 */
@@ -52,6 +57,15 @@ def generate_html_report(
                 font-family: 'Inter', sans-serif, 'Microsoft JhengHei';
             }}
         </style>
+        <script>
+            const ws = new WebSocket("ws://localhost:8080/ws");
+            ws.onmessage = function (event) {{
+                if (event.data === "reload") {{
+                    console.log("📢 收到更新通知，重新載入頁面");
+                    location.reload();
+                }}
+            }};
+        </script>
     </head>
     <body>
         {stats_html}
@@ -64,3 +78,5 @@ def generate_html_report(
     # 將組合好的 HTML 內容寫入指定的檔案
     output_path.write_text(full_html_content, encoding="utf-8")
     print(f"✅ 報告已成功生成至: {output_path}")
+    http_url = f"http://localhost:8080/{report_title}.html"
+    print(f"🌐 報表網址：{http_url}\n")

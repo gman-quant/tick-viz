@@ -1,13 +1,14 @@
 # tick-viz/src/data_sourcing/fetch_ticks.py
 
+from datetime import datetime, timedelta
+
+from confluent_kafka import Consumer, KafkaError
 import orjson
 import pandas as pd
-from datetime import datetime, timedelta, time as dt_time
-from confluent_kafka import Consumer, KafkaError
-from src.utils.time_parser import parse_tick_datetime
 import shioaji as sj
-from config import END_DATETIME
 
+import config
+from src.utils.time_parser import parse_tick_datetime
 
 def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: datetime, end_datetime: datetime, tick_dict: dict) -> tuple[pd.DataFrame, list]:
     """
@@ -55,13 +56,13 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
     df = pd.DataFrame(tick_dict.values())
     if not df.empty:
         df = pd.concat(
-            [df, df.iloc[[-1]].assign(datetime=END_DATETIME.astimezone(None))],
+            [df, df.iloc[[-1]].assign(datetime=config.END_DATETIME.astimezone(None))],
             ignore_index=True
         )
         df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601')
         df.sort_values(by='datetime', inplace=True)
 
-    print(f"✅ 共取得 {len(df)} 筆資料（從 {start_datetime} 到 {end_datetime}）")
+    print(f"✅ 共取得 {len(df)} 筆資料")
     
     # 取得最新 consumer 位置 offsets，準備下一輪拉取用
     positions = consumer.position(offsets)
@@ -78,7 +79,7 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
     
     return df, new_offsets
 
-def fetch_ticks_from_shioaji(api_key: str, secret_key: str, start_datetime: datetime, end_datetime: datetime) -> pd.DataFrame:
+def fetch_ticks_from_shioaji(api_key: str, secret_key: str) -> pd.DataFrame:
     """
     從 Shioaji 獲取並處理 Tick 資料。
     
@@ -87,7 +88,10 @@ def fetch_ticks_from_shioaji(api_key: str, secret_key: str, start_datetime: date
     2. 立刻篩選出 `start_datetime` 到 `end_datetime` 的區間。
     3. 僅對此區間內的資料計算累計指標 (high, low, cumsum_vol, vwap)。
     """
-    target_date = start_datetime.date() if start_datetime.time() < dt_time(15, 0) else (start_datetime + timedelta(days=1)).date()
+    start_datetime = config.START_DATETIME
+    end_datetime   = config.END_DATETIME
+    target_date = config.DATE if config.DAY_SESSION else (config.DATE + timedelta(days=1))
+    
     api = sj.Shioaji(simulation=True)
     api.login(api_key=api_key, secret_key=secret_key)
     try:
@@ -102,10 +106,11 @@ def fetch_ticks_from_shioaji(api_key: str, secret_key: str, start_datetime: date
         df = pd.DataFrame({**ticks})
         df.ts = pd.to_datetime(df.ts).dt.tz_localize(start_datetime.tzinfo)
         
+        target_date = df.iloc[0].ts.date()
         # 獲取加權指數 Ticks
         ticks = api.ticks(
             contract=api.Contracts.Indexs.TSE.TSE001, 
-            date=str(target_date)
+            date=str(config.DATE)
         )
         df2 = pd.DataFrame({**ticks})
         df2.ts = pd.to_datetime(df2.ts).dt.tz_localize(start_datetime.tzinfo)

@@ -4,6 +4,8 @@ from datetime import datetime
 from dateutil import parser
 from config import TAIWAN_TZ
 
+combine = datetime.combine
+
 def parse_tick_datetime(raw_dt: str) -> datetime | None:
     """
     將原始 tick 的字串 datetime 轉為帶時區的 datetime 物件（Asia/Taipei）

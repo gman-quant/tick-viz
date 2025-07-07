@@ -3,7 +3,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from config import START_DATETIME, END_DATETIME
+import config
 
 # 導入相依的處理函式
 # 假設您已將 _prepare_plot_data 移至 metrics.py
@@ -76,7 +76,8 @@ def _configure_layout(fig: go.Figure):
         showline=True,
         # 【關鍵修改】強制顯示所有子圖的 x 軸刻度標籤
         showticklabels=True,
-        range=[START_DATETIME, END_DATETIME]
+        range=[config.START_DATETIME, config.END_DATETIME],
+        autorange=False
     )
 
 
