@@ -3,7 +3,7 @@
 # === Standard Library ===
 import asyncio
 import os
-from datetime import datetime, timezone, timedelta, time as dt_time
+from datetime import datetime, timezone, timedelta
 
 # === Third-Party Libraries ===
 from aiohttp import web
@@ -78,7 +78,7 @@ async def data_loop():
         print(f"模式: {'當盤即時動態' if config.IS_REALTIME_MODE else '歷史資料'}")
 
         if config.IS_REALTIME_MODE:
-            dt_now = datetime.now()
+            dt_now = datetime.now(tz=config.TAIWAN_TZ)
             now_date, now_time = dt_now.date(), dt_now.time()
             day_session = is_day_session(now_time)
             
@@ -128,7 +128,7 @@ async def data_loop():
         except Exception as e:
             print(f"❌ 發生錯誤: {e}")
 
-        if not config.IS_REALTIME_MODE:
+        if not config.IS_REALTIME_MODE or dt_now >= config.END_DATETIME:
             break
 
         await asyncio.sleep(config.UPDATE_INTERVAL)

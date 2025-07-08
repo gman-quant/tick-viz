@@ -3,7 +3,7 @@
 # 恢復追蹤: git update-index --no-assume-unchanged config.py
 
 import os
-from datetime import datetime, date, timedelta, time as dt_time
+from datetime import date
 from pathlib import Path
 
 from zoneinfo import ZoneInfo
@@ -42,7 +42,7 @@ START_DATETIME, END_DATETIME = get_datetimes(DATE, DAY_SESSION, IS_REALTIME_MODE
 CLEAR_SCREEN_EACH_CYCLE = True
 
 # Number of contracts per volume-based bar
-VOLUME_PER_BAR = 450
+VOLUME_PER_BAR = 1000
 
 # Interval (in seconds) to update data and trigger frontend auto-refresh
 UPDATE_INTERVAL = 12

@@ -4,6 +4,9 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from src.utils.session_time import get_range
+import config
+
 def plot_candlestick_with_volume_delta(df: pd.DataFrame):
     """
     繪製K線圖與下方的買賣盤成交量分析圖 (Volume Delta)。
@@ -28,7 +31,7 @@ def plot_candlestick_with_volume_delta(df: pd.DataFrame):
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,          # 共享 X 軸
-        vertical_spacing=0.05,      # 子圖間距
+        vertical_spacing=0.1,      # 子圖間距
         row_heights=[0.75, 0.25],     # 子圖高度比例
         subplot_titles=('Candlestick Chart', 'Volume Delta')
     )
@@ -77,16 +80,23 @@ def plot_candlestick_with_volume_delta(df: pd.DataFrame):
         height=700,
         xaxis_rangeslider_visible=False, # 隱藏下方的範圍滑桿
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), # 圖例置於圖表上方
-        xaxis=dict(
-            rangeslider_visible=False, 
-            showspikes=True, spikemode='across', spikesnap='cursor', showline=True,
-        ),
-        xaxis2=dict(showspikes=True, spikemode='across', spikesnap='cursor', showline=True),
+        xaxis=dict(rangeslider_visible=False),
     )
 
+    st_dt, ed_dt = get_range(config.START_DATETIME, config.END_DATETIME, config.TAIWAN_TZ)
     # 7. 更新座標軸標題
     fig.update_yaxes(title_text="Price", tickformat=".0f", row=1, col=1)
     fig.update_yaxes(title_text="Volume", row=2, col=1)
+    fig.update_xaxes(
+        showspikes=True, 
+        spikemode='across', 
+        spikesnap='cursor', 
+        showline=True,
+        # 【關鍵修改】強制顯示所有子圖的 x 軸刻度標籤
+        showticklabels=True,
+        range=[st_dt, ed_dt],
+        autorange=False
+    )
 
     # 8. 顯示圖表
     # fig.show()

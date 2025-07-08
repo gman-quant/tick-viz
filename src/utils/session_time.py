@@ -59,3 +59,16 @@ def is_day_session(now_time: dt_time) -> bool:
     """
     return dt_time(8, 30) <= now_time < dt_time(14, 50)
 
+def get_range(st_dt: datetime, ed_dt: datetime, tz: ZoneInfo) -> tuple[datetime, datetime]:
+    new_st_dt = st_dt
+    new_ed_dt = datetime.now(tz=tz) + timedelta(hours=1)
+    if st_dt.time() == dt_time(8, 30):
+        new_st_dt += timedelta(minutes=15)
+    else:
+        new_st_dt += timedelta(minutes=10)
+
+    if new_ed_dt > ed_dt:
+        new_ed_dt = ed_dt
+
+    return new_st_dt, new_ed_dt
+

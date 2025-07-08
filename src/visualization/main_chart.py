@@ -1,10 +1,10 @@
 # src/visualization/main_chart.py
 
-from datetime import datetime, timedelta, time as dt_time
 
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from src.utils.session_time import get_range
 import config
 
 # 導入相依的處理函式
@@ -28,7 +28,7 @@ def _add_price_traces(fig: go.Figure, df: pd.DataFrame):
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["low"], name="Low", line=dict(color="Red", dash="dash", width=1)), row=row, col=col)
     
     # 更新 Y 軸設定
-    high, low = df.iloc[-1].high, df.iloc[-1].low
+    high, low = max(df.iloc[-1].high, df.iloc[-1].rrp_high), min(df.iloc[-1].low, df.iloc[-1].rrp_low)
     padding = (high - low) * 0.1
     fig.update_yaxes(title_text="價格", tickformat=".0f", row=row, col=col, 
                      range=[low - padding, high + padding])
@@ -72,12 +72,7 @@ def _configure_layout(fig: go.Figure):
     )
 
 
-    st_dt, ed_dt = config.START_DATETIME, config.END_DATETIME
-    if st_dt.time() == dt_time(8, 30):
-        st_dt += timedelta(minutes=15)
-    else:
-        st_dt += timedelta(minutes=10)
-    
+    st_dt, ed_dt = get_range(config.START_DATETIME, config.END_DATETIME, config.TAIWAN_TZ)
     # 2. 將通用設定一次性應用到所有 X 軸上
     fig.update_xaxes(
         showspikes=True, 

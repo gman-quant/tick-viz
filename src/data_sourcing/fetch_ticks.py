@@ -55,11 +55,7 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
 
     df = pd.DataFrame(tick_dict.values())
     if not df.empty:
-        df = pd.concat(
-            [df, df.iloc[[-1]].assign(datetime=config.END_DATETIME.astimezone(None))],
-            ignore_index=True
-        )
-        df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601', errors='coerce')
+        df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601')
         df.sort_values(by='datetime', inplace=True)
 
     print(f"✅ 共取得 {len(df)} 筆資料")
