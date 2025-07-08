@@ -32,8 +32,8 @@ TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 IS_REALTIME_MODE = 1
 
 # Base date and session type for historical mode
-DATE         = date(2025, 3, 5)
-DAY_SESSION  = 0  # True = 08:30–13:45, False = 14:50–05:00
+DATE         = date(2025, 7, 7)
+DAY_SESSION  = 1  # True = 08:30–13:45, False = 14:50–05:00
 START_DATETIME, END_DATETIME = get_datetimes(DATE, DAY_SESSION, IS_REALTIME_MODE, TAIWAN_TZ)
 
 # === Chart and output settings ===
