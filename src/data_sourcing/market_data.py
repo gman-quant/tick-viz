@@ -56,8 +56,7 @@ def _get_last_close(
     df = load_or_fetch_kbars(api, query_date, symbol)
     if df.empty:
         return None
-    session_end = dt_time(5, 1) if symbol == "txf" and day_session else dt_time(13, 46)
-    
+    session_end = dt_time(13, 46)
     day_session_df = df[df['datetime'].dt.time < session_end]
     # print(f"{symbol}: {day_session_df}")
     return day_session_df['Close'].iloc[-1] if not day_session_df.empty else None
@@ -78,7 +77,7 @@ def find_previous_close(
         tse_query_date = current_date - timedelta(days=1) if day_session else current_date
         
         for _ in range(max_lookback):
-            txf_close = _get_last_close(api, day_session, txf_query_date, symbol="txf")
+            txf_close = _get_last_close(api, day_session, tse_query_date, symbol="txf")
             tse_close = _get_last_close(api, day_session, tse_query_date, symbol="tse")
 
             if txf_close is not None and tse_close is not None:
