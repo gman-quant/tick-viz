@@ -4,7 +4,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from src.utils.session_time import get_range
+from src.utils.session_time import get_observation_window, get_sliding_window
 import config
 
 # 導入相依的處理函式
@@ -72,7 +72,8 @@ def _configure_layout(fig: go.Figure):
     )
 
 
-    st_dt, ed_dt = get_range(config.START_DATETIME, config.END_DATETIME, config.TAIWAN_TZ)
+    st_dt, ed_dt = get_observation_window(config.START_DATETIME, config.END_DATETIME, config.TAIWAN_TZ)
+    # st_dt, ed_dt = get_sliding_window(config.START_DATETIME, config.END_DATETIME, config.TAIWAN_TZ)
     # 2. 將通用設定一次性應用到所有 X 軸上
     fig.update_xaxes(
         showspikes=True, 

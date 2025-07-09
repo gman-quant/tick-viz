@@ -14,7 +14,7 @@ import config
 from src.data_sourcing import fetch_ticks, market_data
 from src.processing import volume_bars
 from src.visualization import main_chart, candlestick_chart, report_generator, stats_table
-from src.utils.session_time import get_datetimes, is_day_session
+from src.utils.session_time import get_trading_session, is_day_session
 
 clients = set()
 
@@ -54,15 +54,7 @@ async def data_loop():
     fixed_offsets = consumer.offsets_for_times(topic_partitions)
     current_offsets = fixed_offsets.copy()
 
-
-    st_dt = config.START_DATETIME
-    if not is_day_session(st_dt.time()):
-        st_dt += timedelta(days=1)
-    txf_prev_close, taiex_prev_close = market_data.find_previous_close(
-        api_key=config.SHIOAJI_API_KEY, 
-        secret_key=config.SHIOAJI_SECRET_KEY, 
-        target_date=st_dt.date()
-    )
+    txf_prev_close, taiex_prev_close = market_data.find_previous_close()
 
     df = None
     tick_dict = {}
@@ -82,7 +74,7 @@ async def data_loop():
             now_date, now_time = dt_now.date(), dt_now.time()
             day_session = is_day_session(now_time)
             
-            start_dt, end_dt = get_datetimes(now_date, day_session, config.IS_REALTIME_MODE, config.TAIWAN_TZ)
+            start_dt, end_dt = get_trading_session(now_date, day_session, config.IS_REALTIME_MODE, config.TAIWAN_TZ)
             config.START_DATETIME = start_dt
             config.END_DATETIME = end_dt
 
@@ -121,7 +113,8 @@ async def data_loop():
                     report_title=config.REPORT_TITLE,
                 )
                 # 通知前端自動更新
-                await notify_clients()
+                if config.IS_REALTIME_MODE:
+                    await notify_clients()
             else:
                 print("⚠️ 沒有新資料，請確認時間或來源。")
 

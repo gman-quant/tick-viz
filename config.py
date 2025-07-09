@@ -9,7 +9,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 
-from src.utils.session_time import get_datetimes
+from src.utils.session_time import get_trading_session
 
 # === Load environment variables ===
 load_dotenv()
@@ -29,12 +29,12 @@ TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 # Toggle between real-time mode and historical mode
 # True  → constantly update report using current time
 # False → generate one-time report for a fixed time window
-IS_REALTIME_MODE = 1
+IS_REALTIME_MODE = 0
 
 # Base date and session type for historical mode
 DATE         = date(2025, 7, 7)
 DAY_SESSION  = 1  # True = 08:30–13:45, False = 14:50–05:00
-START_DATETIME, END_DATETIME = get_datetimes(DATE, DAY_SESSION, IS_REALTIME_MODE, TAIWAN_TZ)
+START_DATETIME, END_DATETIME = get_trading_session(DATE, DAY_SESSION, IS_REALTIME_MODE, TAIWAN_TZ)
 
 # === Chart and output settings ===
 
@@ -42,7 +42,7 @@ START_DATETIME, END_DATETIME = get_datetimes(DATE, DAY_SESSION, IS_REALTIME_MODE
 CLEAR_SCREEN_EACH_CYCLE = True
 
 # Number of contracts per volume-based bar
-VOLUME_PER_BAR = 1000
+VOLUME_PER_BAR = 1000 if DAY_SESSION else 500
 
 # Interval (in seconds) to update data and trigger frontend auto-refresh
 UPDATE_INTERVAL = 12
@@ -53,7 +53,11 @@ UPDATE_INTERVAL = 12
 REPORT_TITLE = (
     "TXF-Charts-Live"
     if IS_REALTIME_MODE
-    else f"TXF-Charts_{START_DATETIME.strftime('%Y-%m-%d_%H%M')}"
+    else 
+    f"TXF-Charts_1_{START_DATETIME.strftime('%Y-%m-%d')}" 
+    if DAY_SESSION
+    else
+    f"TXF-Charts_2_{START_DATETIME.strftime('%Y-%m-%d')}"
 )
 
 # Output directory for HTML report

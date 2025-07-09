@@ -4,7 +4,7 @@ from datetime import datetime, time as dt_time, timedelta, date
 from zoneinfo import ZoneInfo
 
 
-def get_datetimes(trade_date: date, is_day_session: bool, is_real_time_mode: bool, tz: ZoneInfo) -> tuple[datetime, datetime]:
+def get_trading_session(trade_date: date, is_day_session: bool, is_real_time_mode: bool, tz: ZoneInfo) -> tuple[datetime, datetime]:
     """
     Generate the start and end datetime for a specific trading session.
 
@@ -24,10 +24,10 @@ def get_datetimes(trade_date: date, is_day_session: bool, is_real_time_mode: boo
 
     if is_day_session:
         # Day session: Same-day range from 08:30 to 13:45
-        start_time, end_time = dt_time(8, 30), dt_time(13, 45)
+        start_time, end_time = dt_time(8, 30), dt_time(13, 46)
     else:
         # Night session: From 14:50 to 05:00 (spans two calendar days)
-        start_time, end_time = dt_time(14, 50), dt_time(5, 0)
+        start_time, end_time = dt_time(14, 50), dt_time(5, 1)
         one_day = timedelta(days=1)
 
         if not is_real_time_mode:
@@ -59,16 +59,37 @@ def is_day_session(now_time: dt_time) -> bool:
     """
     return dt_time(8, 30) <= now_time < dt_time(14, 50)
 
-def get_range(st_dt: datetime, ed_dt: datetime, tz: ZoneInfo) -> tuple[datetime, datetime]:
-    new_st_dt = st_dt
-    new_ed_dt = datetime.now(tz=tz) + timedelta(hours=1)
-    if st_dt.time() == dt_time(8, 30):
-        new_st_dt += timedelta(minutes=15)
+def get_observation_window(start: datetime, end: datetime, tz: ZoneInfo) -> tuple[datetime, datetime]:
+    """
+    根據觀察邏輯調整時間範圍：
+    - 若起始時間為 08:30，跳過開盤高雜訊，往後推 15 分鐘
+    - 其餘情況則推 10 分鐘
+    - 結束時間為「現在時間 + 1 小時」與原始 end 的最小值
+    """
+    now = datetime.now(tz=tz)
+    if start.time() == dt_time(8, 30):
+        adjusted_start = start + timedelta(minutes=15)
     else:
-        new_st_dt += timedelta(minutes=10)
+        adjusted_start = start + timedelta(minutes=10)
+    
+    adjusted_end = min(end, now + timedelta(hours=1))
+    return adjusted_start, adjusted_end
 
-    if new_ed_dt > ed_dt:
-        new_ed_dt = ed_dt
-
-    return new_st_dt, new_ed_dt
+def get_sliding_window(
+    start: datetime,
+    end: datetime,
+    tz: ZoneInfo,
+    lookback_minutes: int = 120,
+    lookahead_minutes: int = 60
+) -> tuple[datetime, datetime]:
+    """
+    取得以現在時間為中心的區間：
+    - 往前推 `lookback_minutes` 分鐘作為起點
+    - 往後推 `lookahead_minutes` 分鐘作為終點
+    - 並限制在 [start, end] 範圍內
+    """
+    now = datetime.now(tz=tz)
+    window_start = max(start, now - timedelta(minutes=lookback_minutes))
+    window_end = min(end, now + timedelta(minutes=lookahead_minutes))
+    return window_start, window_end
 
