@@ -57,7 +57,7 @@ REPORT_TITLE = (
     f"TXF-Charts_1_{START_DATETIME.strftime('%Y-%m-%d')}" 
     if DAY_SESSION
     else
-    f"TXF-Charts_2_{START_DATETIME.strftime('%Y-%m-%d')}_kafka"
+    f"TXF-Charts_2_{START_DATETIME.strftime('%Y-%m-%d')}"
 )
 
 # Output directory for HTML report
