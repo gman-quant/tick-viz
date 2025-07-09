@@ -32,7 +32,7 @@ TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 IS_REALTIME_MODE = 1
 
 # Base date and session type for historical mode
-DATE         = date(2025, 7, 9)
+DATE         = date(2025, 6, 20)
 DAY_SESSION  = 0  # True = 08:30–13:45, False = 14:50–05:00
 START_DATETIME, END_DATETIME = get_trading_session(DATE, DAY_SESSION, IS_REALTIME_MODE, TAIWAN_TZ)
 
@@ -57,7 +57,7 @@ REPORT_TITLE = (
     f"TXF-Charts_1_{START_DATETIME.strftime('%Y-%m-%d')}" 
     if DAY_SESSION
     else
-    f"TXF-Charts_2_{START_DATETIME.strftime('%Y-%m-%d')}"
+    f"TXF-Charts_2_{START_DATETIME.strftime('%Y-%m-%d')}_kafka"
 )
 
 # Output directory for HTML report

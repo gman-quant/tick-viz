@@ -20,18 +20,18 @@ def _add_price_traces(fig: go.Figure, df: pd.DataFrame):
     """在 fig 的第1列新增價格相關走勢圖。"""
     row, col = 1, 1
     # 疊加其他指標線 (使用原始高密度資料)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["underlying_price"], name="[現貨] TAIEX", line=dict(color="blue", width=1), visible='legendonly'), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["underlying_price"], name="[現貨] TAIEX", line=dict(color="blue", width=1), visible=True), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rrp_by_taiex"], name="[期貨] 參考價", line=dict(color="gray", width=1), visible=True), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["close"], name="[期貨] TXF", line=dict(color="white", width=1)), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["avg_price"], name="VWAP", line=dict(color="orange", dash="solid", width=1)), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["high"], name="High", line=dict(color="green", dash="dash", width=1)), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["low"], name="Low", line=dict(color="Red", dash="dash", width=1)), row=row, col=col)
     
-    # 更新 Y 軸設定
-    high, low = max(df.iloc[-1].high, df.iloc[-1].rrp_high), min(df.iloc[-1].low, df.iloc[-1].rrp_low)
-    padding = (high - low) * 0.1
-    fig.update_yaxes(title_text="價格", tickformat=".0f", row=row, col=col, 
-                     range=[low - padding, high + padding])
+    # # 更新 Y 軸設定
+    # high, low = max(df.iloc[-1].high, df.iloc[-1].rrp_high), min(df.iloc[-1].low, df.iloc[-1].rrp_low)
+    # padding = (high - low) * 0.1
+    fig.update_yaxes(title_text="價格", tickformat=".0f", row=row, col=col,) 
+    #                  range=[low - padding, high + padding])
     fig.update_xaxes(rangeslider_visible=False, row=row, col=col)
 
 
@@ -46,7 +46,7 @@ def _add_volume_traces(fig: go.Figure, df: pd.DataFrame):
 def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
     """在 fig 的第2列新增折溢價圖。"""
     row, col = 2, 1
-    fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_premium"], name="[期貨-現貨] 折溢價", line=dict(color="blue", width=1), visible='legendonly'), row=row, col=col)
+    fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_premium"], name="[期貨-現貨] 折溢價", line=dict(color="blue", width=1), visible=True), row=row, col=col)
     fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_to_rrp_premium"], name="[期貨-參考價] 折溢價", line=dict(color="gray", width=1)), row=row, col=col)
     fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_to_vwap_premium"], name="[期貨-VWAP] 折溢價", line=dict(color="orange", width=1)), row=row, col=col)
     fig.update_yaxes(title_text="折溢價(-/+)", tickformat=".0f", row=row, col=col, autorange=True)

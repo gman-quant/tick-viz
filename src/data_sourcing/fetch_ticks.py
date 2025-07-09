@@ -1,17 +1,19 @@
 # tick-viz/src/data_sourcing/fetch_ticks.py
 
+
+from contextlib import contextmanager
 from datetime import datetime, timedelta, time as dt_time
 from pathlib import Path
 
-from confluent_kafka import Consumer, KafkaError
 import orjson
 import pandas as pd
 import shioaji as sj
+from confluent_kafka import Consumer, KafkaError
 
 import config
 from src.utils.time_parser import parse_tick_datetime
 
-def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: datetime, end_datetime: datetime, tick_dict: dict) -> tuple[pd.DataFrame, list]:
+def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: datetime, end_datetime: datetime, tick_list: list) -> tuple[pd.DataFrame, list]:
     """
     從 Kafka 擷取指定時間區間內的 tick 資料。
     """
@@ -49,15 +51,16 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
                 break
 
             if start_datetime <= tick_dt_taiwan <= end_datetime and not record.get('simtrade', False):
-                tick_dict[tick_dt_taiwan] = record
+                tick_list.append(record)
 
     except KeyboardInterrupt:
         print("🛑 使用者手動中止。")
 
-    df = pd.DataFrame(tick_dict.values())
+    df = pd.DataFrame(tick_list)
     if not df.empty:
         df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601')
         df.sort_values(by='datetime', inplace=True)
+        df.drop_duplicates(inplace=True)
 
     print(f"✅ 共取得 {len(df)} 筆資料")
     
@@ -76,93 +79,111 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
     
     return df, new_offsets
 
-def fetch_ticks_from_shioaji(api_key: str, secret_key: str) -> pd.DataFrame:
-    """
-    從 Shioaji 獲取並處理 Tick 資料。
-    
-    此版本邏輯：
-    1. 獲取整日的 Tick 資料。
-    2. 立刻篩選出 `start_datetime` 到 `end_datetime` 的區間。
-    3. 僅對此區間內的資料計算累計指標 (high, low, cumsum_vol, vwap)。
-    """
-    target_date = config.DATE if config.DAY_SESSION else (config.DATE + timedelta(days=1))
-    
-    output_dir = Path(__file__).resolve().parents[2] / "data"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    txf_file = output_dir / f"txf-ticks_{target_date}.parquet"
-    tse_file = output_dir / f"tse-ticks_{config.DATE}.parquet"
 
+# --- 1. 使用內容管理器，確保 API 安全登入與登出 ---
+@contextmanager
+def shioaji_session(api_key: str, secret_key: str):
+    """A context manager to safely handle Shioaji API login and logout."""
     api = None
     try:
-        if txf_file.exists() and tse_file.exists():
-            df = pd.read_parquet(txf_file)
-            df2 = pd.read_parquet(tse_file)
-        else:
-            api = sj.Shioaji(simulation=True)
-            api.login(api_key=api_key, secret_key=secret_key)
-
-            if txf_file.exists():
-                df = pd.read_parquet(txf_file)
-            else:
-                ticks = api.ticks(
-                    contract=api.Contracts.Futures.TXF.TXFR1,
-                    date=str(target_date)
-                )
-                if not ticks['ts']:
-                    raise ValueError("未找到指定日期的 tick 資料。請確認交易日是否正確。")
-                
-                df = pd.DataFrame({**ticks})
-                df.ts = pd.to_datetime(df['ts']).dt.tz_localize(config.TAIWAN_TZ)
-                df.rename(columns={'ts': 'datetime'}, inplace=True)
-                df = df.sort_values(by='datetime')
-                df.to_parquet(txf_file)
-
-            if tse_file.exists():
-                df2 = pd.read_parquet(tse_file)
-            else:
-                ticks = api.ticks(
-                    contract=api.Contracts.Indexs.TSE.TSE001, 
-                    date=str(config.DATE)
-                )
-                if not ticks['ts']:
-                    raise ValueError("未找到指定日期的 tick 資料。請確認交易日是否正確。")
-                
-                df2 = pd.DataFrame({**ticks})
-                df2.ts = pd.to_datetime(df2['ts']).dt.tz_localize(config.TAIWAN_TZ)
-                df2.rename(columns={'ts': 'datetime'}, inplace=True)
-                df2 = df2.sort_values(by='datetime')
-                df2.to_parquet(tse_file)
-
-        first_row = df2.iloc[[0]].copy()
-        first_row.loc[first_row.index[0], 'datetime'] = config.START_DATETIME
-        df2 = pd.concat([first_row, df2], ignore_index=True)
-        # 合併
-        df['datetime'] = pd.to_datetime(df['datetime']).dt.tz_convert(config.TAIWAN_TZ)
-        df2['datetime'] = pd.to_datetime(df2['datetime']).dt.tz_convert(config.TAIWAN_TZ)
-        df = df.sort_values(by='datetime')
-        df2 = df2.sort_values(by='datetime')
-        df2 = df2[df2['datetime'].dt.time < dt_time(13, 46)]
-        # print(f"txf: {df}")
-        # print(f"tse: {df2}")
-        df = pd.merge_asof(df, df2[['datetime', 'close']], on='datetime', direction='backward', suffixes=('', '_TSE')).set_index('datetime')
-        
-        # 1. 先篩選：設定時間戳為索引，並使用 .loc 精確篩選出您指定的時間窗口
-        df = df.loc[config.START_DATETIME : config.END_DATETIME].copy().reset_index()
-
-        # 2. 後計算：對篩選後的 df_window 進行指標計算
-        #    這樣所有 cumsum, cummax 等都會從 df 的第一筆資料（即 start_datetime 的資料）開始
-        return df.rename(columns={'close_TSE': 'underlying_price'}).assign(
-            bid_side_total_vol = lambda x: x['volume'].where(x['tick_type'] == 1, 0).cumsum(),
-            ask_side_total_vol = lambda x: x['volume'].where(x['tick_type'] == 2, 0).cumsum(),
-            high = lambda x: x['close'].cummax(),
-            low = lambda x: x['close'].cummin(),
-            avg_price = lambda x: (x['close'] * x['volume']).cumsum() / x['volume'].cumsum()
-        )
-    
-    except Exception as e:
-        raise RuntimeError(f"無法從 Shioaji 獲取 Tick 資料: {e}")
-    
+        api = sj.Shioaji(simulation=True)
+        api.login(api_key=api_key, secret_key=secret_key)
+        yield api
     finally:
         if api:
             api.logout()
 
+# --- 2. 抽取輔助函式，處理資料獲取與快取 ---
+def _get_or_fetch_contract_ticks(
+    api: sj.Shioaji, contract: sj.contracts.Contract, date: str, cache_file: Path
+) -> pd.DataFrame:
+    """
+    Reads tick data from a cache file if it exists, otherwise fetches it
+    from the Shioaji API and saves it to the cache.
+    """
+    if cache_file.exists():
+        return pd.read_parquet(cache_file)
+
+    if not api:
+        raise ConnectionError("Shioaji API session not available for fetching data.")
+
+    print(f"Cache not found for {cache_file.name}. Fetching from API...")
+    ticks = api.ticks(contract=contract, date=date)
+    if not ticks['ts']:
+        raise ValueError(f"No tick data found for {contract.code} on {date}.")
+
+    df = pd.DataFrame({**ticks})
+    df['datetime'] = pd.to_datetime(df.pop('ts')).dt.tz_localize(config.TAIWAN_TZ)
+    df = df.sort_values(by='datetime').reset_index(drop=True)
+    df.to_parquet(cache_file)
+    return df
+
+# --- 3. 重構後的主函式 ---
+def fetch_ticks_from_shioaji(api_key: str, secret_key: str) -> pd.DataFrame:
+    """
+    Fetches and processes tick data from Shioaji, using local cache if available.
+    
+    Logic:
+    1. Fetch daily tick data for both TXF and TSE (from cache or API).
+    2. Merge the datasets.
+    3. Filter the merged data for the specific time window.
+    4. Calculate cumulative metrics on the filtered window.
+    """
+    try:
+        # --- 設定日期與檔案路徑 ---
+        target_date_str = str(config.DATE if config.DAY_SESSION else (config.DATE + timedelta(days=1)))
+        date_str = str(config.DATE)
+        
+        output_dir = Path(__file__).resolve().parents[2] / "data"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        txf_file = output_dir / f"txf-ticks_{target_date_str}.parquet"
+        tse_file = output_dir / f"tse-ticks_{date_str}.parquet"
+
+        # --- 獲取資料 (優先從快取讀取) ---
+        # 只有當檔案不存在時，才需要建立 API 連線
+        if not txf_file.exists() or not tse_file.exists():
+            with shioaji_session(api_key, secret_key) as api:
+                # 建立 Shioaji Contracts 物件
+                txf_contract = api.Contracts.Futures.TXF.TXFR1
+                tse_contract = api.Contracts.Indexs.TSE.TSE001
+                
+                df_txf = _get_or_fetch_contract_ticks(api, txf_contract, target_date_str, txf_file)
+                df_tse = _get_or_fetch_contract_ticks(api, tse_contract, date_str, tse_file)
+        else:
+            df_txf = pd.read_parquet(txf_file)
+            df_tse = pd.read_parquet(tse_file)
+
+        # --- 資料處理與合併 ---
+        # 為了 merge_asof，確保 TSE 資料在起始時間有對應值
+        first_row = df_tse.iloc[[0]].copy()
+        first_row['datetime'] = config.START_DATETIME
+        df_tse_adjusted = pd.concat([first_row, df_tse], ignore_index=True)
+        
+        # 統一時區並排序，準備合併
+        df_txf['datetime'] = pd.to_datetime(df_txf['datetime']).dt.tz_convert(config.TAIWAN_TZ)
+        df_tse_adjusted['datetime'] = pd.to_datetime(df_tse_adjusted['datetime']).dt.tz_convert(config.TAIWAN_TZ)
+        
+        df_merged = pd.merge_asof(
+            df_txf.sort_values(by='datetime'),
+            df_tse_adjusted[['datetime', 'close']].sort_values(by='datetime'),
+            on='datetime',
+            direction='backward',
+            suffixes=('', '_TSE')
+        ).set_index('datetime')
+        
+        # --- 篩選與計算 ---
+        # 1. 先篩選出指定時間窗口
+        df_window = df_merged.loc[config.START_DATETIME : config.END_DATETIME].copy().reset_index()
+
+        # 2. 僅對此窗口內的資料計算累計指標
+        return df_window.rename(columns={'close_TSE': 'underlying_price'}).assign(
+            bid_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 1, 0).cumsum(),
+            ask_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 2, 0).cumsum(),
+            high=lambda x: x['close'].cummax(),
+            low=lambda x: x['close'].cummin(),
+            avg_price=lambda x: (x['close'] * x['volume']).cumsum() / x['volume'].cumsum()
+        )
+    
+    except Exception as e:
+        # 將所有可能的錯誤包裝成一個統一的 Runtime 錯誤
+        raise RuntimeError(f"Failed to fetch tick data from Shioaji: {e}") from e

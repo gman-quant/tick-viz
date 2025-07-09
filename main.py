@@ -57,7 +57,7 @@ async def data_loop():
     txf_prev_close, taiex_prev_close = market_data.find_previous_close()
 
     df = None
-    tick_dict = {}
+    tick_list = []
 
     print("✅ 初始化完成。\n")
 
@@ -83,13 +83,13 @@ async def data_loop():
             print(f"🔄 資料區間: {config.START_DATETIME} ~ {config.END_DATETIME}")
 
         try:
-            if config.IS_REALTIME_MODE:
+            if True:#config.IS_REALTIME_MODE:
                 df, current_offsets = fetch_ticks.fetch_ticks_from_kafka(
                     consumer=consumer, 
                     offsets=current_offsets, 
                     start_datetime=config.START_DATETIME, 
                     end_datetime=config.END_DATETIME, 
-                    tick_dict=tick_dict
+                    tick_list=tick_list
                 )
             else:
                 df = fetch_ticks.fetch_ticks_from_shioaji(
