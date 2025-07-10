@@ -93,6 +93,7 @@ def plot_candlestick_with_volume_delta(df: pd.DataFrame):
         spikemode='across', 
         spikesnap='cursor', 
         showline=True,
+        spikethickness=1,
         # 【關鍵修改】強制顯示所有子圖的 x 軸刻度標籤
         showticklabels=True,
         range=[st_dt, ed_dt],

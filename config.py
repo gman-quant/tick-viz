@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 
 from src.utils.session_time import get_trading_session
+from src.processing.volume_bars import get_volume_per_bar
 
 # === Load environment variables ===
 load_dotenv()
@@ -32,8 +33,8 @@ TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 IS_REALTIME_MODE = 1
 
 # Base date and session type for historical mode
-DATE         = date(2025, 6, 20)
-DAY_SESSION  = 0  # True = 08:30–13:45, False = 14:50–05:00
+DATE         = date(2025, 7, 7)
+DAY_SESSION  = 1  # True = 08:30–13:45, False = 14:50–05:00
 START_DATETIME, END_DATETIME = get_trading_session(DATE, DAY_SESSION, IS_REALTIME_MODE, TAIWAN_TZ)
 
 # === Chart and output settings ===
@@ -42,22 +43,24 @@ START_DATETIME, END_DATETIME = get_trading_session(DATE, DAY_SESSION, IS_REALTIM
 CLEAR_SCREEN_EACH_CYCLE = True
 
 # Number of contracts per volume-based bar
-VOLUME_PER_BAR = 1000 if DAY_SESSION else 500
+VOLUME_PER_BAR = get_volume_per_bar(DAY_SESSION)
 
 # Interval (in seconds) to update data and trigger frontend auto-refresh
 UPDATE_INTERVAL = 12
 
 # === Report generation settings ===
+# Data Source
+DATA_SOURCE = "kafka" # "kafka" if you have
 
 # Report title (also used as output file name)
 REPORT_TITLE = (
     "TXF-Charts-Live"
     if IS_REALTIME_MODE
     else 
-    f"TXF-Charts_1_{START_DATETIME.strftime('%Y-%m-%d')}" 
+    f"TXF-Charts_1_{START_DATETIME.strftime('%Y-%m-%d')}_{DATA_SOURCE}" 
     if DAY_SESSION
     else
-    f"TXF-Charts_2_{START_DATETIME.strftime('%Y-%m-%d')}"
+    f"TXF-Charts_2_{START_DATETIME.strftime('%Y-%m-%d')}_{DATA_SOURCE}"
 )
 
 # Output directory for HTML report

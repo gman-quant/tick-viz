@@ -64,13 +64,15 @@ def _configure_layout(fig: go.Figure):
     """設定圖表的整體佈局、標題與圖例。"""
     # 1. 更新圖表的整體佈局
     fig.update_layout(
+        hovermode='x unified',
+
         title=dict(text="價格走勢與淨主動成交量", y=0.95),
         template='plotly_dark',
         height=2000,
         showlegend=True,
         legend=dict(x=0.5, y=1.1, orientation="h", xanchor="center", yanchor="bottom"),
-    )
 
+    )
 
     st_dt, ed_dt = get_observation_window(config.START_DATETIME, config.END_DATETIME, config.TAIWAN_TZ)
     # st_dt, ed_dt = get_sliding_window(config.START_DATETIME, config.END_DATETIME, config.TAIWAN_TZ)
@@ -80,6 +82,7 @@ def _configure_layout(fig: go.Figure):
         spikemode='across', 
         spikesnap='cursor', 
         showline=True,
+        spikethickness=1,
         # 【關鍵修改】強制顯示所有子圖的 x 軸刻度標籤
         showticklabels=True,
         range=[st_dt, ed_dt],
@@ -91,7 +94,7 @@ def _configure_layout(fig: go.Figure):
 # 主要的繪圖函式 (重構後)
 # ----------------------------------------------------------------------------
 
-def plot_tick_analysis(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close: float) -> go.Figure:
+def create_tick_analysis_figure(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close: float) -> go.Figure:
     """
     視覺化 Tick 資料，整合價格、基差、主動成交量等多維度分析。
     

@@ -90,3 +90,4 @@ def generate_html_report(
     print(f"✅ 報告已成功生成至: {output_path}")
     http_url = f"http://localhost:8080/{report_title}.html"
     print(f"🌐 報表網址：{http_url}\n")
+

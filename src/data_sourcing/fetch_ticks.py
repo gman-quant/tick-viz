@@ -11,7 +11,9 @@ import shioaji as sj
 from confluent_kafka import Consumer, KafkaError
 
 import config
+from src.data_sourcing.market_data import get_contract
 from src.utils.time_parser import parse_tick_datetime
+from src.utils.resource_contexts import shioaji_session
 
 def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: datetime, end_datetime: datetime, tick_list: list) -> tuple[pd.DataFrame, list]:
     """
@@ -80,20 +82,7 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
     return df, new_offsets
 
 
-# --- 1. 使用內容管理器，確保 API 安全登入與登出 ---
-@contextmanager
-def shioaji_session(api_key: str, secret_key: str):
-    """A context manager to safely handle Shioaji API login and logout."""
-    api = None
-    try:
-        api = sj.Shioaji(simulation=True)
-        api.login(api_key=api_key, secret_key=secret_key)
-        yield api
-    finally:
-        if api:
-            api.logout()
-
-# --- 2. 抽取輔助函式，處理資料獲取與快取 ---
+# --- 抽取輔助函式，處理資料獲取與快取 ---
 def _get_or_fetch_contract_ticks(
     api: sj.Shioaji, contract: sj.contracts.Contract, date: str, cache_file: Path
 ) -> pd.DataFrame:
@@ -113,12 +102,12 @@ def _get_or_fetch_contract_ticks(
         raise ValueError(f"No tick data found for {contract.code} on {date}.")
 
     df = pd.DataFrame({**ticks})
-    df['datetime'] = pd.to_datetime(df.pop('ts')).dt.tz_localize(config.TAIWAN_TZ)
-    df = df.sort_values(by='datetime').reset_index(drop=True)
+    df['ts'] = pd.to_datetime(df['ts']).dt.tz_localize(config.TAIWAN_TZ)
+    df.rename(columns={'ts': 'datetime'}, inplace=True)
     df.to_parquet(cache_file)
     return df
 
-# --- 3. 重構後的主函式 ---
+
 def fetch_ticks_from_shioaji(api_key: str, secret_key: str) -> pd.DataFrame:
     """
     Fetches and processes tick data from Shioaji, using local cache if available.
@@ -144,8 +133,8 @@ def fetch_ticks_from_shioaji(api_key: str, secret_key: str) -> pd.DataFrame:
         if not txf_file.exists() or not tse_file.exists():
             with shioaji_session(api_key, secret_key) as api:
                 # 建立 Shioaji Contracts 物件
-                txf_contract = api.Contracts.Futures.TXF.TXFR1
-                tse_contract = api.Contracts.Indexs.TSE.TSE001
+                txf_contract = get_contract(api, "txf")
+                tse_contract = get_contract(api, "tse")
                 
                 df_txf = _get_or_fetch_contract_ticks(api, txf_contract, target_date_str, txf_file)
                 df_tse = _get_or_fetch_contract_ticks(api, tse_contract, date_str, tse_file)
@@ -155,22 +144,23 @@ def fetch_ticks_from_shioaji(api_key: str, secret_key: str) -> pd.DataFrame:
 
         # --- 資料處理與合併 ---
         # 為了 merge_asof，確保 TSE 資料在起始時間有對應值
-        first_row = df_tse.iloc[[0]].copy()
-        first_row['datetime'] = config.START_DATETIME
-        df_tse_adjusted = pd.concat([first_row, df_tse], ignore_index=True)
-        
+        first_row_df = pd.DataFrame([df_tse.iloc[0].copy()])
+        first_row_df['datetime'] = first_row_df['datetime'] - timedelta(minutes=30)
+        df_tse_adjusted = pd.concat([first_row_df, df_tse], ignore_index=True)
+        df_tse_adjusted = df_tse_adjusted[df_tse_adjusted['datetime'].dt.time < dt_time(13, 46)]
+
         # 統一時區並排序，準備合併
         df_txf['datetime'] = pd.to_datetime(df_txf['datetime']).dt.tz_convert(config.TAIWAN_TZ)
         df_tse_adjusted['datetime'] = pd.to_datetime(df_tse_adjusted['datetime']).dt.tz_convert(config.TAIWAN_TZ)
-        
+
         df_merged = pd.merge_asof(
-            df_txf.sort_values(by='datetime'),
-            df_tse_adjusted[['datetime', 'close']].sort_values(by='datetime'),
+            df_txf,
+            df_tse_adjusted[['datetime', 'close']],
             on='datetime',
             direction='backward',
             suffixes=('', '_TSE')
         ).set_index('datetime')
-        
+
         # --- 篩選與計算 ---
         # 1. 先篩選出指定時間窗口
         df_window = df_merged.loc[config.START_DATETIME : config.END_DATETIME].copy().reset_index()
