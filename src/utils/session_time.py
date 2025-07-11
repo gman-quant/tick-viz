@@ -4,7 +4,13 @@ from datetime import datetime, time as dt_time, timedelta, date
 from zoneinfo import ZoneInfo
 
 
-def get_trading_session(trade_date: date, day_session: bool = None, is_real_time_mode: bool = True, tz: ZoneInfo = None) -> tuple[datetime, datetime]:
+def get_trading_session(
+        trade_date: date, 
+        day_session: bool = None, 
+        is_real_time_mode: bool = True, 
+        tz: ZoneInfo = None
+) -> tuple[datetime, datetime]:
+    
     start_date = end_date = trade_date
     start_time = end_time = None
     now_time = datetime.now().time()

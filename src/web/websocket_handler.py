@@ -1,7 +1,6 @@
 # src/web/websocket_handler.py
-
-
 from aiohttp import web
+import asyncio
 
 clients = set()
 
@@ -20,4 +19,4 @@ async def websocket_handler(request):
 
 async def notify_clients():
     if clients:
-        await web.broadcast(clients, "reload")
+        await asyncio.gather(*[ws.send_str("reload") for ws in clients])

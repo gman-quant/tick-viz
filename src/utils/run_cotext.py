@@ -5,6 +5,8 @@ from datetime import datetime, date
 from src.utils.session_time import get_trading_session
 from src.processing.volume_bars import get_volume_per_bar
 
+from config import TAIWAN_TZ
+
 class RunContext:
     def __init__(self, is_real_time_mode: bool, trade_date: date, day_session: int, data_source: str):
         self.is_real_time_mode = is_real_time_mode
@@ -15,7 +17,7 @@ class RunContext:
     @property
     def trading_session(self) -> tuple[datetime, datetime]:
         """回傳 (start_datetime, end_datetime)"""
-        return get_trading_session(self.trade_date, self.day_session, self.is_real_time_mode)
+        return get_trading_session(self.trade_date, self.day_session, self.is_real_time_mode, TAIWAN_TZ)
 
     @property
     def start_datetime(self) -> datetime:

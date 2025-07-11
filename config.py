@@ -13,7 +13,7 @@ from src.utils.session_time import get_trading_session
 from src.processing.volume_bars import get_volume_per_bar
 
 # === Load environment variables ===
-load_dotenv()
+load_dotenv(override=True)
 
 # === Shioaji API credentials ===
 SHIOAJI_API_KEY    = os.environ.get('SHIOAJI_API_KEY')
