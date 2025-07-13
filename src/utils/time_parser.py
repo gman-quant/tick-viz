@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from dateutil import parser
-from config import TAIWAN_TZ
+from config.config import TAIWAN_TZ
 
 combine = datetime.combine
 

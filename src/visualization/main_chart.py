@@ -5,7 +5,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from src.utils.session_time import get_observation_window, get_sliding_window
-import config
+import config.config as config
+from config.run_context import RunContext
 
 # 導入相依的處理函式
 # 假設您已將 _prepare_plot_data 移至 metrics.py
@@ -60,12 +61,11 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
     fig.update_yaxes(title_text="淨主動成交量(口)", tickformat=".0f", row=row, col=col, autorange=True)
 
 
-def _configure_layout(fig: go.Figure):
+def _configure_layout(fig: go.Figure, ctx: RunContext):
     """設定圖表的整體佈局、標題與圖例。"""
     # 1. 更新圖表的整體佈局
     fig.update_layout(
         hovermode='x unified',
-
         title=dict(text="價格走勢與淨主動成交量", y=0.95),
         template='plotly_dark',
         height=2000,
@@ -74,8 +74,8 @@ def _configure_layout(fig: go.Figure):
 
     )
 
-    st_dt, ed_dt = get_observation_window(config.START_DATETIME, config.END_DATETIME, config.TAIWAN_TZ)
-    # st_dt, ed_dt = get_sliding_window(config.START_DATETIME, config.END_DATETIME, config.TAIWAN_TZ)
+    st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
+    # st_dt, ed_dt = get_sliding_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
     # 2. 將通用設定一次性應用到所有 X 軸上
     fig.update_xaxes(
         showspikes=True, 
@@ -94,7 +94,7 @@ def _configure_layout(fig: go.Figure):
 # 主要的繪圖函式 (重構後)
 # ----------------------------------------------------------------------------
 
-def create_tick_analysis_figure(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close: float) -> go.Figure:
+def create_tick_analysis_figure(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close: float, ctx: RunContext) -> go.Figure:
     """
     視覺化 Tick 資料，整合價格、基差、主動成交量等多維度分析。
     
@@ -125,7 +125,7 @@ def create_tick_analysis_figure(df: pd.DataFrame, txf_prev_close: float, taiex_p
     _add_volume_traces(fig, plot_df)
 
     # 4. 設定圖表全域樣式
-    _configure_layout(fig)
+    _configure_layout(fig, ctx)
 
     # 5. 【關鍵修改】回傳 Figure 物件，而不是顯示或儲存它
     return fig

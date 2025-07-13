@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from confluent_kafka import Consumer
 import shioaji as sj
 
-import config
+import config.config as config
 
 
 @contextmanager

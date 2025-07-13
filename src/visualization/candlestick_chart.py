@@ -5,9 +5,10 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from src.utils.session_time import get_observation_window, get_sliding_window
-import config
+import config.config as config
+from config.run_context import RunContext
 
-def plot_candlestick_with_volume_delta(df: pd.DataFrame):
+def plot_candlestick_with_volume_delta(df: pd.DataFrame, ctx: RunContext):
     """
     繪製K線圖與下方的買賣盤成交量分析圖 (Volume Delta)。
     - 上方子圖: OHLC K線圖 (Candlestick)。
@@ -83,8 +84,8 @@ def plot_candlestick_with_volume_delta(df: pd.DataFrame):
         xaxis=dict(rangeslider_visible=False),
     )
 
-    st_dt, ed_dt = get_observation_window(config.START_DATETIME, config.END_DATETIME, config.TAIWAN_TZ)
-    # st_dt, ed_dt = get_sliding_window(config.START_DATETIME, config.END_DATETIME, config.TAIWAN_TZ)
+    st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
+    # st_dt, ed_dt = get_sliding_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
     # 7. 更新座標軸標題
     fig.update_yaxes(title_text="Price", tickformat=".0f", row=1, col=1)
     fig.update_yaxes(title_text="Volume", row=2, col=1)

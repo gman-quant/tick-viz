@@ -2,7 +2,7 @@
 
 
 from aiohttp import web
-import config
+import config.config as config
 from .websocket_handler import websocket_handler
 
 async def init_app():

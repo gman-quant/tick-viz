@@ -2,10 +2,12 @@
 
 import pandas as pd
 
-def get_volume_per_bar(day_session: bool = False) -> int:
-    return 1000 if day_session else 500
+from config.types import SessionType
 
-def generate_volume_bars(tick: pd.DataFrame, volume_per_bar=get_volume_per_bar()):
+def get_volume_per_bar(session_type: SessionType = SessionType.NIGHT) -> int:
+    return 1000 if session_type == SessionType.DAY else 500
+
+def generate_volume_bars(tick: pd.DataFrame, volume_per_bar: int = get_volume_per_bar()):
     """
     高效生成成交量 K棒 (Volume Bars)。
     函數僅依賴 datetime, close, 以及買賣雙方的累計成交量欄位。

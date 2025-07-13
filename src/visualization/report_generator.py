@@ -7,14 +7,14 @@ from typing import List
 import plotly.graph_objects as go
 import plotly.io as pio
 
-from config import IS_REALTIME_MODE
+from config.config import OUTPUT_DIR
+from config.run_context import RunContext
 
 
 def generate_html_report(
     figures: List[go.Figure], 
     stats_html: str, 
-    output_path: Path, 
-    report_title: str,
+    ctx: RunContext
 ):
     """
     將多個 Plotly 圖表和統計數據的 HTML 字串，合併成一個完整的 HTML 報告檔案。
@@ -26,6 +26,7 @@ def generate_html_report(
         report_title (str): HTML 網頁的標題。
         refresh_interval (int): 網頁自動刷新的秒數。
     """
+    output_path = OUTPUT_DIR / f"{ctx.report_title}.html"
     # 確保輸出目錄存在
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
@@ -44,7 +45,7 @@ def generate_html_report(
     last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # ⬇️ 根據模式決定是否加上 WebSocket 腳本
-    if IS_REALTIME_MODE:
+    if ctx.real_time_mode:
         websocket_script = """
         <script>
             const ws = new WebSocket("ws://localhost:8080/ws");
@@ -66,7 +67,7 @@ def generate_html_report(
     <head>
         <meta charset="UTF-8">
         <meta name="last-updated" content="{last_updated}">
-        <title>{report_title}</title>
+        <title>{ctx.report_title}</title>
         <style>
             /* 您可以在這裡定義一些 CSS 樣式 */
             body {{
@@ -88,6 +89,6 @@ def generate_html_report(
     # 將組合好的 HTML 內容寫入指定的檔案
     output_path.write_text(full_html_content, encoding="utf-8")
     print(f"✅ 報告已成功生成至: {output_path}")
-    http_url = f"http://localhost:8080/{report_title}.html"
+    http_url = f"http://localhost:8080/{ctx.report_title}.html"
     print(f"🌐 報表網址：{http_url}\n")
 

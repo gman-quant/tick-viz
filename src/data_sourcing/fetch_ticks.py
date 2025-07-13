@@ -1,4 +1,4 @@
-# tick-viz/src/data_sourcing/fetch_ticks.py
+# src/data_sourcing/fetch_ticks.py
 
 
 from contextlib import contextmanager
@@ -10,7 +10,9 @@ import pandas as pd
 import shioaji as sj
 from confluent_kafka import Consumer, KafkaError
 
-import config
+import config.config as config
+from config.run_context import RunContext
+from config.types import SessionType
 from src.data_sourcing.market_data import get_contract
 from src.utils.time_parser import parse_tick_datetime
 from src.utils.resource_contexts import shioaji_session
@@ -108,7 +110,7 @@ def _get_or_fetch_contract_ticks(
     return df
 
 
-def fetch_ticks_from_shioaji(api_key: str, secret_key: str) -> pd.DataFrame:
+def fetch_ticks_from_shioaji(ctx: RunContext, api_key: str, secret_key: str) -> pd.DataFrame:
     """
     Fetches and processes tick data from Shioaji, using local cache if available.
     
@@ -120,8 +122,8 @@ def fetch_ticks_from_shioaji(api_key: str, secret_key: str) -> pd.DataFrame:
     """
     try:
         # --- 設定日期與檔案路徑 ---
-        target_date_str = str(config.DATE if config.DAY_SESSION else (config.DATE + timedelta(days=1)))
-        date_str = str(config.DATE)
+        target_date_str = str(ctx.trade_date if ctx.session_type == SessionType.DAY else (ctx.trade_date + timedelta(days=1)))
+        date_str = str(ctx.trade_date)
         
         output_dir = Path(__file__).resolve().parents[2] / "data"
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -163,7 +165,7 @@ def fetch_ticks_from_shioaji(api_key: str, secret_key: str) -> pd.DataFrame:
 
         # --- 篩選與計算 ---
         # 1. 先篩選出指定時間窗口
-        df_window = df_merged.loc[config.START_DATETIME : config.END_DATETIME].copy().reset_index()
+        df_window = df_merged.loc[ctx.start_datetime : ctx.end_datetime].copy().reset_index()
 
         # 2. 僅對此窗口內的資料計算累計指標
         return df_window.rename(columns={'close_TSE': 'underlying_price'}).assign(

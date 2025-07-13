@@ -7,8 +7,10 @@ from pathlib import Path
 import pandas as pd
 import shioaji as sj
 
-import config
-from src.utils.session_time import is_day_session
+from config.config import SHIOAJI_API_KEY as api_key, SHIOAJI_SECRET_KEY as secret_key
+from config.run_context import RunContext
+from config.types import SessionType
+from src.utils.session_time import in_which_session
 from src.utils.resource_contexts import shioaji_session
 
 
@@ -78,13 +80,13 @@ def _get_last_close(api, query_date: date, symbol: str) -> float | None:
     return day_session_df['Close'].iloc[-1] if not day_session_df.empty else None
 
 
-def find_previous_close(max_lookback: int = 20) -> tuple[float, float]:
+def find_previous_close(ctx: RunContext, max_lookback: int = 10) -> tuple[float, float]:
     """
     回溯最多 max_lookback 天，尋找最近一個交易日的台指期與加權指數日盤收盤價。
     """
-    current_date = config.START_DATETIME.date()
-    current_time = config.START_DATETIME.time()
-    day_session = is_day_session(current_time)
+    current_date = ctx.start_datetime.date()
+    current_time = ctx.start_datetime.time()
+    session_type = in_which_session(current_time)
 
     def _search_close(api, start_date: date) -> tuple[float, float] | None:
         query_date = start_date
@@ -99,13 +101,13 @@ def find_previous_close(max_lookback: int = 20) -> tuple[float, float]:
         return None
 
     # 嘗試不使用 API
-    start_date = current_date - timedelta(days=1) if day_session else current_date
+    start_date = current_date - timedelta(days=1) if session_type == SessionType.DAY else current_date
     result = _search_close(None, start_date)
     if result:
         return result
 
     # 改用 API 查詢
-    with shioaji_session(config.SHIOAJI_API_KEY, config.SHIOAJI_SECRET_KEY) as api:
+    with shioaji_session(api_key, secret_key) as api:
         result = _search_close(api, start_date)
 
     if result:
