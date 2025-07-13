@@ -238,11 +238,12 @@ async def data_loop():
         await process_market_session(None, None, real_time_mode, date_source)
 
 
-async def main(real_time_mode: bool = 1):
+async def main(real_time_mode: bool = 0):
     config.IS_REALTIME_MODE = real_time_mode
-    config.DATA_SOURCE = "kafka"
 
     if config.IS_REALTIME_MODE:
+        config.DATA_SOURCE = "kafka"
+
         app = await init_app()
         runner = web.AppRunner(app)
         await runner.setup()
@@ -263,8 +264,10 @@ async def main(real_time_mode: bool = 1):
         await data_loop()
 
     else:
-        start_date = date(2025, 7, 10)
-        end_date = date(2025, 7, 10)
+        config.DATA_SOURCE = "kafka"
+
+        start_date = date(2025, 7, 11)
+        end_date = date(2025, 7, 11)
         delta = timedelta(days=1)
         tz = config.TAIWAN_TZ
 
@@ -276,7 +279,7 @@ async def main(real_time_mode: bool = 1):
                 continue
 
             print(f"\n📅 處理日期：{current}")
-            for day_session in range(2):
+            for day_session in range(0, 1+1):
                 start_dt, end_dt = get_trading_session(current, day_session, False, tz)
 
                 config.DATE = current
