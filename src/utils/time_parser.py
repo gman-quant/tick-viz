@@ -1,4 +1,4 @@
-# tick-viz/src/utils/time_parser.py
+# src/utils/time_parser.py
 
 from datetime import datetime
 from dateutil import parser

@@ -34,7 +34,7 @@ async def data_loop(ctx: RunContext):
         await process_market_session(None, None, ctx)
 
 
-async def main(real_time_mode: bool = 0):
+async def main(real_time_mode: bool = 1):
     ctx = RunContext(real_time_mode=real_time_mode)
 
     if real_time_mode:

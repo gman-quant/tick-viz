@@ -1,4 +1,4 @@
-# config.py
+# config/config.py
 # 不再追蹤: git update-index --assume-unchanged config.py
 # 恢復追蹤: git update-index --no-assume-unchanged config.py
 

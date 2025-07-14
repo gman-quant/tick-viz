@@ -65,67 +65,71 @@ pip install -r requirements.txt
 ```
 
 #### 4. 進行環境設定
-建立.env 設定參考如下:
+建立.env 設定可參考.env.example如下:
 
 ```python
-# tick-viz/.env
+# tick-viz/.env.example
 
 # Shioaji API credentials
-SHIOAJI_API_KEY="YOUR_API_KEY"
-SHIOAJI_SECRET_KEY="YOUR_SECRET_KEY"
+SHIOAJI_API_KEY=your_shioaji_api_key_here
+SHIOAJI_SECRET_KEY=your_shioaji_secret_key_here
 
 # Kafka broker and topic
-KAFKA_BROKER='kafka_address:9092'
-KAFKA_TOPIC='topic_name_for_realtime-ticks'
+KAFKA_BROKER=your_kafka_addreee:9092
+KAFKA_TOPIC=your_topic_name
 ```
 
 修改config.py 設定參考如下:
 ```python
-# tick-viz/config.py
+# config/config.py
 
-# === Time and session configuration ===
-TAIWAN_TZ = ZoneInfo("Asia/Taipei") # 時區
+# === Timezone setting ===
+TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 
-IS_REALTIME_MODE = True # 設定為 True 進入即時模式，False 為歷史模式
-
-# 歷史資料查詢設定 (僅在 IS_REALTIME_MODE = False 時生效)
-DATE         = date(2025, 7, 7) # 設定歷史模式的日期
-DAY_SESSION  = False  # True = 08:30–13:45 (日盤), False = 14:50–05:00 (夜盤)
-
-# === Chart and output settings ===
-
-CLEAR_SCREEN_EACH_CYCLE = True # 是否在每次更新後清除終端機畫面
-VOLUME_PER_BAR = 450 # 每多少口數產生一根等量 K 棒
-UPDATE_INTERVAL = 12 # 資料更新與前端刷新間隔 (秒)
-
-# === Report generation settings ===
-
-# 報告名稱
-REPORT_TITLE = (
-    "TXF-Charts-Live"
-    if IS_REALTIME_MODE
-    else f"TXF-Charts_{START_DATETIME.strftime('%Y-%m-%d_%H%M')}"
-)
-
-# HTML 報告輸出路徑
-OUTPUT_DIR = Path(__file__).parent / "output" 
+# === Report and chart settings ===
+CLEAR_SCREEN_EACH_CYCLE = True
+UPDATE_INTERVAL = 12  # seconds
+OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
+OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 ```
 
 ## 💡 使用方式
 
--   **即時模式** (`IS_REALTIME_MODE = True`)：
-    -   程式會持續運行，終端機畫面會定時刷新狀態。
-    -   HTML 報告會根據 `config.py` 中設定的 `UPDATE_INTERVAL` 自動刷新。
--   **歷史模式** (`IS_REALTIME_MODE = False`)：
-    -   程式會抓取指定時間區間的資料，生成一次性報告後自動結束。
+本專案支援兩種運行模式：
 
-生成的報告會存放於 `output/` 資料夾下（可在 `config.py` 中修改路徑）。
+### 🟢 即時模式（`real_time_mode=True`）
 
-完成設定後，直接運行主程式即可。
+適用於接收來自 Kafka 或其他串流來源的 **即時 tick 資料**。
 
-```bash
+- 自動判斷目前時間為日盤或夜盤，並建立資料上下文。
+- 啟動 aiohttp 本地伺服器 (`localhost:8080`)，提供動態更新的 HTML 報告。
+- 程式將持續運行，並定時刷新畫面與報告。
+
+---
+
+### 🟡 歷史模式（`real_time_mode=False`）
+
+適用於回測特定區間的 **歷史 tick 資料**。
+
+- 可自訂起始與結束日期。
+- 每天依序處理日盤（SessionType.DAY）與夜盤（SessionType.NIGHT）。
+- 自動跳過週末（六、日）。
+- 資料處理完畢後，自動結束程式。
+
+#### 預設日期設定：
+```python
+start_date = date(2025, 7, 10)
+end_date = date(2025, 7, 11)
+```
+
+#### 啟動方式
+```python
 python main.py
 ```
+```
+
+> 📂 所有輸出報告會自動儲存至 `output/` 資料夾（可在 `config.py` 中修改）。
+
 
 ---
 
@@ -133,18 +137,27 @@ python main.py
 
 ```
 TICK-VIZ/
-├── src/                      # 核心原始碼
-│   ├── data_sourcing/      # 數據獲取模組 (Kafka, Shioaji)
-│   ├── processing/         # 數據處理模組 (指標計算, K棒生成)
-│   ├── utils/              # 工具函式模組 (時間處理)
-│   └── visualization/      # 視覺化模組 (圖表, 報告生成)
-├── output/                   # 預設報告輸出資料夾
-├── docs/                     # 存放文件與截圖
-├── main.py                   # 專案主執行檔
-├── config.py                 # 環境設定檔
-├── requirements.txt          # Python 相依套件列表
-├── .env.example              # .env 範例檔案
-└── README.md                 # 專案說明文件
+├── src/                          # 核心原始碼
+│   ├── data_sourcing/           # 數據獲取模組（Kafka、Shioaji）
+│   ├── processing/              # 數據處理模組（K棒生成、指標計算等）
+│   ├── utils/                   # 工具模組（時間、資源管理等）
+│   ├── visualization/           # 圖表與報告產出模組（Plotly 等）
+│   └── web/                     # Web 模組（WebSocket 等伺服器功能）
+│
+├── config/                      # 專案設定與型別定義
+│   ├── config.py                # 全域參數與 API 金鑰設定
+│   ├── run_context.py           # 執行上下文（RunContext，含交易邏輯）
+│   └── types.py                 # 自定型別與列舉（SessionType、DataSource）
+│
+├── output/                      # 預設報告輸出資料夾（HTML、圖表等）
+├── data/                        # 本地快取的 Tick/Kbars 資料（Parquet 格式）
+├── docs/                        # 文件與截圖（開發紀錄、說明圖示等）
+│
+├── main.py                      # 專案主程式（支援即時與歷史模式）
+├── main_process.py              # 核心資料處理邏輯（資料流轉、報告生成）
+├── requirements.txt             # Python 套件依賴清單
+├── .env.example                 # .env 環境變數範例檔
+└── README.md                    # 專案說明文件
 ```
 
 ---
