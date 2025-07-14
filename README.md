@@ -133,7 +133,7 @@ python main.py
 
 ## 📁 專案結構
 
-```bash
+```text
 TICK-VIZ/
 ├── src/                          # 核心原始碼
 │   ├── data_sourcing/           # 數據獲取模組（Kafka、Shioaji）
