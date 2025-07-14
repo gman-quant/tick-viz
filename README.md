@@ -135,7 +135,7 @@ python main.py
 
 ```text
 TICK-VIZ/
-├── src/                          # 核心原始碼
+├── src/                         # 核心原始碼
 │   ├── data_sourcing/           # 數據獲取模組（Kafka、Shioaji）
 │   ├── processing/              # 數據處理模組（K棒生成、指標計算等）
 │   ├── utils/                   # 工具模組（時間、資源管理等）
