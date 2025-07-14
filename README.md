@@ -50,13 +50,13 @@ cd tick-viz
 
 #### 2. 建立並啟用虛擬環境
 ```bash
-# Windows (Git Bash)
-python -m venv venv
-source venv/Scripts/activate
-
 # macOS / Linux
 python -m venv venv
 source venv/bin/activate
+
+# Windows (Git Bash)
+python -m venv venv
+source venv/Scripts/activate
 ```
 
 #### 3. 安裝相依套件
@@ -65,7 +65,7 @@ pip install -r requirements.txt
 ```
 
 #### 4. 進行環境設定
-建立.env 設定可參考.env.example如下:
+建立'.env' 設定可參考'.env.example' 如下:
 
 ```python
 # tick-viz/.env.example
@@ -79,7 +79,7 @@ KAFKA_BROKER=your_kafka_addreee:9092
 KAFKA_TOPIC=your_topic_name
 ```
 
-修改config.py 設定參考如下:
+修改'config.py' 設定參考如下:
 ```python
 # config/config.py
 
@@ -126,10 +126,8 @@ end_date = date(2025, 7, 11)
 ```python
 python main.py
 ```
-```
 
 > 📂 所有輸出報告會自動儲存至 `output/` 資料夾（可在 `config.py` 中修改）。
-
 
 ---
 
