@@ -123,11 +123,11 @@ end_date = date(2025, 7, 11)
 ```
 
 #### 啟動方式
-```python
+```bash
 python main.py
 ```
 
-> 📂 所有輸出報告會自動儲存至 `output/` 資料夾（可在 `config.py` 中修改）。
+📂 所有輸出報告會自動儲存至 `output/` 資料夾（可在 `config.py` 中修改）。
 
 ---
 
