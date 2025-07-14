@@ -68,7 +68,7 @@ def _configure_layout(fig: go.Figure, ctx: RunContext):
         hovermode='x unified',
         title=dict(text="價格走勢與淨主動成交量", y=0.95),
         template='plotly_dark',
-        height=2000,
+        height=2200,
         showlegend=True,
         legend=dict(x=0.5, y=1.1, orientation="h", xanchor="center", yanchor="bottom"),
 
@@ -113,7 +113,7 @@ def create_tick_analysis_figure(df: pd.DataFrame, txf_prev_close: float, taiex_p
     fig = make_subplots(
         rows=4, cols=1,
         shared_xaxes=True,
-        row_heights=[0.375, 0.225, 0.2, 0.2],
+        row_heights=[0.35, 0.25, 0.2, 0.2],
         vertical_spacing=0.05,
         subplot_titles=("價格走勢", "期貨折溢價", "買賣盤成交總量差", "買賣盤成交總量")
     )

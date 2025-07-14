@@ -5,7 +5,6 @@ from datetime import date, timedelta, time as dt_time
 from pathlib import Path
 
 import pandas as pd
-import shioaji as sj
 
 from config.config import SHIOAJI_API_KEY as api_key, SHIOAJI_SECRET_KEY as secret_key
 from config.run_context import RunContext
@@ -80,40 +79,55 @@ def _get_last_close(api, query_date: date, symbol: str) -> float | None:
     return day_session_df['Close'].iloc[-1] if not day_session_df.empty else None
 
 
-def find_previous_close(ctx: RunContext, max_lookback: int = 10) -> tuple[float, float]:
+def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 10) -> tuple[float, float]:
     """
-    回溯最多 max_lookback 天，尋找最近一個交易日的台指期與加權指數日盤收盤價。
+    回溯最多 max_lookback 天，依序嘗試從本地與 API 查詢，
+    尋找最近一個交易日的台指期與加權指數日盤收盤價。
+    若 api 為 None，則自動建立 session 後查詢。
     """
+    def _try_get_close(query_date: date, api) -> tuple[float, float] | None:
+        if query_date.weekday() >= 5:
+            return None
+
+        txf_close = _get_last_close(None, query_date, symbol="txf")
+        tse_close = _get_last_close(None, query_date, symbol="tse")
+        if txf_close is not None and tse_close is not None:
+            print(f"📂 本地資料: {query_date} TXF={txf_close}, TSE={tse_close}")
+            return txf_close, tse_close
+
+        if api is not None:
+            txf_close = _get_last_close(api, query_date, symbol="txf")
+            tse_close = _get_last_close(api, query_date, symbol="tse")
+            if txf_close is not None and tse_close is not None:
+                print(f"🌐 API 資料: {query_date} TXF={txf_close}, TSE={tse_close}")
+                return txf_close, tse_close
+
+        return None
+
+    def _lookup_all(api, start_date: date) -> tuple[float, float] | None:
+        query_date = start_date
+        for _ in range(max_lookback):
+            result = _try_get_close(query_date, api)
+            if result:
+                return result
+            query_date -= timedelta(days=1)
+        return None
+    
     current_date = ctx.start_datetime.date()
     current_time = ctx.start_datetime.time()
     session_type = in_which_session(current_time)
 
-    def _search_close(api, start_date: date) -> tuple[float, float] | None:
-        query_date = start_date
-        for _ in range(max_lookback):
-            if query_date.weekday() < 5:  # 平日才查
-                txf_close = _get_last_close(api, query_date, symbol="txf")
-                tse_close = _get_last_close(api, query_date, symbol="tse")
-                if txf_close is not None and tse_close is not None:
-                    print(f"✅ 前交易日({query_date})收盤價: TXF={txf_close}, TSE={tse_close}")
-                    return txf_close, tse_close
-            query_date -= timedelta(days=1)
-        return None
-
-    # 嘗試不使用 API
     start_date = current_date - timedelta(days=1) if session_type == SessionType.DAY else current_date
-    result = _search_close(None, start_date)
-    if result:
-        return result
 
-    # 改用 API 查詢
-    with shioaji_session(api_key, secret_key) as api:
-        result = _search_close(api, start_date)
+    if api is not None:
+        result = _lookup_all(api, start_date)
+    else:
+        with shioaji_session(api_key, secret_key) as api:
+            result = _lookup_all(api, start_date)
 
     if result:
         return result
 
     raise FileNotFoundError(f"❌ 在過去 {max_lookback} 天內找不到 TXF / TSE 收盤價。")
-
 
         

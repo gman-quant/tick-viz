@@ -17,6 +17,7 @@ async def process_market_session(
     consumer: Consumer | None,
     current_offsets: list[TopicPartition] | None,
     ctx: RunContext,
+    api=None
 ):
     df = None
     tick_list = []
@@ -25,7 +26,7 @@ async def process_market_session(
     session_info    = f"🕒 交易日期: {ctx.start_datetime.date()}({'日盤' if ctx.session_type == SessionType.DAY else '夜盤'})"
     time_range_info = f"🔄 資料區間: {ctx.start_datetime} ~ {ctx.end_datetime}"
 
-    txf_prev_close, taiex_prev_close = market_data.find_previous_close(ctx)
+    txf_prev_close, taiex_prev_close = market_data.find_previous_close(ctx, api)
 
     print("✅ 初始化完成。\n")
 
