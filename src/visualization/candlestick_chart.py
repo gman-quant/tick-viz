@@ -34,7 +34,7 @@ def plot_candlestick_with_volume_delta(df: pd.DataFrame, ctx: RunContext):
         shared_xaxes=True,          # 共享 X 軸
         vertical_spacing=0.1,      # 子圖間距
         row_heights=[0.75, 0.25],     # 子圖高度比例
-        subplot_titles=('Candlestick Chart', 'Volume Delta')
+        subplot_titles=('Volume-based Bars', 'Volume Delta')
     )
 
     # 4. 繪製上方的 K 線圖
@@ -75,7 +75,7 @@ def plot_candlestick_with_volume_delta(df: pd.DataFrame, ctx: RunContext):
 
     # 6. 設定圖表整體樣式與佈局
     fig.update_layout(
-        title_text='Candlestick with Volume Delta',
+        title_text='Volume-based Bars with Volume Delta',
         template='plotly_dark',     # 暗色主題
         hovermode='x unified',      # 統一的懸停提示
         height=700,

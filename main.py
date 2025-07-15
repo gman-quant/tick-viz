@@ -35,7 +35,7 @@ async def data_loop(ctx: RunContext, api=None):
         await process_market_session(None, None, ctx, api)
 
 
-async def main(real_time_mode: bool = 0):
+async def main(real_time_mode: bool = 1):
     ctx = RunContext(real_time_mode=real_time_mode)
 
     if real_time_mode:
@@ -54,8 +54,8 @@ async def main(real_time_mode: bool = 0):
 
     else:
         with shioaji_session(config.SHIOAJI_API_KEY, config.SHIOAJI_SECRET_KEY) as api: 
-            start_date = date(2025, 7, 7)
-            end_date = date(2025, 7, 11)
+            start_date = date(2025, 7, 14)
+            end_date = date(2025, 7, 14)
             delta = timedelta(days=1)
 
             current = start_date
@@ -66,11 +66,11 @@ async def main(real_time_mode: bool = 0):
                     continue
 
                 print(f"\n📅 處理日期：{current}")
-                for day_session in range(1, 0-1, -1):
+                for day_session in range(0, 0 + 1):
                     ctx = ctx.with_updated(
                         trade_date=current,
                         session_type=SessionType.DAY if day_session else SessionType.NIGHT,
-                        data_source=DataSource.SHIOAJI
+                        data_source=DataSource.KAFKA
                     )
     
                     await data_loop(ctx, api)
