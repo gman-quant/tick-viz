@@ -127,15 +127,13 @@ end_date = date(2025, 7, 14)
 
 #### 如何設定報告要輸出日盤或夜盤？
 
-請修改 `main()` 中的以下區段：
+請修改 `main()` 中的 for day_session in range(...)：
 ```python
-for day_session in range(1, 1 + 1):  # 只輸出 day session
-```
-```python
-for day_session in range(0, 0 + 1):  # 只輸出 night session
-```
-```python
-for day_session in range(0, 1 + 1):  # 同時輸出 night(0) 與 day(1)
+for day_session in range(1, 1 + 1):  # 只輸出 day session(1)
+or
+for day_session in range(0, 0 + 1):  # 只輸出 night session(0)
+or
+for day_session in range(0, 1 + 1):  # 同時輸出
 ```
 
 #### 啟動方式
