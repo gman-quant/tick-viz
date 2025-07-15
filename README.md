@@ -93,6 +93,8 @@ OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 ```
 
+---
+
 ## 💡 使用方式
 
 本專案支援兩種運行模式：
@@ -105,7 +107,6 @@ OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 - 啟動 aiohttp 本地伺服器 (`localhost:8080`)，提供動態更新的 HTML 報告。
 - 程式將持續運行，並定時刷新畫面與報告。
 
----
 
 ### 🟡 歷史模式（`real_time_mode=False`）
 
