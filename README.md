@@ -109,17 +109,32 @@ OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 
 ### 🟡 歷史模式（`real_time_mode=False`）
 
-適用於回測特定區間的 **歷史 tick 資料**。
+適用於回看特定區間的 **歷史 tick 資料**。
 
 - 可自訂起始與結束日期。
-- 每天依序處理日盤（SessionType.DAY）與夜盤（SessionType.NIGHT）。
+- 報告會分開日盤（SessionType.DAY）與夜盤（SessionType.NIGHT）。
 - 自動跳過週末（六、日）。
 - 資料處理完畢後，自動結束程式。
 
-#### 預設日期設定：
+#### 如何設定報告輸出的日期範圍？
+
+請修改 `main()` 中的以下區段：
 ```python
-start_date = date(2025, 7, 10)
-end_date = date(2025, 7, 11)
+start_date = date(2025, 7, 7)
+end_date = date(2025, 7, 14)
+```
+
+#### 如何設定報告要輸出日盤或夜盤？
+
+請修改 `main()` 中的以下區段：
+```python
+for day_session in range(1, 1 + 1):  # 只輸出 day session
+```
+```python
+for day_session in range(0, 0 + 1):  # 只輸出 night session
+```
+```python
+for day_session in range(0, 1 + 1):  # 同時輸出 night(0) 與 day(1)
 ```
 
 #### 啟動方式
