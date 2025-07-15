@@ -46,6 +46,28 @@ def in_which_session(now_time: dt_time) -> SessionType:
     """
     return SessionType.DAY if dt_time(8, 30) <= now_time < dt_time(14, 50) else SessionType.NIGHT
 
+def get_session_range(pick: str) -> tuple[int, int]:
+    """
+    根據輸入的 pick 字串，回傳對應的 session 範圍。
+    - 'day'   → (1, 1)
+    - 'night' → (0, 0)
+    - 'whole' → (0, 1)
+
+    若輸入無效，預設回傳 (0, 1)（即 whole）。
+
+    Args:
+        pick (str): 指定要處理的時段類型。
+
+    Returns:
+        tuple[int, int]: session 起迄 index
+    """
+    mapping = {
+        'day': (1, 1),
+        'night': (0, 0),
+        'whole': (0, 1),
+    }
+    return mapping.get(pick.lower(), (0, 1))  # 忽略大小寫
+
 def get_observation_window(start: datetime, end: datetime, tz: ZoneInfo) -> tuple[datetime, datetime]:
     """
     根據起始時間自動調整觀察區間，排除開盤雜訊或初期波動。

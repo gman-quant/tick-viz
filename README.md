@@ -116,24 +116,13 @@ OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 - 自動略過週末（六、日）。
 - 全部資料處理完畢後自動結束。
 
-#### 如何設定日期範圍？
+#### 如何設定日期範圍與盤別？
 
-請修改 `main()` 中的以下區段：
+請修改 `main()` 中的以下區段來指定報告的日期範圍與盤別：
 ```python
-start_date = date(2025, 7, 7)
-end_date = date(2025, 7, 14)
-```
-
-#### 如何設定日盤或夜盤？
-
-請修改 `main()` 中的 for day_session in range(...)：
-```python
-for day_session in range(1, 1 + 1):  # 只輸出 day session(1)
-    ...
-for day_session in range(0, 0 + 1):  # 只輸出 night session(0)
-    ...
-for day_session in range(0, 1 + 1):  # 同時輸出
-    ...
+start_date = date(2025, 7, 15)
+end_date = date(2025, 7, 15)
+pick = 'day'  # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
 ```
 
 #### 啟動方式
