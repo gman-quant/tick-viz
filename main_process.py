@@ -49,16 +49,16 @@ async def process_market_session(
                 )
             else:
                 df = fetch_ticks.fetch_ticks_from_shioaji(
-                    api_key=config.SHIOAJI_API_KEY,
-                    secret_key=config.SHIOAJI_SECRET_KEY,
-                    ctx=ctx
+                    ctx=ctx,
+                    api=api,
+                    tse_prev_close=taiex_prev_close
                 )
 
             if not df.empty:
                 print("📊 資料獲取完畢，準備處理與繪圖...\n")
 
                 df_vol_kbars = volume_bars.generate_volume_bars(df, volume_per_bar=ctx.volume_per_bar)
-                stats_html = stats_table.generate_stats_html(df)
+                stats_html = stats_table.generate_stats_html(df, txf_prev_close)
                 fig_candlestick = candlestick_chart.plot_candlestick_with_volume_delta(df_vol_kbars, ctx)
                 fig_main_analysis = main_chart.create_tick_analysis_figure(df, txf_prev_close, taiex_prev_close, ctx)
 

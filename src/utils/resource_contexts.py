@@ -10,15 +10,23 @@ import config.config as config
 
 
 @contextmanager
-def shioaji_session(api_key: str, secret_key: str):
+def shioaji_session():
     """A context manager to safely handle Shioaji API login and logout."""
     api = sj.Shioaji(simulation=True)
     try:
-        api.login(api_key=api_key, secret_key=secret_key)
+        api.login(api_key=config.SHIOAJI_API_KEY, secret_key=config.SHIOAJI_SECRET_KEY)
         yield api
     finally:
         api.logout()
 
+@contextmanager
+def ensure_api_session(api):
+    """Yield an existing API if provided, otherwise create and clean up a new one."""
+    if api is not None:
+        yield api
+    else:
+        with shioaji_session() as sj_api:
+            yield sj_api
 
 @contextmanager
 def kafka_consumer():

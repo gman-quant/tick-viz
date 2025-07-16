@@ -15,7 +15,7 @@ from config.run_context import RunContext
 from config.types import SessionType
 from src.data_sourcing.market_data import get_contract
 from src.utils.time_parser import parse_tick_datetime
-from src.utils.resource_contexts import shioaji_session
+from src.utils.resource_contexts import ensure_api_session
 
 def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: datetime, end_datetime: datetime, tick_list: list) -> tuple[pd.DataFrame, list]:
     """
@@ -110,7 +110,7 @@ def _get_or_fetch_contract_ticks(
     return df
 
 
-def fetch_ticks_from_shioaji(ctx: RunContext, api_key: str, secret_key: str) -> pd.DataFrame:
+def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.DataFrame:
     """
     Fetches and processes tick data from Shioaji, using local cache if available.
     
@@ -133,28 +133,30 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api_key: str, secret_key: str) -> 
         # --- 獲取資料 (優先從快取讀取) ---
         # 只有當檔案不存在時，才需要建立 API 連線
         if not txf_file.exists() or not tse_file.exists():
-            with shioaji_session(api_key, secret_key) as api:
-                # 建立 Shioaji Contracts 物件
-                txf_contract = get_contract(api, "txf")
-                tse_contract = get_contract(api, "tse")
-                
-                df_txf = _get_or_fetch_contract_ticks(api, txf_contract, target_date_str, txf_file)
-                df_tse = _get_or_fetch_contract_ticks(api, tse_contract, date_str, tse_file)
+            with ensure_api_session(api) as sj_api:
+                txf_contract = get_contract(sj_api, "txf")
+                tse_contract = get_contract(sj_api, "tse")
+                df_txf = _get_or_fetch_contract_ticks(sj_api, txf_contract, target_date_str, txf_file)
+                df_tse = _get_or_fetch_contract_ticks(sj_api, tse_contract, date_str, tse_file)
         else:
             df_txf = pd.read_parquet(txf_file)
             df_tse = pd.read_parquet(tse_file)
 
         # --- 資料處理與合併 ---
-        # 為了 merge_asof，確保 TSE 資料在起始時間有對應值
-        first_row_df = pd.DataFrame([df_tse.iloc[0].copy()])
-        first_row_df['datetime'] = first_row_df['datetime'] - timedelta(minutes=30)
-        df_tse_adjusted = pd.concat([first_row_df, df_tse], ignore_index=True)
+        # 複製前兩列，並將 close 設為 tse_prev_close，時間提前 30 分鐘，確保 merge_asof 有對應值
+        two_rows = df_tse.iloc[:2].copy()
+        two_rows['close'] = tse_prev_close
+        two_rows['datetime'] = two_rows['datetime'] - timedelta(minutes=30)
+
+        # 合併調整後的 df_tse 和原始 df_tse，並過濾時間早於 13:46
+        df_tse_adjusted = pd.concat([two_rows, df_tse], ignore_index=True)
         df_tse_adjusted = df_tse_adjusted[df_tse_adjusted['datetime'].dt.time < dt_time(13, 46)]
 
         # 統一時區並排序，準備合併
         df_txf['datetime'] = pd.to_datetime(df_txf['datetime']).dt.tz_convert(config.TAIWAN_TZ)
         df_tse_adjusted['datetime'] = pd.to_datetime(df_tse_adjusted['datetime']).dt.tz_convert(config.TAIWAN_TZ)
 
+        # 使用 merge_asof 對齊 datetime，取最近的先前 TSE close 價
         df_merged = pd.merge_asof(
             df_txf,
             df_tse_adjusted[['datetime', 'close']],

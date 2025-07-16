@@ -51,7 +51,7 @@ def get_session_range(pick: str) -> tuple[int, int]:
     根據輸入的 pick 字串，回傳對應的 session 範圍。
     - 'day'   → (1, 1)
     - 'night' → (0, 0)
-    - 'whole' → (0, 1)
+    - 'whole' → (1, 0)
 
     若輸入無效，預設回傳 (0, 1)（即 whole）。
 
@@ -64,7 +64,7 @@ def get_session_range(pick: str) -> tuple[int, int]:
     mapping = {
         'day': (1, 1),
         'night': (0, 0),
-        'whole': (0, 1),
+        'whole': (1, 0),
     }
     return mapping.get(pick.lower(), (0, 1))  # 忽略大小寫
 

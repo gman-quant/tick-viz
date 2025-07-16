@@ -10,7 +10,7 @@ from config.config import SHIOAJI_API_KEY as api_key, SHIOAJI_SECRET_KEY as secr
 from config.run_context import RunContext
 from config.types import SessionType
 from src.utils.session_time import in_which_session
-from src.utils.resource_contexts import shioaji_session
+from src.utils.resource_contexts import shioaji_session, ensure_api_session
 
 
 def get_contract(api, symbol: str):
@@ -119,11 +119,8 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 10) -> tu
 
     start_date = current_date - timedelta(days=1) if session_type == SessionType.DAY else current_date
 
-    if api is not None:
-        result = _lookup_all(api, start_date)
-    else:
-        with shioaji_session(api_key, secret_key) as api:
-            result = _lookup_all(api, start_date)
+    with ensure_api_session(api) as sj_api:
+        result = _lookup_all(sj_api, start_date)
 
     if result:
         return result

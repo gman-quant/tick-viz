@@ -53,10 +53,10 @@ async def main(real_time_mode: bool = 1):
         await data_loop(ctx)
 
     else:
-        with shioaji_session(config.SHIOAJI_API_KEY, config.SHIOAJI_SECRET_KEY) as api: 
-            start_date = date(2025, 7, 15)
-            end_date   = date(2025, 7, 15)
-            pick       = 'day' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
+        with shioaji_session() as api: 
+            start_date = date(2025, 5, 1)
+            end_date   = date(2025, 7, 16)
+            pick       = 'whole' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
             
             current = start_date
             one_day = timedelta(days=1)
@@ -67,12 +67,12 @@ async def main(real_time_mode: bool = 1):
                     current += one_day
                     continue
 
-                for day_session in range(st, ed + 1):
+                for day_session in range(st, ed - 1, -1):
                     print(f"\n📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
                     ctx = ctx.with_updated(
                         trade_date=current,
                         session_type=SessionType.DAY if day_session else SessionType.NIGHT,
-                        data_source=DataSource.KAFKA
+                        data_source=DataSource.SHIOAJI
                     )
     
                     await data_loop(ctx, api)
