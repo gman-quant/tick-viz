@@ -143,13 +143,13 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
             df_tse = pd.read_parquet(tse_file)
 
         # --- 資料處理與合併 ---
-        # 複製前兩列，並將 close 設為 tse_prev_close，時間提前 30 分鐘，確保 merge_asof 有對應值
-        two_rows = df_tse.iloc[:2].copy()
-        two_rows['close'] = tse_prev_close
-        two_rows['datetime'] = two_rows['datetime'] - timedelta(minutes=30)
+        # 複製第一列，並將 close 設為 tse_prev_close，時間提前 30 分鐘，確保 merge_asof 有對應值
+        first_row_df = pd.DataFrame([df_tse.iloc[0].copy()])
+        first_row_df['datetime'] = first_row_df['datetime'] - timedelta(minutes=30)
+        first_row_df['close'] = tse_prev_close
 
         # 合併調整後的 df_tse 和原始 df_tse，並過濾時間早於 13:46
-        df_tse_adjusted = pd.concat([two_rows, df_tse], ignore_index=True)
+        df_tse_adjusted = pd.concat([first_row_df, df_tse], ignore_index=True)
         df_tse_adjusted = df_tse_adjusted[df_tse_adjusted['datetime'].dt.time < dt_time(13, 46)]
 
         # 統一時區並排序，準備合併
