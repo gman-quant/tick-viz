@@ -65,6 +65,12 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
         df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601')
         df.sort_values(by='datetime', inplace=True)
         df.drop_duplicates(inplace=True)
+        window_size = 600  # 你可以自由調整這個數字
+        df['rvwap'] = (
+            (df['close'] * df['volume']).rolling(window_size, min_periods=1).sum() /
+            df['volume'].rolling(window_size, min_periods=1).sum()
+        )
+        
 
     print(f"✅ 共取得 {len(df)} 筆資料")
     
@@ -170,12 +176,15 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         df_window = df_merged.loc[ctx.start_datetime : ctx.end_datetime].copy().reset_index()
 
         # 2. 僅對此窗口內的資料計算累計指標
+        window_size = 600  # 你可以自由調整這個數字
         return df_window.rename(columns={'close_TSE': 'underlying_price'}).assign(
             bid_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 1, 0).cumsum(),
             ask_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 2, 0).cumsum(),
             high=lambda x: x['close'].cummax(),
             low=lambda x: x['close'].cummin(),
-            avg_price=lambda x: (x['close'] * x['volume']).cumsum() / x['volume'].cumsum()
+            avg_price=lambda x: (x['close'] * x['volume']).cumsum() / x['volume'].cumsum(),
+            rvwap=lambda x: (x['close'] * x['volume']).rolling(window_size, min_periods=1).sum() /
+                          x['volume'].rolling(window_size, min_periods=1).sum()
         )
     
     except Exception as e:

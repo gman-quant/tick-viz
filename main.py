@@ -18,7 +18,6 @@ from main_process import process_market_session
 
 
 async def data_loop(ctx: RunContext, api=None):
-
     if ctx.real_time_mode or ctx.data_source == DataSource.KAFKA:
         with kafka_consumer() as consumer:
             # Kafka offset 初始化
@@ -35,15 +34,16 @@ async def data_loop(ctx: RunContext, api=None):
         await process_market_session(None, None, ctx, api)
 
 
-async def main(real_time_mode: bool = 1):
-    ctx = RunContext(real_time_mode=real_time_mode)
+async def main(auto_refresh: bool = 1, real_time_mode: bool = 1):
+    ctx = RunContext(auto_refresh=auto_refresh, real_time_mode=real_time_mode)
 
-    if real_time_mode:
-        app = await init_app()
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, 'localhost', 8080)
-        await site.start()
+    if ctx.real_time_mode:
+        if ctx.auto_refresh:
+            app = await init_app()
+            runner = web.AppRunner(app)
+            await runner.setup()
+            site = web.TCPSite(runner, 'localhost', 8080)
+            await site.start()
 
         now_time = datetime.now(tz=config.TAIWAN_TZ).time()
         ctx = ctx.with_updated(
@@ -54,8 +54,8 @@ async def main(real_time_mode: bool = 1):
 
     else:
         with shioaji_session() as api: 
-            start_date = date(2025, 7, 17)
-            end_date   = date(2025, 7, 17)
+            start_date = date(2025, 7, 21)
+            end_date   = date(2025, 7, 21)
             pick       = 'day' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
             
             current = start_date

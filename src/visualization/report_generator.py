@@ -26,6 +26,7 @@ def generate_html_report(
         report_title (str): HTML 網頁的標題。
         refresh_interval (int): 網頁自動刷新的秒數。
     """
+
     output_path = OUTPUT_DIR / f"{ctx.report_title}.html"
     # 確保輸出目錄存在
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,7 +46,7 @@ def generate_html_report(
     last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # ⬇️ 根據模式決定是否加上 WebSocket 腳本
-    if ctx.real_time_mode:
+    if ctx.real_time_mode and ctx.auto_refresh:
         websocket_script = """
         <script>
             const ws = new WebSocket("ws://localhost:8080/ws");

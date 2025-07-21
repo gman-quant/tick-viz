@@ -23,7 +23,8 @@ def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close:
         "ask_side_total_vol",
         "high",      # 繪圖需要
         "low",       # 繪圖需要
-        "avg_price"  # 繪圖需要
+        "avg_price",  # 繪圖需要
+        "rvwap"
     ]
     # 檢查所有必要欄位是否存在於原始 df 中
     if not all(col in df.columns for col in required_initial_cols):
@@ -35,12 +36,17 @@ def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close:
     
     # === 衍生欄位計算 ===
     # rrp: Relative Reference Price，由現貨價推估的期貨理論價
+    window_size = 150
     processed_df['rrp_by_taiex'] = processed_df['underlying_price'] / taiex_prev_close * txf_prev_close
-    processed_df['rrp_high'] = processed_df['rrp_by_taiex'].cummax()
-    processed_df['rrp_low']  = processed_df['rrp_by_taiex'].cummin()
+    processed_df['rrp_rhigh'] = processed_df['rrp_by_taiex'].rolling(window_size, min_periods=1).max()
+    processed_df['rrp_rlow']  = processed_df['rrp_by_taiex'].rolling(window_size, min_periods=1).min()
     processed_df['fut_premium'] = processed_df['close'] - processed_df['underlying_price']
     processed_df['fut_to_rrp_premium'] = processed_df['close'] - processed_df['rrp_by_taiex']
     processed_df['fut_to_vwap_premium'] = processed_df['close'] - processed_df['avg_price']
     processed_df['cumu_net_agg_vol'] = processed_df['bid_side_total_vol'] - processed_df['ask_side_total_vol']
+    processed_df['rvwap_to_vwap_premium'] = processed_df['rvwap'] - processed_df['avg_price']
+    processed_df['rvwap-rrp_rh'] = processed_df['rvwap'] - processed_df['rrp_rhigh']
+    processed_df['rvwap-rrp_rl'] = processed_df['rvwap'] - processed_df['rrp_rlow']
+    processed_df['rrp_rh-rrp_rl'] = processed_df['rrp_rhigh'] - processed_df['rrp_rlow']
     
     return processed_df

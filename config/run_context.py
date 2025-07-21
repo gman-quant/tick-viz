@@ -13,6 +13,7 @@ from src.utils.session_time import get_trading_session
 
 @dataclass(frozen=True)
 class RunContext:
+    auto_refresh: bool = True
     real_time_mode: bool = True
     trade_date: date = field(default_factory=date.today)
     session_type: SessionType = SessionType.UNKNOWN
@@ -37,8 +38,10 @@ class RunContext:
 
     @property
     def report_title(self) -> str:
-        if self.real_time_mode:
+        if self.real_time_mode and self.auto_refresh:
             return "TXF-Charts-Live"
+        elif self.real_time_mode:
+            return "TXF-Charts-Live-Static"
         else:
             session_flag = "1" if self.session_type == SessionType.DAY else "2"
             return f"TXF-Charts_{self.trade_date.strftime('%Y-%m-%d')}_{session_flag}_{self.data_source.value}"
