@@ -44,6 +44,7 @@ def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
     fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap_to_vwap_premium"], name="[RVWAP-VWAP] 折溢價", line=dict(color="yellow", width=1)), row=row, col=col)
     fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap-rrp_rh"], name="[RVWAP-RRP_H] 折溢價", line=dict(color='rgba(144, 238, 144, 0.3)', width=1)), row=row, col=col)
     fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap-rrp_rl"], name="[RVWAP-RRP_L] 折溢價", line=dict(color='rgba(255, 192, 203, 0.3)', width=1)), row=row, col=col)
+    fig.add_trace(go.Scatter(x=df["datetime"], y=df["close-rvwap"], name="[Close-RVWAP] 折溢價", line=dict(color="gray", width=1)), row=row, col=col)
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["rrp_rh-rrp_rl"], name="[RRP_H-L] 折溢價", line=dict(color="gray", width=1)), row=row, col=col)
     
     fig.update_yaxes(title_text="折溢價(-/+)", tickformat=".0f", row=row, col=col, autorange=True)

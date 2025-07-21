@@ -47,6 +47,7 @@ class RunContext:
             return f"TXF-Charts_{self.trade_date.strftime('%Y-%m-%d')}_{session_flag}_{self.data_source.value}"
 
     def with_updated(self, **kwargs) -> "RunContext":
+        new_auto_refresh = kwargs.get("auto_refresh", self.auto_refresh)
         new_real_time_mode = kwargs.get("real_time_mode", self.real_time_mode)
         new_trade_date = kwargs.get("trade_date", self.trade_date)
         new_session_type = kwargs.get("session_type", self.session_type)
@@ -70,6 +71,7 @@ class RunContext:
             end_dt = self.end_datetime
 
         return RunContext(
+            auto_refresh=new_auto_refresh,
             real_time_mode=new_real_time_mode,
             trade_date=new_trade_date,
             session_type=new_session_type,

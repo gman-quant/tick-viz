@@ -34,8 +34,8 @@ async def data_loop(ctx: RunContext, api=None):
         await process_market_session(None, None, ctx, api)
 
 
-async def main(auto_refresh: bool = 1, real_time_mode: bool = 1):
-    ctx = RunContext(auto_refresh=auto_refresh, real_time_mode=real_time_mode)
+async def main(real_time_mode: bool = 0, auto_refresh: bool = 1):
+    ctx = RunContext(real_time_mode=real_time_mode, auto_refresh=auto_refresh)
 
     if ctx.real_time_mode:
         if ctx.auto_refresh:
