@@ -34,7 +34,7 @@ async def data_loop(ctx: RunContext, api=None):
         await process_market_session(None, None, ctx, api)
 
 
-async def main(real_time_mode: bool = 0, auto_refresh: bool = 1):
+async def main(real_time_mode: bool = 0, auto_refresh: bool = 0):
     ctx = RunContext(real_time_mode=real_time_mode, auto_refresh=auto_refresh)
 
     if ctx.real_time_mode:
@@ -54,8 +54,8 @@ async def main(real_time_mode: bool = 0, auto_refresh: bool = 1):
 
     else:
         with shioaji_session() as api: 
-            start_date = date(2025, 7, 21)
-            end_date   = date(2025, 7, 21)
+            start_date = date(2025, 7, 22)
+            end_date   = date(2025, 7, 22)
             pick       = 'day' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
             
             current = start_date

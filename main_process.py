@@ -63,7 +63,7 @@ async def process_market_session(
                 fig_main_analysis = main_chart.create_tick_analysis_figure(df, txf_prev_close, taiex_prev_close, ctx)
 
                 report_generator.generate_html_report(
-                    figures=[fig_candlestick, fig_main_analysis],
+                    figures=[fig_main_analysis, fig_candlestick],
                     stats_html=stats_html,
                     ctx=ctx
                 )

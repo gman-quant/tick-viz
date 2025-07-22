@@ -63,7 +63,6 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
     df = pd.DataFrame(tick_list)
     if not df.empty:
         df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601')
-        df.sort_values(by='datetime', inplace=True)
         df.drop_duplicates(inplace=True)
         window_size = 500  # 你可以自由調整這個數字
         df['rvwap'] = (

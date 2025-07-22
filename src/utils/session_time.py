@@ -89,6 +89,8 @@ def get_sliding_window(
     動態滑動時間窗：根據現在時間往前 / 往後推移，限制在 [start, end] 區間。
     """
     now = datetime.now(tz=tz)
-    window_start = max(start, now - timedelta(minutes=lookback_minutes))
+    adjustment = timedelta(minutes=15 if start.time() == dt_time(8, 30) else 10)
+    adjusted_start = start + adjustment
+    window_start = max(adjusted_start, now - timedelta(minutes=lookback_minutes))
     window_end = min(end, now + timedelta(minutes=lookahead_minutes))
     return window_start, window_end

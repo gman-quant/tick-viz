@@ -76,8 +76,10 @@ def _configure_layout(fig: go.Figure, ctx: RunContext):
 
     )
 
-    st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
-    # st_dt, ed_dt = get_sliding_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
+    if ctx.real_time_mode:
+        st_dt, ed_dt = get_sliding_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
+    else:
+        st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
     # 2. 將通用設定一次性應用到所有 X 軸上
     fig.update_xaxes(
         showspikes=True, 
