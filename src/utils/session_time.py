@@ -75,15 +75,15 @@ def get_observation_window(start: datetime, end: datetime, tz: ZoneInfo) -> tupl
     now = datetime.now(tz=tz)
     adjustment = timedelta(minutes=15 if start.time() == dt_time(8, 30) else 10)
     adjusted_start = start + adjustment
-    adjusted_end = min(end, now + timedelta(hours=1))
+    adjusted_end = min(end, now + timedelta(minutes=30))
     return adjusted_start, adjusted_end
 
 def get_sliding_window(
     start: datetime,
     end: datetime,
     tz: ZoneInfo,
-    lookback_minutes: int = 120,
-    lookahead_minutes: int = 60
+    lookback_minutes: int = 90,
+    lookahead_minutes: int = 30
 ) -> tuple[datetime, datetime]:
     """
     動態滑動時間窗：根據現在時間往前 / 往後推移，限制在 [start, end] 區間。

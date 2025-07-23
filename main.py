@@ -1,6 +1,7 @@
 # main.py
 
 
+import argparse
 import asyncio
 from datetime import date, datetime, timedelta, timezone
 
@@ -34,10 +35,34 @@ async def data_loop(ctx: RunContext, api=None):
         await process_market_session(None, None, ctx, api)
 
 
-async def main(real_time_mode: bool = 0, auto_refresh: bool = 0):
+async def main(real_time_mode: bool = 1, auto_refresh: bool = 1):
     ctx = RunContext(real_time_mode=real_time_mode, auto_refresh=auto_refresh)
 
-    if ctx.real_time_mode:
+    if not ctx.real_time_mode:
+        with shioaji_session() as api: 
+            start_date = date(2025, 6, 2)
+            end_date   = date(2025, 7, 22)
+            pick       = 'whole' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
+            
+            current = start_date
+            one_day = timedelta(days=1)
+            st, ed = get_session_range(pick)
+            while current <= end_date:
+                if current.weekday() >= 5:
+                    print(f"⏩ 跳過週末：{current}")
+                    current += one_day
+                    continue
+                for day_session in range(st, ed - 1, -1):
+                    print(f"\n📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
+                    ctx = ctx.with_updated(
+                        trade_date=current,
+                        session_type=SessionType.DAY if day_session else SessionType.NIGHT,
+                        data_source=DataSource.SHIOAJI
+                    )
+    
+                    await data_loop(ctx, api)
+                current += one_day
+    else:
         if ctx.auto_refresh:
             app = await init_app()
             runner = web.AppRunner(app)
@@ -51,34 +76,21 @@ async def main(real_time_mode: bool = 0, auto_refresh: bool = 0):
             session_type=in_which_session(now_time),
         )
         await data_loop(ctx)
-
-    else:
-        with shioaji_session() as api: 
-            start_date = date(2025, 7, 22)
-            end_date   = date(2025, 7, 22)
-            pick       = 'day' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
-            
-            current = start_date
-            one_day = timedelta(days=1)
-            st, ed = get_session_range(pick)
-            while current <= end_date:
-                if current.weekday() >= 5:
-                    print(f"⏩ 跳過週末：{current}")
-                    current += one_day
-                    continue
-
-                for day_session in range(st, ed - 1, -1):
-                    print(f"\n📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
-                    ctx = ctx.with_updated(
-                        trade_date=current,
-                        session_type=SessionType.DAY if day_session else SessionType.NIGHT,
-                        data_source=DataSource.SHIOAJI
-                    )
-    
-                    await data_loop(ctx, api)
-
-                current += one_day
-
+        
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--real-time-mode", type=int, choices=[0, 1], default=1)
+    parser.add_argument("--auto-refresh", type=int, choices=[0, 1], default=1)
+    args = parser.parse_args()
+
+    # 呼叫 async 的 main
+    asyncio.run(main(
+        real_time_mode=bool(args.real_time_mode),
+        auto_refresh=bool(args.auto_refresh)
+    ))
+
+'''
+source venv/bin/activate
+python main.py --auto-refresh 1 --real-time-mode 0
+'''

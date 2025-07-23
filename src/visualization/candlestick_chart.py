@@ -46,7 +46,7 @@ def plot_candlestick_with_volume_delta(df: pd.DataFrame, ctx: RunContext):
         close=df['close'],
         name='OHLC',
         increasing_line_color='green',
-        decreasing_line_color='red'
+        decreasing_line_color='red',
     ), row=1, col=1)
 
     # 5. 繪製下方的主動成交量圖
@@ -78,14 +78,18 @@ def plot_candlestick_with_volume_delta(df: pd.DataFrame, ctx: RunContext):
         title_text='Volume-based Bars with Volume Delta',
         template='plotly_dark',     # 暗色主題
         hovermode='x unified',      # 統一的懸停提示
-        height=700,
+        height=800,
         xaxis_rangeslider_visible=False, # 隱藏下方的範圍滑桿
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), # 圖例置於圖表上方
         xaxis=dict(rangeslider_visible=False),
     )
 
-    st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
-    # st_dt, ed_dt = get_sliding_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
+    if ctx.real_time_mode and ctx.auto_refresh:
+        st_dt, ed_dt = get_sliding_window(
+            ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ,
+        )
+    else:
+        st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
     # 7. 更新座標軸標題
     fig.update_yaxes(title_text="Price", tickformat=".0f", row=1, col=1)
     fig.update_yaxes(title_text="Volume", row=2, col=1)

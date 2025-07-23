@@ -5,7 +5,7 @@ import pandas as pd
 from config.types import SessionType
 
 def get_volume_per_bar(session_type: SessionType = SessionType.NIGHT) -> int:
-    return 400 if session_type == SessionType.DAY else 50
+    return 500 if session_type == SessionType.DAY else 150
 
 def generate_volume_bars(tick: pd.DataFrame, volume_per_bar: int = get_volume_per_bar()):
     """

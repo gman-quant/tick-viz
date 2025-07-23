@@ -44,6 +44,14 @@ def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close:
     processed_df['fut_to_rrp_premium'] = processed_df['close'] - processed_df['rrp_by_taiex']
     processed_df['fut_to_vwap_premium'] = processed_df['close'] - processed_df['avg_price']
     processed_df['cumu_net_agg_vol'] = processed_df['bid_side_total_vol'] - processed_df['ask_side_total_vol']
+    processed_df['total_volume'] = processed_df['bid_side_total_vol'] + processed_df['ask_side_total_vol']
+    # 各邊的成交量變化（過去 window_size ticks）
+    processed_df['bid_side_volume_change'] = (
+        processed_df['bid_side_total_vol'] - processed_df['bid_side_total_vol'].shift(window_size)
+    )
+    processed_df['ask_side_volume_change'] = (
+        processed_df['ask_side_total_vol'] - processed_df['ask_side_total_vol'].shift(window_size)
+    )
     processed_df['rvwap_to_vwap_premium'] = processed_df['rvwap'] - processed_df['avg_price']
     processed_df['rvwap-rrp_rh'] = processed_df['rvwap'] - processed_df['rrp_rhigh']
     processed_df['rvwap-rrp_rl'] = processed_df['rvwap'] - processed_df['rrp_rlow']
