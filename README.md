@@ -104,6 +104,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 - 自動判斷當前時間屬於日盤或夜盤，並建立執行上下文。
 - 啟動本地 aiohttp 伺服器（localhost:8080），提供可動態更新的 HTML 報告。
 - 程式常駐執行，並定期刷新報告與畫面。
+- 參數 `auto_refresh` 控制是否自動刷新。 
 
 ### 🟡 歷史模式（`real_time_mode=False`）
 
@@ -125,7 +126,8 @@ pick = 'day'  # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（�
 
 #### 啟動方式
 ```bash
-python main.py
+source venv/bin/activate
+python main.py --auto-refresh 1 --real-time-mode 1
 ```
 
 📂 所有輸出報告會自動儲存至 `output/` 資料夾（可在 `config.py` 中修改）。
