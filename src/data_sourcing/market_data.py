@@ -79,7 +79,7 @@ def _get_last_close(api, query_date: date, symbol: str) -> float | None:
     return day_session_df['Close'].iloc[-1] if not day_session_df.empty else None
 
 
-def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 10) -> tuple[float, float]:
+def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tuple[float, float]:
     """
     回溯最多 max_lookback 天，依序嘗試從本地與 API 查詢，
     尋找最近一個交易日的台指期與加權指數日盤收盤價。

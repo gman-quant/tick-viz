@@ -40,8 +40,8 @@ async def main(real_time_mode: bool = 1, auto_refresh: bool = 1):
 
     if not ctx.real_time_mode:
         with shioaji_session() as api: 
-            start_date = date(2025, 6, 2)
-            end_date   = date(2025, 7, 22)
+            start_date = date(2024, 9, 1)
+            end_date   = date(2024, 12, 31)
             pick       = 'whole' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
             
             current = start_date

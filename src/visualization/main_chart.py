@@ -23,13 +23,13 @@ def _add_price_traces(fig: go.Figure, df: pd.DataFrame):
     # 疊加其他指標線 (使用原始高密度資料)
     # fig.add_trace(go.Scattergl(x=df["datetime"], y=df["underlying_price"], name="[現貨] TAIEX", line=dict(color="blue", width=1), visible='legendonly'), row=row, col=col)
     # fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rrp_by_taiex"], name="[期貨] 參考價", line=dict(color="gray", width=1), visible='legendonly'), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["close"], name="[期貨] TXF", line=dict(color="rgba(255, 255, 255, 0.5)", width=1)), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rvwap"], name="RVWAP", line=dict(color="yellow", dash="solid", width=1)), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["avg_price"], name="VWAP", line=dict(color="orange", dash="solid", width=1)), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rrp_rhigh"], name="[期貨] 參考價", line=dict(color='rgba(144, 238, 144, 0.3)', width=1), visible=True), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rrp_rlow"], name="[期貨] 參考價", line=dict(color='rgba(255, 192, 203, 0.3)', width=1), visible=True), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["close"], name="[期貨] TXF", line=dict(color="rgba(255, 255, 255, 0.5)", width=1)), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["avg_price"], name="VWAP", line=dict(color="orange", dash="solid", width=1)), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["high"], name="High", line=dict(color="green", dash="dash", width=1)), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["low"], name="Low", line=dict(color="Red", dash="dash", width=1)), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rvwap"], name="Rolling VWAP", line=dict(color="yellow", dash="solid", width=1)), row=row, col=col)
 
     # # 更新 Y 軸設定
     fig.update_yaxes(title_text="價格", tickformat=".0f", row=row, col=col,) 
@@ -42,8 +42,9 @@ def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
     # --- Bid side（主動買盤）成交變化（綠色區塊）
     fig.add_trace(go.Scatter(
         x=df["datetime"],
-        y=df["bid_side_volume_change"],
-        name="主動買盤成交變化",
+        
+        y=df["net_agg_vol_change"].where(df["net_agg_vol_change"] > 0),
+        name="淨成交強度指標",
         mode="lines",
         line=dict(color="green", width=1),
         line_shape="hv",
@@ -54,8 +55,8 @@ def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
     # --- Ask side（主動賣盤）成交變化（紅色區塊）
     fig.add_trace(go.Scatter(
         x=df["datetime"],
-        y=df["ask_side_volume_change"],  # ⚠️ 顯示在下方，向下延伸
-        name="主動賣盤成交變化",
+        y=df["net_agg_vol_change"].where(df["net_agg_vol_change"] < 0),  # ⚠️ 顯示在下方，向下延伸
+        name="淨成交強度指標",
         mode="lines",
         line=dict(color="red", width=1),
         line_shape="hv",
@@ -63,18 +64,18 @@ def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
         fillcolor="rgba(255, 0, 0, 0.2)"
     ), row=row, col=col)
 
-    # 計算 Y 軸上下限（保留 5% buffer）
-    min_ask = df["ask_side_volume_change"].min()
-    min_bid = df["bid_side_volume_change"].min()
-    ymin = 0.95 * min(min_ask, min_bid)
+    # # 計算 Y 軸上下限（保留 5% buffer）
+    # min_ask = df["ask_side_volume_change"].min()
+    # min_bid = df["bid_side_volume_change"].min()
+    # ymin = 0.95 * min(min_ask, min_bid)
 
     # 設定 Y 軸格式
     fig.update_yaxes(
-        title_text="雙邊成交變化(口)",
-        tickformat=".0f",
+        title_text="淨成交強度指標",
+        tickformat=".2f",
         row=row,
         col=col,
-        range=[ymin, None],
+        # range=[ymin, None],
     )
 
 
@@ -174,7 +175,7 @@ def create_tick_analysis_figure(df: pd.DataFrame, txf_prev_close: float, taiex_p
         shared_xaxes=True,
         row_heights=[0.4, 0.2, 0.2, 0.2],
         vertical_spacing=0.05,
-        subplot_titles=("價格走勢", "買賣盤成交量變化(past 150 ticks)", "期貨折溢價", "買賣盤成交總量差")
+        subplot_titles=("價格走勢", "淨成交強度指標", "期貨折溢價", "買賣盤成交總量差")
     )
 
     # 3. 依序繪製各個子圖
