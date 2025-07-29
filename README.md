@@ -127,7 +127,20 @@ pick = 'day'  # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（�
 #### 啟動方式
 ```bash
 source venv/bin/activate
+
+# 🟢 即時更新模式
 python main.py --auto-refresh 1 --real-time-mode 1
+
+# 🟡靜態即時模式
+python main.py --auto-refresh 0 --real-time-mode 1
+
+# 🔵歷史回顧模式
+python main.py --auto-refresh 0 --real-time-mode 0
+
+# 📅 日線圖更新
+python -m src.processing.kbar.process_all_ticks_to_daily_csv
+python plot_txf_kbar.py
+'''
 ```
 
 📂 所有輸出報告會自動儲存至 `output/` 資料夾（可在 `config.py` 中修改）。
@@ -141,6 +154,7 @@ TICK-VIZ/
 ├── src/                         # 核心原始碼
 │   ├── data_sourcing/           # 數據獲取模組（Kafka、Shioaji）
 │   ├── processing/              # 數據處理模組（K棒生成、指標計算等）
+│   │   └── kbar/                # 將tick data 聚合成日線圖
 │   ├── utils/                   # 工具模組（時間、資源管理等）
 │   ├── visualization/           # 圖表與報告產出模組（Plotly 等）
 │   └── web/                     # Web 模組（WebSocket 等伺服器功能）
@@ -156,6 +170,7 @@ TICK-VIZ/
 │
 ├── main.py                      # 專案主程式（支援即時與歷史模式）
 ├── main_process.py              # 核心資料處理邏輯（資料流轉、報告生成）
+├── plot_txf_kbar.py             # 繪製日線圖
 ├── requirements.txt             # Python 套件依賴清單
 ├── .env.example                 # .env 環境變數範例檔
 └── README.md                    # 專案說明文件
