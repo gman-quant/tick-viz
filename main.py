@@ -40,9 +40,9 @@ async def main(real_time_mode: bool = 1, auto_refresh: bool = 1):
 
     if not ctx.real_time_mode:
         with shioaji_session() as api: 
-            start_date = date(2024, 9, 1)
-            end_date   = date(2024, 12, 31)
-            pick       = 'whole' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
+            start_date = date(2025, 7, 28)
+            end_date   = date(2025, 7, 28)
+            pick       = 'night' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
             
             current = start_date
             one_day = timedelta(days=1)
@@ -91,6 +91,7 @@ if __name__ == "__main__":
     ))
 
 '''
+cd Documents/tick-viz
 source venv/bin/activate
 python main.py --auto-refresh 1 --real-time-mode 0
 '''

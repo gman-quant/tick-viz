@@ -28,7 +28,7 @@ def load_and_preprocess(csv_path: str) -> pd.DataFrame:
     return df
 
 
-def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path="{OUTPUT_DIR}/TXF-Daily-Chart.html"):
+def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DIR}/TXF-Daily-Chart.html"):
     if df.empty:
         print("無資料可畫圖")
         return

@@ -98,6 +98,18 @@ def process_all_ticks():
     df_sorted.write_csv(DAILY_CSV_PATH)
     print(f"✅ 新增並排序後，共有 {df_sorted.height} 筆資料寫入 {DAILY_CSV_PATH}")
 
+    # 6. 若當前時間早於 13:45，且已有今天的 ticks 檔案，則刪除
+    now = datetime.now()
+    cutoff_time = now.replace(hour=13, minute=45, second=0, microsecond=0)
+
+    if now < cutoff_time:
+        today_str = now.strftime("%Y-%m-%d")
+        today_tick_file = DATA_DIR / f"txf-ticks_{today_str}.parquet"
+
+        if today_tick_file.exists():
+            today_tick_file.unlink()
+            print(f"🗑️ 13:45 前刪除不完整 tick 檔：{today_tick_file.name}")
+
 
 if __name__ == "__main__":
     process_all_ticks()
