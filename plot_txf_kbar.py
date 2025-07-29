@@ -150,7 +150,8 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
     output_path.write_text(html_str, encoding="utf-8")
     print(f"✅ 輸出 HTML: {output_path.resolve()}")
 
-    webbrowser.open(output_path.resolve().as_uri())
+    # 自動開啟瀏覽器
+    # webbrowser.open(output_path.resolve().as_uri())
 
 
 # 執行

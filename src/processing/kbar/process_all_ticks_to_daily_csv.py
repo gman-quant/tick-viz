@@ -54,8 +54,11 @@ def process_all_ticks():
             "volume": pl.Int64,
         })
 
-    # 2. 找出已處理的 file_date 清單
-    processed_dates = set(df_existing["file_date"].to_list())
+    # 2. 找出已處理的 file_date 清單（排除今天）
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    processed_dates = set(
+        df_existing.filter(pl.col("file_date") != today_str)["file_date"].to_list()
+    )
 
     # 3. 開始處理 parquet 檔
     all_new_rows = []
