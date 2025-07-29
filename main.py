@@ -94,11 +94,11 @@ if __name__ == "__main__":
 cd Documents/tick-viz && source venv/bin/activate
 python main.py --auto-refresh 1 --real-time-mode 1
 '''
-''' 🟡靜態即時模式
+''' 🟡 靜態即時模式
 cd Documents/tick-viz && source venv/bin/activate
 python main.py --auto-refresh 0 --real-time-mode 1
 '''
-''' 🔵歷史回顧模式
+''' 🔵 歷史回顧模式
 cd Documents/tick-viz && source venv/bin/activate
 python main.py --auto-refresh 0 --real-time-mode 0
 '''

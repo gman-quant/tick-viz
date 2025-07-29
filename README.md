@@ -106,7 +106,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 - 程式常駐執行，並定期刷新報告與畫面。
 - 參數 `auto_refresh` 控制是否自動刷新。 
 
-### 🟡 歷史模式（`real_time_mode=False`）
+### 🔵 歷史模式（`real_time_mode=False`）
 
 適用於回看特定區間的 **歷史 tick 資料**。
 
@@ -127,20 +127,23 @@ pick = 'day'  # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（�
 #### 啟動方式
 ```bash
 source venv/bin/activate
-
+```
+```bash
 # 🟢 即時更新模式
 python main.py --auto-refresh 1 --real-time-mode 1
-
-# 🟡靜態即時模式
+```
+```bash
+# 🟡 靜態即時模式
 python main.py --auto-refresh 0 --real-time-mode 1
-
-# 🔵歷史回顧模式
+```
+```bash
+# 🔵 歷史回顧模式
 python main.py --auto-refresh 0 --real-time-mode 0
-
+```
+```bash
 # 📅 日線圖更新
 python -m src.processing.kbar.process_all_ticks_to_daily_csv
 python plot_txf_kbar.py
-'''
 ```
 
 📂 所有輸出報告會自動儲存至 `output/` 資料夾（可在 `config.py` 中修改）。
