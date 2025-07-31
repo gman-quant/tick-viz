@@ -82,18 +82,17 @@ def get_sliding_window(
     start: datetime,
     end: datetime,
     tz: ZoneInfo,
-    lookback_minutes: int = 90,
-    lookahead_minutes: int = 30
+    lookback_minutes: int = 30,
+    lookahead_minutes: int = 5
 ) -> tuple[datetime, datetime]:
     """
     動態滑動時間窗：根據現在時間往前 / 往後推移，限制在 [start, end] 區間。
-    若現在時間在 9:30 以前，lookahead_minutes 自動調整為 5。
     """
     now = datetime.now(tz=tz)
 
     # 9:30 前自動縮短 lookahead
-    if now.time() < dt_time(9, 30):
-        lookahead_minutes = 5
+    if now.time() < dt_time(9, 0):
+        lookahead_minutes = 1
 
     adjustment = timedelta(minutes=15 if start.time() == dt_time(8, 30) else 10)
     adjusted_start = start + adjustment

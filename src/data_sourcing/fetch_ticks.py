@@ -1,7 +1,6 @@
 # src/data_sourcing/fetch_ticks.py
 
 
-from contextlib import contextmanager
 from datetime import datetime, timedelta, time as dt_time
 from pathlib import Path
 
@@ -64,7 +63,7 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
     if not df.empty:
         df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601')
         df.drop_duplicates(inplace=True)
-        window_size = 500  # 你可以自由調整這個數字
+        window_size = 300  # 你可以自由調整這個數字
         df['rvwap'] = (
             (df['close'] * df['volume']).rolling(window_size, min_periods=1).sum() /
             df['volume'].rolling(window_size, min_periods=1).sum()
@@ -175,7 +174,7 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         df_window = df_merged.loc[ctx.start_datetime : ctx.end_datetime].copy().reset_index()
 
         # 2. 僅對此窗口內的資料計算累計指標
-        window_size = 500  # 你可以自由調整這個數字
+        window_size = 300  # 你可以自由調整這個數字
         return df_window.rename(columns={'close_TSE': 'underlying_price'}).assign(
             bid_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 1, 0).cumsum(),
             ask_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 2, 0).cumsum(),

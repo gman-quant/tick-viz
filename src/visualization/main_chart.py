@@ -64,20 +64,50 @@ def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
         fillcolor="rgba(255, 0, 0, 0.2)"
     ), row=row, col=col)
 
-    # # 計算 Y 軸上下限（保留 5% buffer）
-    # min_ask = df["ask_side_volume_change"].min()
-    # min_bid = df["bid_side_volume_change"].min()
-    # ymin = 0.95 * min(min_ask, min_bid)
-
     # 設定 Y 軸格式
     fig.update_yaxes(
         title_text="淨成交強度指標",
         tickformat=".2f",
         row=row,
         col=col,
-        # range=[ymin, None],
     )
 
+# def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
+#     """在 fig 的第2列新增成交量變化圖（Bid 與 Ask 分開繪製）。"""
+#     row, col = 2, 1
+
+#     # --- Bid side（主動買盤）成交變化（綠色區塊）
+#     fig.add_trace(go.Scatter(
+#         x=df["datetime"],
+        
+#         y=df["bid_side_volume_change"],
+#         name="主動買成交量變化(past 300 ticks)",
+#         mode="lines",
+#         line=dict(color="green", width=1),
+#         line_shape="hv",
+#         fill="tozeroy",
+#         fillcolor="rgba(0, 128, 0, 0.2)"
+#     ), row=row, col=col)
+
+#     # --- Ask side（主動賣盤）成交變化（紅色區塊）
+#     fig.add_trace(go.Scatter(
+#         x=df["datetime"],
+#         y=df["ask_side_volume_change"],
+#         name="主動賣成交量變化(past 300 ticks)",
+#         mode="lines",
+#         line=dict(color="red", width=1),
+#         line_shape="hv",
+#         fill="tozeroy",
+#         fillcolor="rgba(255, 0, 0, 0.2)"
+#     ), row=row, col=col)
+
+#     # 設定 Y 軸格式
+#     fig.update_yaxes(
+#         title_text="主動買賣成交量變化(past 300 ticks)",
+#         tickformat=".2f",
+#         row=row,
+#         col=col,
+#     )
 
 def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
     """在 fig 的第3列新增折溢價圖。"""

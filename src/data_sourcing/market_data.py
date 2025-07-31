@@ -1,19 +1,21 @@
 # src/data_sourcing/market_data.py
 
-
-from datetime import date, timedelta, time as dt_time
+from datetime import date, datetime, timedelta, time as dt_time, timezone
 from pathlib import Path
 
 import pandas as pd
+from confluent_kafka import TopicPartition
 
-from config.config import SHIOAJI_API_KEY as api_key, SHIOAJI_SECRET_KEY as secret_key
+from config.config import KAFKA_TOPIC, TAIWAN_TZ
 from config.run_context import RunContext
 from config.types import SessionType
+from src.data_sourcing import fetch_ticks
 from src.utils.session_time import in_which_session
-from src.utils.resource_contexts import shioaji_session, ensure_api_session
+from src.utils.resource_contexts import ensure_api_session, kafka_consumer
 
 
 def get_contract(api, symbol: str):
+    """取得合約物件"""
     if symbol == "txf":
         return api.Contracts.Futures.TXF.TXFR1
     elif symbol == "tse":
@@ -32,7 +34,6 @@ def load_or_fetch_kbars(api, query_date: date, symbol: str) -> pd.DataFrame:
     file_name = f"{symbol.lower()}-kbars_{query_date}.parquet"
     output_file = output_dir / file_name
 
-    # 嘗試讀取快取檔案
     df = pd.DataFrame()
     try:
         df = pd.read_parquet(output_file)
@@ -47,7 +48,6 @@ def load_or_fetch_kbars(api, query_date: date, symbol: str) -> pd.DataFrame:
     if not df.empty or api is None:
         return df
 
-    # API fallback 抓資料
     print(f"⚠️ Fetching {symbol.upper()} kbars from API for {query_date}...")
 
     contract = get_contract(api, symbol)
@@ -79,12 +79,68 @@ def _get_last_close(api, query_date: date, symbol: str) -> float | None:
     return day_session_df['Close'].iloc[-1] if not day_session_df.empty else None
 
 
+def find_previous_close_from_kafka(ctx: RunContext, max_lookback: int = 15) -> tuple[float, float] | None:
+    """
+    嘗試透過 Kafka tick 資料查詢最近 max_lookback 天內的台指期收盤價與標的指數價格。
+    回傳 (TXF close, underlying price) 或 None。
+    """
+    if ctx.real_time_mode:
+        dt_now = datetime.now(TAIWAN_TZ)
+        now_time = dt_now.time()
+        now_date = dt_now.date()
+        pre_date = now_date - timedelta(days=1) if now_time < dt_time(13, 45) else now_date
+    else:
+        pre_date = ctx.trade_date - timedelta(days=1) if ctx.session_type == SessionType.DAY else ctx.trade_date
+
+    with kafka_consumer() as consumer:
+        metadata = consumer.list_topics(KAFKA_TOPIC)
+        partitions = list(metadata.topics[KAFKA_TOPIC].partitions.keys())
+
+        for _ in range(max_lookback):
+            if pre_date.weekday() >= 5:
+                pre_date -= timedelta(days=1)
+                continue
+
+            start_datetime = datetime.combine(pre_date, dt_time(13, 29)).replace(tzinfo=TAIWAN_TZ)
+            end_datetime = datetime.combine(pre_date, dt_time(13, 46)).replace(tzinfo=TAIWAN_TZ)
+
+            timestamp_ms = int(start_datetime.astimezone(timezone.utc).timestamp() * 1000)
+            topic_partitions = [TopicPartition(KAFKA_TOPIC, p, timestamp_ms) for p in partitions]
+            fixed_offsets = consumer.offsets_for_times(topic_partitions)
+            fixed_offsets = [o for o in fixed_offsets if o is not None]
+            if not fixed_offsets:
+                pre_date -= timedelta(days=1)
+                continue
+
+            df, _ = fetch_ticks.fetch_ticks_from_kafka(
+                consumer=consumer,
+                offsets=fixed_offsets,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                tick_list=[],
+            )
+
+            if not df.empty:
+                txf_close, tse_close = df.iloc[-1]['close'], df.iloc[-1]['underlying_price']
+                print(f"📊 從 Kafka 獲取前收資料: {pre_date} TXF={txf_close}, TSE={tse_close}")
+                return txf_close, tse_close
+
+            pre_date -= timedelta(days=1)
+
+    return None
+
+
 def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tuple[float, float]:
     """
-    回溯最多 max_lookback 天，依序嘗試從本地與 API 查詢，
+    回溯最多 max_lookback 天，依序嘗試從 Kafka、本地 parquet、API 查詢，
     尋找最近一個交易日的台指期與加權指數日盤收盤價。
     若 api 為 None，則自動建立 session 後查詢。
     """
+    if ctx.trade_date >= date(2025, 7, 10):
+        result = find_previous_close_from_kafka(ctx, max_lookback)
+        if result:
+            return result
+
     def _try_get_close(query_date: date, api) -> tuple[float, float] | None:
         if query_date.weekday() >= 5:
             return None
@@ -112,7 +168,7 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tu
                 return result
             query_date -= timedelta(days=1)
         return None
-    
+
     current_date = ctx.start_datetime.date()
     current_time = ctx.start_datetime.time()
     session_type = in_which_session(current_time)
@@ -126,5 +182,3 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tu
         return result
 
     raise FileNotFoundError(f"❌ 在過去 {max_lookback} 天內找不到 TXF / TSE 收盤價。")
-
-        
