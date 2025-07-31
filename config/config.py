@@ -30,3 +30,8 @@ UPDATE_INTERVAL = 6  # seconds
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 
+# === Data cache settings ===
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+DATA_DIR.mkdir(exist_ok=True)  # 確保目錄存在
+
+

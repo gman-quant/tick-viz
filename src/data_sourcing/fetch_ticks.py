@@ -9,7 +9,7 @@ import pandas as pd
 import shioaji as sj
 from confluent_kafka import Consumer, KafkaError
 
-import config.config as config
+from config.config import DATA_DIR, TAIWAN_TZ
 from config.run_context import RunContext
 from config.types import SessionType
 from src.data_sourcing.market_data import get_contract
@@ -108,7 +108,7 @@ def _get_or_fetch_contract_ticks(
         raise ValueError(f"No tick data found for {contract.code} on {date}.")
 
     df = pd.DataFrame({**ticks})
-    df['ts'] = pd.to_datetime(df['ts']).dt.tz_localize(config.TAIWAN_TZ)
+    df['ts'] = pd.to_datetime(df['ts']).dt.tz_localize(TAIWAN_TZ)
     df.rename(columns={'ts': 'datetime'}, inplace=True)
     df.to_parquet(cache_file)
     return df
@@ -129,10 +129,8 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         target_date_str = str(ctx.trade_date if ctx.session_type == SessionType.DAY else (ctx.trade_date + timedelta(days=1)))
         date_str = str(ctx.trade_date)
         
-        output_dir = Path(__file__).resolve().parents[2] / "data"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        txf_file = output_dir / f"txf-ticks_{target_date_str}.parquet"
-        tse_file = output_dir / f"tse-ticks_{date_str}.parquet"
+        txf_file = DATA_DIR / f"txf-ticks_{target_date_str}.parquet"
+        tse_file = DATA_DIR / f"tse-ticks_{date_str}.parquet"
 
         # --- 獲取資料 (優先從快取讀取) ---
         # 只有當檔案不存在時，才需要建立 API 連線
@@ -157,8 +155,8 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         df_tse_adjusted = df_tse_adjusted[df_tse_adjusted['datetime'].dt.time < dt_time(13, 46)]
 
         # 統一時區並排序，準備合併
-        df_txf['datetime'] = pd.to_datetime(df_txf['datetime']).dt.tz_convert(config.TAIWAN_TZ)
-        df_tse_adjusted['datetime'] = pd.to_datetime(df_tse_adjusted['datetime']).dt.tz_convert(config.TAIWAN_TZ)
+        df_txf['datetime'] = pd.to_datetime(df_txf['datetime']).dt.tz_convert(TAIWAN_TZ)
+        df_tse_adjusted['datetime'] = pd.to_datetime(df_tse_adjusted['datetime']).dt.tz_convert(TAIWAN_TZ)
 
         # 使用 merge_asof 對齊 datetime，取最近的先前 TSE close 價
         df_merged = pd.merge_asof(

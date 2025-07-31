@@ -5,10 +5,10 @@ import polars as pl
 from pathlib import Path
 import re
 from src.utils.session_time import in_which_session
+from config.config import DATA_DIR
 
 # --- 設定路徑 ---
-DATA_DIR = Path("data")
-DAILY_CSV_PATH = Path("data/txf_daily.csv")
+DAILY_CSV_PATH = DATA_DIR / "txf_daily.csv"
 
 # --- 正規表示式找出日期 ---
 PARQUET_PATTERN = re.compile(r"txf-ticks_(\d{4}-\d{2}-\d{2})\.parquet")
