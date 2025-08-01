@@ -1,7 +1,6 @@
 # src/visualization/report_generator.py
 
 from datetime import datetime
-from pathlib import Path
 from typing import List
 
 import plotly.graph_objects as go
@@ -45,7 +44,7 @@ def generate_html_report(
     # 用當下時間當作「更新標記」
     last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # ⬇️ 根據模式決定是否加上 WebSocket 腳本
+    # ⬇️ 根據模式決定是否加上 WebSocket 腳本
     if ctx.real_time_mode and ctx.auto_refresh:
         websocket_script = """
         <script>

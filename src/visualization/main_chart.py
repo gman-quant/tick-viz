@@ -205,7 +205,7 @@ def create_tick_analysis_figure(df: pd.DataFrame, txf_prev_close: float, taiex_p
         shared_xaxes=True,
         row_heights=[0.4, 0.2, 0.2, 0.2],
         vertical_spacing=0.05,
-        subplot_titles=("價格走勢", "淨成交強度指標", "期貨折溢價", "買賣盤成交總量差")
+        subplot_titles=("價格走勢", "淨成交強度指標", "期貨折溢價", "淨主動成交量")
     )
 
     # 3. 依序繪製各個子圖
