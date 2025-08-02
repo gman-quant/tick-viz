@@ -14,7 +14,7 @@ from config.run_context import RunContext
 from config.types import SessionType
 from src.data_sourcing.market_data import get_contract
 from src.utils.time_parser import parse_tick_datetime
-from src.utils.resource_contexts import ensure_api_session
+from src.utils.resource_contexts import shioaji_session
 
 def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: datetime, end_datetime: datetime, tick_list: list) -> tuple[pd.DataFrame, list]:
     """
@@ -135,11 +135,17 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         # --- 獲取資料 (優先從快取讀取) ---
         # 只有當檔案不存在時，才需要建立 API 連線
         if not txf_file.exists() or not tse_file.exists():
-            with ensure_api_session(api) as sj_api:
-                txf_contract = get_contract(sj_api, "txf")
-                tse_contract = get_contract(sj_api, "tse")
-                df_txf = _get_or_fetch_contract_ticks(sj_api, txf_contract, target_date_str, txf_file)
-                df_tse = _get_or_fetch_contract_ticks(sj_api, tse_contract, date_str, tse_file)
+            if api is None:
+                with shioaji_session() as sj_api:
+                    txf_contract = get_contract(sj_api, "txf")
+                    tse_contract = get_contract(sj_api, "tse")
+                    df_txf = _get_or_fetch_contract_ticks(sj_api, txf_contract, target_date_str, txf_file)
+                    df_tse = _get_or_fetch_contract_ticks(sj_api, tse_contract, date_str, tse_file)
+            else:
+                txf_contract = get_contract(api, "txf")
+                tse_contract = get_contract(api, "tse")
+                df_txf = _get_or_fetch_contract_ticks(api, txf_contract, target_date_str, txf_file)
+                df_tse = _get_or_fetch_contract_ticks(api, tse_contract, date_str, tse_file)
         else:
             df_txf = pd.read_parquet(txf_file)
             df_tse = pd.read_parquet(tse_file)

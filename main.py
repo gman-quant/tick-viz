@@ -11,11 +11,10 @@ from confluent_kafka import TopicPartition
 import config.config as config
 from config.run_context import RunContext
 from config.types import SessionType, DataSource
-from src.utils.session_time import in_which_session, get_session_range
+from src.utils.session_time import get_session_range, in_which_session
 from src.utils.resource_contexts import kafka_consumer, shioaji_session
 from src.web.app_factory import init_app
 from main_process import process_market_session
-
 
 
 async def data_loop(ctx: RunContext, api=None):
@@ -39,10 +38,10 @@ async def main(real_time_mode: bool = 1, auto_refresh: bool = 1):
     ctx = RunContext(real_time_mode=real_time_mode, auto_refresh=auto_refresh)
 
     if not ctx.real_time_mode:
-        with shioaji_session() as api: 
-            start_date = date(2025, 8, 1)
-            end_date   = date(2025, 8, 1)
-            pick       = 'night' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
+        with shioaji_session() as api:
+            start_date = date(2024, 3, 11)
+            end_date   = date(2024, 4, 1)
+            pick       = 'whole' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
             
             current = start_date
             one_day = timedelta(days=1)

@@ -18,16 +18,7 @@ def shioaji_session():
         yield api
     finally:
         api.logout()
-
-@contextmanager
-def ensure_api_session(api):
-    """Yield an existing API if provided, otherwise create and clean up a new one."""
-    if api is not None:
-        yield api
-    else:
-        with shioaji_session() as sj_api:
-            yield sj_api
-
+        
 @contextmanager
 def kafka_consumer():
     """Context manager for Kafka Consumer with safe teardown."""

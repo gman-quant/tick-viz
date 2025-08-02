@@ -11,7 +11,7 @@ from config.run_context import RunContext
 from config.types import SessionType
 from src.data_sourcing import fetch_ticks
 from src.utils.session_time import in_which_session
-from src.utils.resource_contexts import ensure_api_session, kafka_consumer
+from src.utils.resource_contexts import kafka_consumer, shioaji_session
 
 
 def get_contract(api, symbol: str):
@@ -175,8 +175,11 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tu
 
     start_date = current_date - timedelta(days=1) if session_type == SessionType.DAY else current_date
 
-    with ensure_api_session(api) as sj_api:
-        result = _lookup_all(sj_api, start_date)
+    if api is None:
+        with shioaji_session as api:
+            result = _lookup_all(api, start_date)
+    else:
+        result = _lookup_all(api, start_date)
 
     if result:
         return result
