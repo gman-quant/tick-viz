@@ -25,6 +25,9 @@ def load_and_preprocess(csv_path: str) -> pd.DataFrame:
     df = df.sort_values('end_time').reset_index(drop=True)
     df['x_index'] = df.index
 
+    # ➤ 新增 VWAP 欄位 (必要)
+    df['vwap'] = (df['high'] + df['low'] + df['close']) / 3
+
     return df
 
 
@@ -35,6 +38,16 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
 
     bar_width = max(0.3, 0.3 * (df['x_index'].diff().median() or 1))
 
+    # --- ➤ 計算 MA 與 RVWAP ---
+    ma_days = [5, 10, 20, 40, 60, 120]
+    ma_colors = ['yellow', 'cyan', 'magenta', 'orange', 'lime', 'white']
+    for p in ma_days:
+        df[f"MA{p}"] = df['close'].rolling(window=2 * p, min_periods=1).mean()
+        df[f"RVWAP{p}"] = (
+            (df['vwap'] * df['volume']).rolling(window=2 * p, min_periods=1).sum()
+            / df['volume'].rolling(window=2 * p, min_periods=1).sum()
+        )
+
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,
@@ -43,7 +56,7 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
         subplot_titles=['TXF Candlestick', 'Volume']
     )
 
-    # 日盤 K 線
+    # ➤ 日盤 K 線
     df_day = df[df['session'] == 'day']
     fig.add_trace(go.Candlestick(
         x=df_day['x_index'],
@@ -58,7 +71,7 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
         hoverinfo='text+y'
     ), row=1, col=1)
 
-    # 夜盤 K 線（調透明）
+    # ➤ 夜盤 K 線（調透明）
     df_night = df[df['session'] == 'night']
     fig.add_trace(go.Candlestick(
         x=df_night['x_index'],
@@ -73,28 +86,48 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
         hoverinfo='text+y'
     ), row=1, col=1)
 
+    # ➤ 加入 MA 線
+    for p, c in zip(ma_days, ma_colors):
+        fig.add_trace(go.Scatter(
+            x=df['x_index'],
+            y=df[f'MA{p}'],
+            mode='lines',
+            line=dict(color=c, width=1),
+            name=f"MA{p}"
+        ), row=1, col=1)
+
+    # ➤ 加入 RVWAP 線（預設隱藏）
+    for p, c in zip(ma_days, ma_colors):
+        fig.add_trace(go.Scatter(
+            x=df['x_index'],
+            y=df[f'RVWAP{p}'],
+            mode='lines',
+            line=dict(color=c, width=1, dash='dot'),
+            name=f"RVWAP{p}",
+            visible='legendonly'  # 預設隱藏
+        ), row=1, col=1)
 
     # ➤ Volume - 日盤
     fig.add_trace(go.Bar(
-        x=df[df['session'] == 'day']['x_index'],
-        y=df[df['session'] == 'day']['volume'],
+        x=df_day['x_index'],
+        y=df_day['volume'],
         name='Day Volume',
         width=bar_width,
         marker_color='rgba(255, 255, 0, 1.0)',
         opacity=0.6,
-        hovertext=df[df['session'] == 'day']['display_time'],
+        hovertext=df_day['display_time'],
         hoverinfo='text+y'
     ), row=2, col=1)
 
     # ➤ Volume - 夜盤
     fig.add_trace(go.Bar(
-        x=df[df['session'] == 'night']['x_index'],
-        y=df[df['session'] == 'night']['volume'],
+        x=df_night['x_index'],
+        y=df_night['volume'],
         name='Night Volume',
         width=bar_width,
         marker_color='rgba(127, 127, 0, 1.0)',
         opacity=0.4,
-        hovertext=df[df['session'] == 'night']['display_time'],
+        hovertext=df_night['display_time'],
         hoverinfo='text+y'
     ), row=2, col=1)
 
@@ -104,7 +137,7 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
         hovermode='x unified',
         height=1600,
         xaxis_rangeslider_visible=False,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="right", x=1),
     )
 
     fig.update_xaxes(
@@ -135,7 +168,7 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
         row=2, col=1
     )
 
-    # --- ⬇️ 產出黑底 HTML 檔案 ---
+    # ➤ 產出 HTML 檔
     html_str = pio.to_html(fig, full_html=True, include_plotlyjs='cdn')
     html_str = html_str.replace(
         "<head>",
@@ -150,11 +183,11 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
     output_path.write_text(html_str, encoding="utf-8")
     print(f"✅ 輸出 HTML: {output_path.resolve()}")
 
-    # 自動開啟瀏覽器
+    # 自動開啟（可依需要取消註解）
     # webbrowser.open(output_path.resolve().as_uri())
 
 
-# 執行
+# --- 執行 ---
 df = load_and_preprocess("data/txf_daily.csv")
 plot_candlestick_with_volume(df)
 

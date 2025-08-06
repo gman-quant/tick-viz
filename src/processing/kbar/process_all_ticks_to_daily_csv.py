@@ -2,7 +2,6 @@
 
 from datetime import datetime
 import polars as pl
-from pathlib import Path
 import re
 from src.utils.session_time import in_which_session
 from config.config import DATA_DIR
@@ -20,7 +19,8 @@ def convert_tick_to_daily(df_tick: pl.DataFrame, file_date: str) -> pl.DataFrame
         pl.col("datetime").map_elements(
             lambda x: in_which_session(x.time()).value,
             return_dtype=pl.String
-        ).alias("session")
+        ).alias("session"),
+        (pl.col("close") * pl.col("volume")).alias("pv")  # 為了計算 VWAP
     ])
 
     df_daily = df.group_by("session").agg([
@@ -29,12 +29,13 @@ def convert_tick_to_daily(df_tick: pl.DataFrame, file_date: str) -> pl.DataFrame
         pl.max("price").alias("high"),
         pl.min("price").alias("low"),
         pl.last("price").alias("close"),
-        pl.sum("volume").alias("volume")
+        (pl.sum("pv") / pl.sum("volume")).alias("vwap"),  # ➤ VWAP
+        pl.sum("volume").alias("volume"),
     ]).with_columns([
         pl.lit(file_date).alias("file_date")
     ])
 
-    return df_daily.select(["file_date", "date", "session", "open", "high", "low", "close", "volume"])
+    return df_daily.select(["file_date", "date", "session", "open", "high", "low", "close", "vwap", "volume"])
 
 
 # --- 主處理流程 ---
@@ -51,6 +52,7 @@ def process_all_ticks():
             "high": pl.Float64,
             "low": pl.Float64,
             "close": pl.Float64,
+            "vwap": pl.Float64,
             "volume": pl.Int64,
         })
 
@@ -83,12 +85,16 @@ def process_all_ticks():
 
     # 4. 合併並排序
     df_new = pl.DataFrame(all_new_rows)
-    
+    # 先確保 date 是日期型別
     df_existing = df_existing.with_columns(pl.col("date").cast(pl.Date))
     df_new = df_new.with_columns(pl.col("date").cast(pl.Date))
-
+    # --- 統一欄位型別 ---
+    for col, dtype in df_existing.schema.items():
+        if col in df_new.columns:
+            df_new = df_new.with_columns([pl.col(col).cast(dtype)])
+    # 合併
     df_combined = pl.concat([df_existing, df_new])
-
+    # 排序
     session_order = {"day": 0, "night": 1}
     df_sorted = (
         df_combined.unique(subset=["date", "session"])

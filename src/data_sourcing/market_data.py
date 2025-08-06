@@ -176,7 +176,7 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tu
     start_date = current_date - timedelta(days=1) if session_type == SessionType.DAY else current_date
 
     if api is None:
-        with shioaji_session as api:
+        with shioaji_session() as api:
             result = _lookup_all(api, start_date)
     else:
         result = _lookup_all(api, start_date)
