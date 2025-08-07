@@ -98,7 +98,10 @@ def process_all_ticks():
     session_order = {"day": 0, "night": 1}
     df_sorted = (
         df_combined.unique(subset=["date", "session"])
-        .with_columns(pl.col("session").map_elements(lambda s: session_order.get(s, 99)).alias("session_order"))
+        .with_columns(pl.col("session").map_elements(
+            lambda s: session_order.get(s, 99),
+            return_dtype=pl.Int64
+        ).alias("session_order"))
         .sort(["date", "session_order"])
         .drop("session_order")
     )
