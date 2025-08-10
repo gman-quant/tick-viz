@@ -38,11 +38,11 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
 
     bar_width = max(0.3, 0.3 * (df['x_index'].diff().median() or 1))
 
-    # --- ➤ 計算 MA 與 RVWAP ---
+    # --- ➤ 計算 SMA 與 RVWAP ---
     ma_days = [5, 10, 20, 40, 60, 120]
     ma_colors = ['yellow', 'cyan', 'magenta', 'orange', 'lime', 'white']
     for p in ma_days:
-        df[f"MA{p}"] = df['close'].rolling(window=2 * p, min_periods=1).mean()
+        df[f"SMA{p}"] = df['close'].rolling(window=2 * p, min_periods=1).mean()
         df[f"RVWAP{p}"] = (
             (df['vwap'] * df['volume']).rolling(window=2 * p, min_periods=1).sum()
             / df['volume'].rolling(window=2 * p, min_periods=1).sum()
@@ -86,14 +86,14 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
         hoverinfo='text+y'
     ), row=1, col=1)
 
-    # ➤ 加入 MA 線
+    # ➤ 加入 SMA 線
     for p, c in zip(ma_days, ma_colors):
         fig.add_trace(go.Scatter(
             x=df['x_index'],
-            y=df[f'MA{p}'],
+            y=df[f'SMA{p}'],
             mode='lines',
             line=dict(color=c, width=1),
-            name=f"MA{p}"
+            name=f"SMA{p}"
         ), row=1, col=1)
 
     # ➤ 加入 RVWAP 線（預設隱藏）
