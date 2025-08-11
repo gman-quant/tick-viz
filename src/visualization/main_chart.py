@@ -155,11 +155,11 @@ def _configure_layout(fig: go.Figure, ctx: RunContext):
     # 1. 更新圖表的整體佈局
     fig.update_layout(
         hovermode='x unified',
-        title=dict(text="價格走勢與淨主動成交量", y=0.9),
+        title=dict(text="價格走勢與淨主動成交量", y=0.96),
         template='plotly_dark',
         height=2200,
         showlegend=True,
-        legend=dict(x=0.5, y=1.1, orientation="h", xanchor="center", yanchor="bottom"),
+        legend=dict(x=0.5, y=1.03, orientation="h", xanchor="center", yanchor="bottom"),
     )
 
     if ctx.real_time_mode and ctx.auto_refresh:

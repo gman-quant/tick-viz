@@ -39,9 +39,9 @@ async def main(real_time_mode: bool = 1, auto_refresh: bool = 1):
 
     if not ctx.real_time_mode:
         with shioaji_session() as api:
-            start_date = date(2025, 8, 8) # 2024, 3, 14
-            end_date   = date(2025, 8, 8) # 2024, 3, 28
-            pick       = 'night' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
+            start_date = date(2025, 8, 11) # 2024, 3, 14
+            end_date   = date(2025, 8, 11) # 2024, 3, 28
+            pick       = 'day' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
             
             current = start_date
             one_day = timedelta(days=1)
@@ -104,4 +104,7 @@ python main.py --auto-refresh 0 --real-time-mode 0
 ''' 📅 日線圖更新
 source venv/bin/activate && python -m src.processing.kbar.process_all_ticks_to_daily_csv
 python plot_txf_kbar.py
+'''
+''' 📦 生成 requirements.txt
+pipreqs --force
 '''
