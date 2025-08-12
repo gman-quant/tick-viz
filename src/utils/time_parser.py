@@ -1,6 +1,6 @@
 # src/utils/time_parser.py
 
-from datetime import datetime
+from datetime import date, datetime
 from dateutil import parser
 from config.config import TAIWAN_TZ
 
@@ -20,3 +20,7 @@ def parse_tick_datetime(raw_dt: str) -> datetime | None:
     except Exception as e:
         print(f"⚠️ 無法解析 datetime: {raw_dt}，錯誤: {e}")
         return None
+    
+# 把日期字串轉成 date 物件
+def parse_date(raw_date: str) -> date | None:
+    return datetime.strptime(raw_date, "%Y-%m-%d").date() if raw_date else None
