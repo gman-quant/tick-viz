@@ -47,12 +47,12 @@ async def main(
     if not ctx.real_time_mode:
         with shioaji_session() as api:
             one_day = timedelta(days=1)
-            dt_st = date_start or date.today() - one_day # 2024, 3, 14
-            dt_ed = date_end or date.today() # 2024, 3, 28
-            pick  = session or 'whole' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
+            dt_st   = date_start or date.today() - one_day # 2024, 3, 14
+            dt_ed   = date_end or date.today() # 2024, 3, 28
+            pick    = session or 'whole' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
             
             current = dt_st
-            st, ed = get_session_range(pick)
+            st, ed  = get_session_range(pick)
             while current <= dt_ed:
                 if current.weekday() >= 5:
                     print(f"⏩ 跳過週末：{current}")
@@ -85,20 +85,47 @@ async def main(
         
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--real-time-mode", type=int, choices=[0, 1], default=1)
-    parser.add_argument("--auto-refresh", type=int, choices=[0, 1], default=1)
-    parser.add_argument("--date-start", type=str, help="格式: YYYY-MM-DD")
-    parser.add_argument("--date-end", type=str, help="格式: YYYY-MM-DD")
-    parser.add_argument("--session", type=str, choices=["day", "night", "whole"], help="日盤 / 夜盤 / 全部")
+    parser = argparse.ArgumentParser(description="台指期 Tick 資料處理與繪圖")
+    
+    parser.add_argument(
+        "--real-time-mode", 
+        type=int, 
+        choices=[0, 1], 
+        default=1,
+        help="即時模式 (1=啟用, 0=停用)"
+    )
+    parser.add_argument(
+        "--auto-refresh", 
+        type=int, 
+        choices=[0, 1], 
+        default=1,
+        help="自動重新整理 (1=啟用, 0=停用)"
+    )
+    parser.add_argument(
+        "--date-start", 
+        type=parse_date, 
+        help="資料開始日期 (格式: YYYY-MM-DD)"
+    )
+    parser.add_argument(
+        "--date-end", 
+        type=parse_date, 
+        help="資料結束日期 (格式: YYYY-MM-DD)"
+    )
+    parser.add_argument(
+        "--session", 
+        type=str, 
+        choices=["day", "night", "whole"], 
+        help="交易時段: day=日盤, night=夜盤, whole=全部"
+    )
+
     args = parser.parse_args()
 
     # 呼叫 async 的 main
     asyncio.run(main(
         real_time_mode=bool(args.real_time_mode),
         auto_refresh=bool(args.auto_refresh),
-        date_start=parse_date(args.date_start),
-        date_end=parse_date(args.date_end),
+        date_start=args.date_start,
+        date_end=args.date_end,
         session=args.session
     ))
 
