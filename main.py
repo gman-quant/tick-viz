@@ -151,20 +151,35 @@ python plot_txf_kbar.py
 pip freeze > requirements.txt
 '''
 
+
 ''' macOS launchd 代理程式管理與除錯指令
+
 這份精簡指南涵蓋了常用的 launchctl 指令與相關檔案操作，方便你快速掌握自動啟動代理程式的狀態與問題排查。
+
+📂 代理程式檔案位置
+| Agent Label          | Script Name             | Schedule Time          | Description       
+| -------------------- | ----------------------- | ---------------------- | ----------------- 
+| com.garrett.tickviz  | update_daily_chart.sh   | MON - FRI 13:46        | 自動執行歷史回顧模式  
+| com.garrett.tickviz2 | monitor_realtime_txf.sh | MON - FRI 08:44, 14:59 | 自動執行即時更新模式  
+
 
 📜 launchctl 指令
 launchctl print gui/$(id -u)/com.garrett.tickviz	                查看代理程式的狀態、日誌與退出碼。
 launchctl load ~/Library/LaunchAgents/com.garrett.tickviz.plist	    啟動並載入代理程式。
 launchctl unload ~/Library/LaunchAgents/com.garrett.tickviz.plist   停止並卸載代理程式。
+launchctl list com.garrett.tickviz	                                列出該代理程式的狀態。
+launchctl list | grep tickviz	                                    查看所有與 tickviz 相關的代理程式。
+launchctl kickstart -k gui/$(id -u)/com.garrett.tickviz	            立即啟動或重新啟動代理程式。
+launchctl stop gui/$(id -u)/com.garrett.tickviz	                    停止正在執行的代理程式。
+launchctl start gui/$(id -u)/com.garrett.tickviz	                啟動代理程式（如果尚未啟動）。
+launchctl remove com.garrett.tickviz	                            從 launchctl 中移除該代理程式（卸載前請先 unload）。
 
 📂 .plist 檔案除錯
 plutil -lint ~/Library/LaunchAgents/com.garrett.tickviz.plist   檢查 .plist 檔案的 XML 語法是否正確。
 nano ~/Library/LaunchAgents/com.garrett.tickviz.plist	        編輯 .plist 檔案。
 
 📂 腳本與日誌
-cat ~/Library/Scripts/startup.sh    查看 startup.sh 腳本的內容。
+nano ~/Library/Scripts/startup.sh   編輯 startup.sh 腳本的內容。
 cat /tmp/tickviz.log	            查看 腳本的標準輸出日誌。
 cat /tmp/tickviz.err	            查看 腳本的錯誤日誌。
 '''
