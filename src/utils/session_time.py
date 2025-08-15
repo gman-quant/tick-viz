@@ -82,7 +82,7 @@ def get_sliding_window(
     start: datetime,
     end: datetime,
     tz: ZoneInfo,
-    lookback_minutes: int = 30,
+    lookback_minutes: int = 60,
     lookahead_minutes: int = 5
 ) -> tuple[datetime, datetime]:
     """

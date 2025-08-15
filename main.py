@@ -164,22 +164,23 @@ pip freeze > requirements.txt
 
 
 📜 launchctl 指令
-launchctl print gui/$(id -u)/com.garrett.tickviz	                查看代理程式的狀態、日誌與退出碼。
-launchctl load ~/Library/LaunchAgents/com.garrett.tickviz.plist	    啟動並載入代理程式。
-launchctl unload ~/Library/LaunchAgents/com.garrett.tickviz.plist   停止並卸載代理程式。
-launchctl list com.garrett.tickviz	                                列出該代理程式的狀態。
-launchctl list | grep tickviz	                                    查看所有與 tickviz 相關的代理程式。
-launchctl kickstart -k gui/$(id -u)/com.garrett.tickviz	            立即啟動或重新啟動代理程式。
-launchctl stop gui/$(id -u)/com.garrett.tickviz	                    停止正在執行的代理程式。
-launchctl start gui/$(id -u)/com.garrett.tickviz	                啟動代理程式（如果尚未啟動）。
-launchctl remove com.garrett.tickviz	                            從 launchctl 中移除該代理程式（卸載前請先 unload）。
+launchctl list | grep tickviz                                                       # 查看所有與 tickviz 相關的代理程式
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.garrett.tickviz.plist     # 卸載舊代理程式（若有）
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.garrett.tickviz.plist   # 載入新代理程式
+launchctl kickstart -k gui/$(id -u)/com.garrett.tickviz                             # 立即測試執行（強制重啟）
+launchctl print gui/$(id -u)/com.garrett.tickviz                                    # 查看代理程式的狀態、日誌與退出碼
+launchctl list com.garrett.tickviz                                                  # 列出該代理程式的狀態
+launchctl start gui/$(id -u)/com.garrett.tickviz                                    # 啟動代理程式（若尚未運行）
+launchctl stop gui/$(id -u)/com.garrett.tickviz                                     # 停止正在執行的代理程式
+launchctl remove com.garrett.tickviz                                                # 從 launchctl 清單中移除代理程式（卸載前請先 bootout）
 
 📂 .plist 檔案除錯
-plutil -lint ~/Library/LaunchAgents/com.garrett.tickviz.plist   檢查 .plist 檔案的 XML 語法是否正確。
-nano ~/Library/LaunchAgents/com.garrett.tickviz.plist	        編輯 .plist 檔案。
+plutil -lint ~/Library/LaunchAgents/com.garrett.tickviz.plist   # 檢查 .plist 檔案的 XML 語法是否正確。
+nano ~/Library/LaunchAgents/com.garrett.tickviz.plist	        # 編輯 .plist 檔案。
 
 📂 腳本與日誌
-nano ~/Library/Scripts/startup.sh   編輯 startup.sh 腳本的內容。
-cat /tmp/tickviz.log	            查看 腳本的標準輸出日誌。
-cat /tmp/tickviz.err	            查看 腳本的錯誤日誌。
+nano ~/Library/Scripts/update_daily_chart.sh    # 編輯 startup.sh 腳本的內容。
+cat /tmp/tickviz.log	                        # 查看 腳本的標準輸出日誌。
+cat /tmp/tickviz.err	                        # 查看 腳本的錯誤日誌。
+tail -f /tmp/tickviz2.out /tmp/tickviz2.err     # 實時查看腳本的標準輸出與錯誤日誌
 '''
