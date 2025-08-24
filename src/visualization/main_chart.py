@@ -115,14 +115,14 @@ def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_premium"], name="[期貨-現貨] 折溢價", line=dict(color="blue", width=1), visible='legendonly'), row=row, col=col)
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_to_rrp_premium"], name="[期貨-參考價] 折溢價", line=dict(color="gray", width=1), visible='legendonly'), row=row, col=col)
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_to_vwap_premium"], name="[期貨-VWAP] 折溢價", line=dict(color="orange", width=1), visible='legendonly'), row=row, col=col)
-    fig.add_trace(go.Scatter(x=df["datetime"], y=df["close-rvwap"], name="折溢價 (Close - RVWAP)", line=dict(color="gray", width=1)), row=row, col=col, secondary_y=False)
-    fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap_to_vwap_premium"], name="折溢價 (RVWAP - VWAP)", line=dict(color="yellow", width=1.5)), row=row, col=col, secondary_y=True)
+    fig.add_trace(go.Scatter(x=df["datetime"], y=df["close-rvwap"], name="Close - RVWAP", line=dict(color="gray", width=1)), row=row, col=col, secondary_y=False)
+    fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap_to_vwap_premium"], name="RVWAP - VWAP", line=dict(color="yellow", width=1.5)), row=row, col=col, secondary_y=True)
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap-rrp_rh"], name="[RVWAP-RRP_H] 折溢價", line=dict(color='rgba(144, 238, 144, 0.3)', width=1)), row=row, col=col)
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap-rrp_rl"], name="[RVWAP-RRP_L] 折溢價", line=dict(color='rgba(255, 192, 203, 0.3)', width=1)), row=row, col=col)
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["rrp_rh-rrp_rl"], name="[RRP_H-L] 折溢價", line=dict(color="gray", width=1)), row=row, col=col)
     # 左軸
     fig.update_yaxes(
-        title_text="[RVWAP-VWAP] 折溢價",
+        title_text="折溢價 (RVWAP - VWAP)",
         tickformat=".0f",
         autorange=True,
         matches=None,
@@ -132,7 +132,7 @@ def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
     )
     # 右軸
     fig.update_yaxes(
-        title_text="[Close-RVWAP] 折溢價",
+        title_text="折溢價 (Close - RVWAP)",
         tickformat=".0f",
         showgrid=False,
         autorange=True,
