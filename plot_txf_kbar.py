@@ -39,8 +39,17 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
     bar_width = max(0.3, 0.3 * (df['x_index'].diff().median() or 1))
 
     # --- ➤ 計算 SMA 與 RVWAP ---
-    ma_days = [5, 10, 20, 40, 60, 120]
-    ma_colors = ['yellow', 'cyan', 'magenta', 'orange', 'lime', 'white']
+    ma_days   = [5, 10, 20, 30, 60, 120, 200]
+    ma_colors = [
+        "rgba(255, 255, 0, 1.0)",   # 5  → 金黃
+        "rgba(0, 255, 255, 1.0)",   # 10 → 青藍
+        "rgba(255, 0, 255, 1.0)",   # 20 → 品紅
+        "rgba(255, 140, 0, 1.0)",   # 30 → 橘色
+        "rgba(50, 205, 50, 1.0)",   # 60 → 青綠
+        "rgba(173, 216, 230, 1.0)", # 120 → 淡藍
+        "rgba(255, 255, 255, 1.0)"  # 200 → 白色
+    ]
+
     for p in ma_days:
         df[f"SMA{p}"] = df['close'].rolling(window=2 * p, min_periods=1).mean()
         df[f"RVWAP{p}"] = (
