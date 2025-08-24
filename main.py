@@ -141,7 +141,7 @@ python main.py --auto-refresh 0 --real-time-mode 1
 
 🔵 歷史回顧模式
 cd Projects/tick-viz && source venv/bin/activate
-python main.py --auto-refresh 0 --real-time-mode 0 --date-start 2025-08-12 --date-end 2025-08-12 --session day
+python main.py --auto-refresh 0 --real-time-mode 0 --date-start 2025-08-22 --date-end 2025-08-22 --session whole
 
  📅 日線圖更新
 source venv/bin/activate && python -m src.processing.kbar.process_all_ticks_to_daily_csv

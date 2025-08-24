@@ -115,17 +115,48 @@ def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_premium"], name="[期貨-現貨] 折溢價", line=dict(color="blue", width=1), visible='legendonly'), row=row, col=col)
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_to_rrp_premium"], name="[期貨-參考價] 折溢價", line=dict(color="gray", width=1), visible='legendonly'), row=row, col=col)
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_to_vwap_premium"], name="[期貨-VWAP] 折溢價", line=dict(color="orange", width=1), visible='legendonly'), row=row, col=col)
-    fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap_to_vwap_premium"], name="[RVWAP-VWAP] 折溢價", line=dict(color="yellow", width=1)), row=row, col=col)
+    fig.add_trace(go.Scatter(x=df["datetime"], y=df["close-rvwap"], name="折溢價 (Close - RVWAP)", line=dict(color="gray", width=1)), row=row, col=col, secondary_y=False)
+    fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap_to_vwap_premium"], name="折溢價 (RVWAP - VWAP)", line=dict(color="yellow", width=1.5)), row=row, col=col, secondary_y=True)
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap-rrp_rh"], name="[RVWAP-RRP_H] 折溢價", line=dict(color='rgba(144, 238, 144, 0.3)', width=1)), row=row, col=col)
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap-rrp_rl"], name="[RVWAP-RRP_L] 折溢價", line=dict(color='rgba(255, 192, 203, 0.3)', width=1)), row=row, col=col)
-    fig.add_trace(go.Scatter(x=df["datetime"], y=df["close-rvwap"], name="[Close-RVWAP] 折溢價", line=dict(color="gray", width=1)), row=row, col=col)
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["rrp_rh-rrp_rl"], name="[RRP_H-L] 折溢價", line=dict(color="gray", width=1)), row=row, col=col)
-    
-    fig.update_yaxes(title_text="折溢價(-/+)", tickformat=".0f", row=row, col=col, autorange=True)
+    # 左軸
+    fig.update_yaxes(
+        title_text="[RVWAP-VWAP] 折溢價",
+        tickformat=".0f",
+        autorange=True,
+        matches=None,
+        nticks=10,
+        row=row, col=col,
+        secondary_y=False
+    )
+    # 右軸
+    fig.update_yaxes(
+        title_text="[Close-RVWAP] 折溢價",
+        tickformat=".0f",
+        showgrid=False,
+        autorange=True,
+        zeroline=False,
+        matches=None,
+        nticks=10,
+        ticks="outside",
+        row=row, col=col,
+        secondary_y=True
+    )
 
 def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
     """在 fig 的第4列新增淨主動成交量圖。"""
     row, col = 4, 1
+    fig.add_trace(go.Scatter(
+        x=df["datetime"], 
+        y=df["total_volume"], 
+        name="累計成交量", 
+        mode="lines", 
+        line=dict(color="rgba(255, 255, 0, 0.4)"), 
+        line_shape="hv"),
+        row=row, col=col,
+        secondary_y=True
+    )
     fig.add_trace(go.Scatter(
         x=df["datetime"], 
         y=df["cumu_net_agg_vol"].where(df["cumu_net_agg_vol"] > 0), 
@@ -134,7 +165,8 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
         line_shape="hv",
         fill="tozeroy", 
         fillcolor="rgba(0, 128, 0, 0.4)"), 
-        row=row, col=col
+        row=row, col=col,
+        secondary_y=False
     )
     fig.add_trace(go.Scatter(
         x=df["datetime"], 
@@ -145,9 +177,20 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
         line_shape="hv",
         fill="tozeroy", 
         fillcolor="rgba(255, 0, 0, 0.4)"), 
-        row=row, col=col
+        row=row, col=col,
+        secondary_y=False
     )
-    fig.update_yaxes(title_text="淨主動成交量(口)", tickformat=".0f", row=row, col=col, autorange=True)
+    fig.update_yaxes(title_text="淨主動成交量", tickformat=".0f", row=row, col=col, autorange=True, secondary_y=False)
+    fig.update_yaxes(
+        title_text="累計成交量", 
+        tickformat=".0f",
+        autorange=True,
+        showgrid=False,
+        zeroline=False,
+        ticks="outside",
+        row=row, col=col,
+        secondary_y=True
+    )
 
 
 def _configure_layout(fig: go.Figure, ctx: RunContext):
@@ -205,7 +248,8 @@ def create_tick_analysis_figure(df: pd.DataFrame, txf_prev_close: float, taiex_p
         shared_xaxes=True,
         row_heights=[0.4, 0.2, 0.2, 0.2],
         vertical_spacing=0.05,
-        subplot_titles=("價格走勢", "淨成交強度指標", "期貨折溢價", "淨主動成交量")
+        specs=[[{}], [{}], [{"secondary_y": True}], [{"secondary_y": True}]],
+        subplot_titles=("價格走勢", "淨成交強度指標", "期貨折溢價", "成交量")
     )
 
     # 3. 依序繪製各個子圖

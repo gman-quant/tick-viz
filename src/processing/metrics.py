@@ -21,6 +21,7 @@ def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close:
         "close",
         "bid_side_total_vol",
         "ask_side_total_vol",
+        "total_volume",
         "high",      # 繪圖需要
         "low",       # 繪圖需要
         "avg_price",  # 繪圖需要

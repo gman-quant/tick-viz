@@ -182,6 +182,7 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         return df_window.rename(columns={'close_TSE': 'underlying_price'}).assign(
             bid_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 1, 0).cumsum(),
             ask_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 2, 0).cumsum(),
+            total_volume =lambda x: x['volume'].cumsum(),
             high=lambda x: x['close'].cummax(),
             low=lambda x: x['close'].cummin(),
             avg_price=lambda x: (x['close'] * x['volume']).cumsum() / x['volume'].cumsum(),
