@@ -122,7 +122,7 @@ def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
     # fig.add_trace(go.Scatter(x=df["datetime"], y=df["rrp_rh-rrp_rl"], name="[RRP_H-L] 折溢價", line=dict(color="gray", width=1)), row=row, col=col)
     # 左軸
     fig.update_yaxes(
-        title_text="折溢價 (RVWAP - VWAP)",
+        title_text="折溢價 (Close - RVWAP)",
         tickformat=".0f",
         autorange=True,
         matches=None,
@@ -132,7 +132,7 @@ def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
     )
     # 右軸
     fig.update_yaxes(
-        title_text="折溢價 (Close - RVWAP)",
+        title_text="折溢價 (RVWAP - VWAP)",
         tickformat=".0f",
         showgrid=False,
         autorange=True,
