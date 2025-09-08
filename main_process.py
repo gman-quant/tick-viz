@@ -10,6 +10,7 @@ from src.data_sourcing import fetch_ticks, market_data
 from src.processing import volume_bars
 from src.visualization import candlestick_chart, main_chart, report_generator, stats_table
 from src.utils.misc import clear_console
+from src.utils.session_time import get_observation_window
 from src.web.websocket_handler import notify_clients
 
 
@@ -67,6 +68,17 @@ async def process_market_session(
                     stats_html=stats_html,
                     ctx=ctx
                 )
+                # 額外另外生成一份靜態報告
+                if ctx.real_time_mode and ctx.auto_refresh:
+                    ctx2 = ctx.with_updated(auto_refresh=False)
+                    st_dt, ed_dt = get_observation_window(ctx2.start_datetime, ctx2.end_datetime, config.TAIWAN_TZ)
+                    fig_candlestick.update_xaxes(range=[st_dt, ed_dt])
+                    fig_main_analysis.update_xaxes(range=[st_dt, ed_dt])
+                    report_generator.generate_html_report(
+                        figures=[fig_main_analysis, fig_candlestick],
+                        stats_html=stats_html,
+                        ctx=ctx2
+                    )
 
                 if ctx.real_time_mode:
                     await notify_clients()
