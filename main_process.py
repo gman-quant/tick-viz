@@ -7,7 +7,7 @@ import config.config as config
 from config.run_context import RunContext
 from config.types import SessionType, DataSource
 from src.data_sourcing import fetch_ticks, market_data
-from src.processing import volume_bars
+from src.processing import volume_bars, kbars
 from src.visualization import candlestick_chart, main_chart, report_generator, stats_table
 from src.utils.misc import clear_console
 from src.utils.session_time import get_observation_window
@@ -58,13 +58,22 @@ async def process_market_session(
             if not df.empty:
                 print("📊 資料獲取完畢，準備處理與繪圖...\n")
 
-                df_vol_kbars = volume_bars.generate_volume_bars(df, volume_per_bar=ctx.volume_per_bar)
+                #df_vol_kbars = volume_bars.generate_volume_bars(df, volume_per_bar=ctx.volume_per_bar)
+                #fig_candlestick = candlestick_chart.plot_candlestick_with_volume_delta(df_vol_kbars, ctx)
                 stats_html = stats_table.generate_stats_html(df, txf_prev_close)
-                fig_candlestick = candlestick_chart.plot_candlestick_with_volume_delta(df_vol_kbars, ctx)
                 fig_main_analysis = main_chart.create_tick_analysis_figure(df, txf_prev_close, taiex_prev_close, ctx)
+                df_kbars = kbars.generate_kbars(df, period='1min')
+                fig_candlestick = candlestick_chart.plot_candlestick(df_kbars, ctx)
 
+                figures = [fig_main_analysis, fig_candlestick]
+                if not ctx.real_time_mode:
+                    for period in ['5min', '10min']:
+                        df_kbars = kbars.generate_kbars(df, period=period)
+                        fig_candlestick = candlestick_chart.plot_candlestick(df_kbars, ctx)
+                        figures.append(fig_candlestick)
+                
                 report_generator.generate_html_report(
-                    figures=[fig_main_analysis, fig_candlestick],
+                    figures=figures,
                     stats_html=stats_html,
                     ctx=ctx
                 )
