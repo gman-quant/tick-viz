@@ -66,7 +66,7 @@ def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
 
     # 設定 Y 軸格式
     fig.update_yaxes(
-        title_text="淨成交強度指標",
+        title_text="淨成交強度",
         tickformat=".2f",
         row=row,
         col=col,
@@ -146,7 +146,7 @@ def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
 
 def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
     """在 fig 的第4列新增淨主動成交量圖。"""
-    row, col = 4, 1
+    row, col = 3, 1
     fig.add_trace(go.Scatter(
         x=df["datetime"], 
         y=df["total_volume"], 
@@ -198,9 +198,9 @@ def _configure_layout(fig: go.Figure, ctx: RunContext):
     # 1. 更新圖表的整體佈局
     fig.update_layout(
         hovermode='x unified',
-        title=dict(text="價格走勢與淨主動成交量", y=0.96),
+        title=dict(text="TXF技術分析圖表", y=0.95),
         template='plotly_dark',
-        height=2200,
+        height=1600,
         showlegend=True,
         legend=dict(x=0.5, y=1.03, orientation="h", xanchor="center", yanchor="bottom"),
     )
@@ -244,17 +244,17 @@ def create_tick_analysis_figure(df: pd.DataFrame, txf_prev_close: float, taiex_p
 
     # 2. 建立 4x1 的子圖畫布
     fig = make_subplots(
-        rows=4, cols=1,
+        rows=3, cols=1,
         shared_xaxes=True,
-        row_heights=[0.4, 0.2, 0.2, 0.2],
+        row_heights=[0.5, 0.25, 0.25],
         vertical_spacing=0.05,
-        specs=[[{}], [{}], [{"secondary_y": True}], [{"secondary_y": True}]],
-        subplot_titles=("價格走勢", "淨成交強度指標", "期貨折溢價", "成交量")
+        specs=[[{}], [{}], [{"secondary_y": True}]],
+        subplot_titles=("逐筆成交價", "淨成交強度指標", "成交量")
     )
 
     # 3. 依序繪製各個子圖
     _add_price_traces(fig, plot_df)
-    _add_premium_traces(fig, plot_df)
+    #_add_premium_traces(fig, plot_df)
     _add_net_volume_traces(fig, plot_df)
     _add_volume_change_traces(fig, plot_df)
 

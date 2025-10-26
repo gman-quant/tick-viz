@@ -62,13 +62,13 @@ async def process_market_session(
                 #fig_candlestick = candlestick_chart.plot_candlestick_with_volume_delta(df_vol_kbars, ctx)
                 stats_html = stats_table.generate_stats_html(df, txf_prev_close)
                 fig_main_analysis = main_chart.create_tick_analysis_figure(df, txf_prev_close, taiex_prev_close, ctx)
-                df_kbars = kbars.generate_kbars(df, period='1min')
+                df_kbars = kbars.generate_kbars(df, period='1min', ctx=ctx)
                 fig_candlestick = candlestick_chart.plot_candlestick(df_kbars, ctx)
 
                 figures = [fig_main_analysis, fig_candlestick]
                 if not ctx.real_time_mode:
                     for period in ['5min', '10min']:
-                        df_kbars = kbars.generate_kbars(df, period=period)
+                        df_kbars = kbars.generate_kbars(df, period=period, ctx=ctx)
                         fig_candlestick = candlestick_chart.plot_candlestick(df_kbars, ctx)
                         figures.append(fig_candlestick)
                 

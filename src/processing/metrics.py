@@ -38,7 +38,7 @@ def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close:
     # === 衍生欄位計算 ===
     # rrp: Relative Reference Price，由現貨價推估的期貨理論價
     window_size = 150
-    window_size2 = 300
+    window_size2 = 180
     processed_df['rrp_by_taiex'] = processed_df['underlying_price'] / taiex_prev_close * txf_prev_close
     processed_df['rrp_rhigh'] = processed_df['rrp_by_taiex'].rolling(window_size, min_periods=1).max()
     processed_df['rrp_rlow']  = processed_df['rrp_by_taiex'].rolling(window_size, min_periods=1).min()
