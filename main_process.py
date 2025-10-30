@@ -25,8 +25,6 @@ async def process_market_session(
 
     mode_info       = f"模式: {'即時動態' if ctx.real_time_mode else '歷史回顧'}"
     session_info    = f"🕒 交易日期: {ctx.start_datetime.date()}({'日盤' if ctx.session_type == SessionType.DAY else '夜盤'})"
-    time_now        = f"🕒 當前時間: {datetime.now(tz=config.TAIWAN_TZ).strftime("%H:%M:%S")}" 
-
     txf_prev_close, taiex_prev_close = market_data.find_previous_close(ctx, api)
 
     print("✅ 初始化完成。\n")
@@ -34,6 +32,7 @@ async def process_market_session(
     while True:
         if config.CLEAR_SCREEN_EACH_CYCLE:
             clear_console()
+        time_now        = f"🕒 當前時間: {datetime.now(tz=config.TAIWAN_TZ).strftime("%H:%M:%S")}" 
 
         print(mode_info)
         print(session_info)
