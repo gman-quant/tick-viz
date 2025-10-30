@@ -160,7 +160,7 @@ pip freeze > requirements.txt
 | Agent Label          | Script Name             | Schedule Time          | Description       
 | -------------------- | ----------------------- | ---------------------- | ----------------- 
 | com.garrett.tickviz  | update_daily_chart.sh   | MON - FRI 13:46        | 自動執行歷史回顧模式  
-| com.garrett.tickviz2 | monitor_realtime_txf.sh | MON - FRI 08:44, 14:59 | 自動執行即時更新模式  
+| com.garrett.tickviz2 | monitor_realtime_txf.sh | MON - FRI 08:40, 14:55 | 自動執行即時更新模式  
 
 
 📜 launchctl 指令

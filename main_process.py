@@ -25,7 +25,7 @@ async def process_market_session(
 
     mode_info       = f"模式: {'即時動態' if ctx.real_time_mode else '歷史回顧'}"
     session_info    = f"🕒 交易日期: {ctx.start_datetime.date()}({'日盤' if ctx.session_type == SessionType.DAY else '夜盤'})"
-    time_range_info = f"🔄 資料區間: {ctx.start_datetime} ~ {ctx.end_datetime}"
+    time_now        = f"🕒 當前時間: {datetime.now(tz=config.TAIWAN_TZ).strftime("%H:%M:%S")}" 
 
     txf_prev_close, taiex_prev_close = market_data.find_previous_close(ctx, api)
 
@@ -37,7 +37,7 @@ async def process_market_session(
 
         print(mode_info)
         print(session_info)
-        print(time_range_info)
+        print(time_now)
 
         try:
             if ctx.real_time_mode or ctx.data_source == DataSource.KAFKA:
