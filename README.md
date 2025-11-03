@@ -110,6 +110,12 @@ OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 - **左上角「⬜️ 點擊生成報告」按鈕**：  
   - 功能：將目前儀表板的圖表與統計資料生成 **靜態 HTML 報告**，存至 `output/TXF-Charts-Live-Static.html`。  
   - 注意：僅在即時模式下可使用，按鈕是浮動的，不佔用主要畫面區域。
+- 啟動方式：
+```bash
+# 🟢 即時更新模式
+source venv/bin/activate
+python main.py --real-time-mode 1
+```
 
 ### 🔵 歷史模式（`real_time_mode=False`）
 
@@ -119,33 +125,32 @@ OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 - 可分別產出日盤與夜盤報告。
 - 自動略過週末（六、日）。
 - 全部資料處理完畢後自動結束。
-
-#### 如何設定日期範圍與盤別？
-
-請修改 `main()` 中的以下區段來指定報告的日期範圍與盤別：
-```python
-start_date = date(2025, 7, 15)
-end_date = date(2025, 7, 15)
-pick = 'day'  # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
-```
-
-#### 啟動方式
-```bash
-source venv/bin/activate
-```
-```bash
-# 🟢 即時更新模式
-python main.py --real-time-mode 1
-```
+- 啟動方式：
 ```bash
 # 🔵 歷史回顧模式
-python main.py --real-time-mode 0
+source venv/bin/activate
+python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 --session whole
+# --session 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
 ```
+
+### 📅 日線圖更新
+
+此流程將 tick 資料聚合成日線 K 棒並繪製圖表，適合：
+
+- 更新每日/夜盤日線 CSV
+- 確認歷史日線資料完整性
+- 為報告或分析提供日線圖
+> 輸出：
+> - 日線CSV：`data/`
+> - 日線圖表：`output/`
+
+- 啟動方式：
 ```bash
 # 📅 日線圖更新
-python -m src.processing.kbar.process_all_ticks_to_daily_csv
+source venv/bin/activate && python -m src.processing.kbar.process_all_ticks_to_daily_csv
 python plot_txf_kbar.py
 ```
+
 
 📂 所有輸出報告會自動儲存至 `output/` 資料夾（可在 `config.py` 中修改）。
 
