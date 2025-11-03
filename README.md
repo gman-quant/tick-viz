@@ -112,7 +112,6 @@ OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
   - 注意：僅在即時模式下可使用，按鈕是浮動的，不佔用主要畫面區域。
 - 啟動方式：
 ```bash
-# 🟢 即時更新模式
 source venv/bin/activate
 python main.py --real-time-mode 1
 ```
@@ -127,7 +126,6 @@ python main.py --real-time-mode 1
 - 全部資料處理完畢後自動結束。
 - 啟動方式：
 ```bash
-# 🔵 歷史回顧模式
 source venv/bin/activate
 python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 --session whole
 # --session 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
@@ -146,7 +144,6 @@ python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 
 
 - 啟動方式：
 ```bash
-# 📅 日線圖更新
 source venv/bin/activate && python -m src.processing.kbar.process_all_ticks_to_daily_csv
 python plot_txf_kbar.py
 ```
