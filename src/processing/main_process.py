@@ -115,4 +115,4 @@ async def process_market_session(
             break
 
         # 等待下一輪
-        await asyncio.sleep(config.UPDATE_INTERVAL)
+        await asyncio.sleep(config.FETCH_INTERVAL)

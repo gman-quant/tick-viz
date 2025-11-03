@@ -89,9 +89,8 @@ TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 
 # === Report and chart settings ===
 CLEAR_SCREEN_EACH_CYCLE = True
-UPDATE_INTERVAL = 12  # seconds
-OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
-OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
+FETCH_INTERVAL = 1     # 每幾秒抓取一批新的 tick（ex: 1 秒）
+UPDATE_INTERVAL = 3    # 每幾秒更新畫面與統計資料（ex: 3 秒）
 ```
 
 ---
