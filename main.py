@@ -50,7 +50,6 @@ async def data_loop(ctx: RunContext, api=None):
 # ------------------------------------------------------------
 async def main(
     real_time_mode: bool = True,
-    auto_refresh: bool = True,
     date_start: date | None = None,
     date_end: date | None = None,
     session: str | None = None,
@@ -61,7 +60,7 @@ async def main(
     2️⃣ 即時模式 + 靜態報告
     3️⃣ 歷史模式（多日迭代）
     """
-    ctx = RunContext(real_time_mode=real_time_mode, auto_refresh=auto_refresh)
+    ctx = RunContext(real_time_mode=real_time_mode)
 
     if not ctx.real_time_mode:
         # --------------------
@@ -100,8 +99,7 @@ async def main(
         # --------------------
         # ⚡ 即時模式
         # --------------------
-        if ctx.auto_refresh:
-            run_dash_app(ctx, port=8080)
+        run_dash_app(ctx, port=8080)
 
         now_time = datetime.now(tz=config.TAIWAN_TZ).time()
         ctx = ctx.with_updated(
@@ -120,8 +118,6 @@ if __name__ == "__main__":
 
     parser.add_argument("--real-time-mode", type=int, choices=[0, 1], default=1,
                         help="即時模式 (1=啟用, 0=停用)")
-    parser.add_argument("--auto-refresh", type=int, choices=[0, 1], default=1,
-                        help="自動重新整理 (1=啟用, 0=停用)")
     parser.add_argument("--date-start", type=parse_date,
                         help="資料開始日期 (格式: YYYY-MM-DD)")
     parser.add_argument("--date-end", type=parse_date,
@@ -134,7 +130,6 @@ if __name__ == "__main__":
     asyncio.run(
         main(
             real_time_mode=bool(args.real_time_mode),
-            auto_refresh=bool(args.auto_refresh),
             date_start=args.date_start,
             date_end=args.date_end,
             session=args.session,
@@ -146,15 +141,11 @@ if __name__ == "__main__":
 
 🟢 即時更新模式
 cd Projects/tick-viz && source venv/bin/activate
-python main.py --auto-refresh 1 --real-time-mode 1
-
-🟡 靜態即時模式
-cd Projects/tick-viz && source venv/bin/activate
-python main.py --auto-refresh 0 --real-time-mode 1
+python main.py --real-time-mode 1
 
 🔵 歷史回顧模式
 cd Projects/tick-viz && source venv/bin/activate
-python main.py --auto-refresh 0 --real-time-mode 0 --date-start 2025-08-22 --date-end 2025-08-22 --session whole
+python main.py --real-time-mode 0 --date-start 2025-08-22 --date-end 2025-08-22 --session whole
 
  📅 日線圖更新
 source venv/bin/activate && python -m src.processing.kbar.process_all_ticks_to_daily_csv

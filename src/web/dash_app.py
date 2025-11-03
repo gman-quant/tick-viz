@@ -120,11 +120,10 @@ def create_dash_app(ctx):
         stats_html = stats_table.generate_stats_html(stats_table.compute_stats(df, txf_prev_close))
 
         # 建立靜態報告
-        ctx2 = ctx.with_updated(auto_refresh=False)
-        st_dt, ed_dt = get_observation_window(ctx2.start_datetime, ctx2.end_datetime, config.TAIWAN_TZ)
+        st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
         for fig in figures:
             fig.update_xaxes(range=[st_dt, ed_dt])
-        report_generator.generate_html_report(figures=figures, stats_html=stats_html, ctx=ctx2)
+        report_generator.generate_html_report(figures=figures, stats_html=stats_html, ctx=ctx)
 
         # ✅ 成功提示 + 啟動倒數回復
         return "✅　已生成新報告", False, 0

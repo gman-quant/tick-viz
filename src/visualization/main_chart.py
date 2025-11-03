@@ -205,7 +205,7 @@ def _configure_layout(fig: go.Figure, ctx: RunContext):
         legend=dict(x=0.5, y=1.03, orientation="h", xanchor="center", yanchor="bottom"),
     )
 
-    if ctx.real_time_mode and ctx.auto_refresh:
+    if ctx.real_time_mode:
         st_dt, ed_dt = get_sliding_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
     else:
         st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)

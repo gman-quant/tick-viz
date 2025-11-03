@@ -75,7 +75,7 @@ def plot_candlestick_with_volume_delta(df: pd.DataFrame, ctx: RunContext):
     )
 
     # 計算觀察時間區間
-    if ctx.real_time_mode and ctx.auto_refresh:
+    if ctx.real_time_mode:
         st_dt, ed_dt = get_sliding_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
     else:
         st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
@@ -156,7 +156,7 @@ def plot_candlestick(df: pd.DataFrame, ctx: RunContext):
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
 
-    if ctx.real_time_mode and ctx.auto_refresh:
+    if ctx.real_time_mode:
         st_dt, ed_dt = get_sliding_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
     else:
         st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
