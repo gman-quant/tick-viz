@@ -1,133 +1,146 @@
 # main.py
 
-
 import argparse
 import asyncio
 from datetime import date, datetime, timedelta, timezone
 
-from aiohttp import web
 from confluent_kafka import TopicPartition
 
 import config.config as config
 from config.run_context import RunContext
 from config.types import SessionType, DataSource
+from src.processing.main_process import process_market_session
 from src.utils.session_time import get_session_range, in_which_session
 from src.utils.time_parser import parse_date
 from src.utils.resource_contexts import kafka_consumer, shioaji_session
-from src.web.app_factory import init_app
-from main_process import process_market_session
+from src.web.dash_app import run_dash_app
 
 
+# ------------------------------------------------------------
+# 📦 資料處理主循環
+# ------------------------------------------------------------
 async def data_loop(ctx: RunContext, api=None):
+    """
+    根據執行模式選擇資料來源（Kafka / Shioaji），
+    並呼叫主處理流程 process_market_session。
+    """
     if ctx.real_time_mode or ctx.data_source == DataSource.KAFKA:
+        # Kafka 模式
         with kafka_consumer() as consumer:
-            # Kafka offset 初始化
             start_dt_utc = ctx.start_datetime.astimezone(timezone.utc)
             timestamp_ms = int(start_dt_utc.timestamp() * 1000)
+
             metadata = consumer.list_topics(config.KAFKA_TOPIC)
             partitions = list(metadata.topics[config.KAFKA_TOPIC].partitions.keys())
-            topic_partitions = [TopicPartition(config.KAFKA_TOPIC, p, timestamp_ms) for p in partitions]
+            topic_partitions = [
+                TopicPartition(config.KAFKA_TOPIC, p, timestamp_ms) for p in partitions
+            ]
+
             fixed_offsets = consumer.offsets_for_times(topic_partitions)
             current_offsets = fixed_offsets.copy()
 
             await process_market_session(consumer, current_offsets, ctx)
     else:
+        # Shioaji 模式（歷史回顧）
         await process_market_session(None, None, ctx, api)
 
 
+# ------------------------------------------------------------
+# 🚀 主流程：根據模式執行不同邏輯
+# ------------------------------------------------------------
 async def main(
-        real_time_mode: bool = 1, 
-        auto_refresh: bool = 1,
-        date_start: str = None, 
-        date_end: str = None, 
-        session: str = None
+    real_time_mode: bool = True,
+    auto_refresh: bool = True,
+    date_start: date | None = None,
+    date_end: date | None = None,
+    session: str | None = None,
 ):
+    """
+    主執行流程，支援三種模式：
+    1️⃣ 即時模式 + 自動刷新（Dash）
+    2️⃣ 即時模式 + 靜態報告
+    3️⃣ 歷史模式（多日迭代）
+    """
     ctx = RunContext(real_time_mode=real_time_mode, auto_refresh=auto_refresh)
 
     if not ctx.real_time_mode:
+        # --------------------
+        # 📘 歷史回顧模式
+        # --------------------
         with shioaji_session() as api:
             one_day = timedelta(days=1)
-            dt_st   = date_start or date.today() - one_day # 2024, 3, 14
-            dt_ed   = date_end or date.today() # 2024, 3, 28
-            pick    = session or 'whole' # 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
-            
+            dt_st = date_start or (date.today() - one_day)
+            dt_ed = date_end or date.today()
+            pick = session or "whole"
+
+            st, ed = get_session_range(pick)
             current = dt_st
-            st, ed  = get_session_range(pick)
+
             while current <= dt_ed:
+                # 跳過週末
                 if current.weekday() >= 5:
                     print(f"⏩ 跳過週末：{current}")
                     current += one_day
                     continue
+
                 for day_session in range(st, ed - 1, -1):
                     print(f"\n📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
+
                     ctx = ctx.with_updated(
                         trade_date=current,
                         session_type=SessionType.DAY if day_session else SessionType.NIGHT,
-                        data_source=DataSource.SHIOAJI
+                        data_source=DataSource.SHIOAJI,
                     )
-    
+
                     await data_loop(ctx, api)
+
                 current += one_day
+
     else:
+        # --------------------
+        # ⚡ 即時模式
+        # --------------------
         if ctx.auto_refresh:
-            app = await init_app()
-            runner = web.AppRunner(app)
-            await runner.setup()
-            site = web.TCPSite(runner, 'localhost', 8080)
-            await site.start()
+            run_dash_app(ctx, port=8080)
 
         now_time = datetime.now(tz=config.TAIWAN_TZ).time()
         ctx = ctx.with_updated(
             trade_date=date.today(),
             session_type=in_which_session(now_time),
         )
-        await data_loop(ctx)
-        
 
+        await data_loop(ctx)
+
+
+# ------------------------------------------------------------
+# 🧭 CLI 參數設定
+# ------------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="台指期 Tick 資料處理與繪圖")
-    
-    parser.add_argument(
-        "--real-time-mode", 
-        type=int, 
-        choices=[0, 1], 
-        default=1,
-        help="即時模式 (1=啟用, 0=停用)"
-    )
-    parser.add_argument(
-        "--auto-refresh", 
-        type=int, 
-        choices=[0, 1], 
-        default=1,
-        help="自動重新整理 (1=啟用, 0=停用)"
-    )
-    parser.add_argument(
-        "--date-start", 
-        type=parse_date, 
-        help="資料開始日期 (格式: YYYY-MM-DD)"
-    )
-    parser.add_argument(
-        "--date-end", 
-        type=parse_date, 
-        help="資料結束日期 (格式: YYYY-MM-DD)"
-    )
-    parser.add_argument(
-        "--session", 
-        type=str, 
-        choices=["day", "night", "whole"], 
-        help="交易時段: day=日盤, night=夜盤, whole=全部"
-    )
+
+    parser.add_argument("--real-time-mode", type=int, choices=[0, 1], default=1,
+                        help="即時模式 (1=啟用, 0=停用)")
+    parser.add_argument("--auto-refresh", type=int, choices=[0, 1], default=1,
+                        help="自動重新整理 (1=啟用, 0=停用)")
+    parser.add_argument("--date-start", type=parse_date,
+                        help="資料開始日期 (格式: YYYY-MM-DD)")
+    parser.add_argument("--date-end", type=parse_date,
+                        help="資料結束日期 (格式: YYYY-MM-DD)")
+    parser.add_argument("--session", type=str, choices=["day", "night", "whole"],
+                        help="交易時段: day=日盤, night=夜盤, whole=全部")
 
     args = parser.parse_args()
 
-    # 呼叫 async 的 main
-    asyncio.run(main(
-        real_time_mode=bool(args.real_time_mode),
-        auto_refresh=bool(args.auto_refresh),
-        date_start=args.date_start,
-        date_end=args.date_end,
-        session=args.session
-    ))
+    asyncio.run(
+        main(
+            real_time_mode=bool(args.real_time_mode),
+            auto_refresh=bool(args.auto_refresh),
+            date_start=args.date_start,
+            date_end=args.date_end,
+            session=args.session,
+        )
+    )
+
 
 ''' 📊 tick-viz 專案常用指令
 

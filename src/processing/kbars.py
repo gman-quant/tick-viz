@@ -33,6 +33,7 @@ def generate_kbars(tick: pd.DataFrame, period: str = '1min', ctx: RunContext = N
     }
 
     # 依時間聚合
+    offset = '0h'
     if ctx.session_type == SessionType.DAY:
         offset='8h45min'
     elif ctx.session_type == SessionType.NIGHT:

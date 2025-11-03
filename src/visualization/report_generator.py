@@ -44,22 +44,6 @@ def generate_html_report(
     # 用當下時間當作「更新標記」
     last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # ⬇️ 根據模式決定是否加上 WebSocket 腳本
-    if ctx.real_time_mode and ctx.auto_refresh:
-        websocket_script = """
-        <script>
-            const ws = new WebSocket("ws://localhost:8080/ws");
-            ws.onmessage = function (event) {
-                if (event.data === "reload") {
-                    console.log("📢 收到更新通知，重新載入頁面");
-                    location.reload();
-                }
-            };
-        </script>
-        """
-    else:
-        websocket_script = ""  # 歷史模式不需要 WebSocket
-
     # 使用 f-string 組合出最終的完整 HTML 結構
     full_html_content = f"""
     <!DOCTYPE html>
@@ -76,7 +60,6 @@ def generate_html_report(
                 font-family: 'Inter', sans-serif, 'Microsoft JhengHei';
             }}
         </style>
-        {websocket_script}
     </head>
     <body>
         {stats_html}
