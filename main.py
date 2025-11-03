@@ -145,7 +145,7 @@ python main.py --real-time-mode 1
 
 🔵 歷史回顧模式
 cd Projects/tick-viz && source venv/bin/activate
-python main.py --real-time-mode 0 --date-start 2025-08-22 --date-end 2025-08-22 --session whole
+python main.py --real-time-mode 0 --date-start 2025-01-01 --date-end 2025-10-31 --session whole
 
  📅 日線圖更新
 source venv/bin/activate && python -m src.processing.kbar.process_all_ticks_to_daily_csv

@@ -9,48 +9,61 @@ import pandas as pd
 import shioaji as sj
 from confluent_kafka import Consumer, KafkaError
 
-from config.config import DATA_DIR, TAIWAN_TZ
+from config.config import DATA_DIR, TAIWAN_TZ, FETCH_INTERVAL
 from config.run_context import RunContext
 from config.types import SessionType
 from src.data_sourcing.market_data import get_contract
 from src.utils.time_parser import parse_tick_datetime
 from src.utils.resource_contexts import shioaji_session
 
-def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: datetime, end_datetime: datetime, tick_list: list) -> tuple[pd.DataFrame, list]:
+def fetch_ticks_from_kafka(
+    consumer: Consumer,
+    offsets: list,
+    start_datetime: datetime,
+    end_datetime: datetime,
+    tick_list: list
+) -> tuple[pd.DataFrame, list]:
     """
     從 Kafka 擷取指定時間區間內的 tick 資料。
+    單筆 poll + 推進 offsets，保留速度快且避免重複。
     """
     consumer.assign(offsets)
     print(f"🔄 從 {start_datetime} (Asia/Taipei) 開始讀取資料...")
 
+    finished = False
+
     try:
-        while True:
+        while not finished:
             try:
-                msg = consumer.poll(1.0)
+                msg = consumer.poll(FETCH_INTERVAL)
             except Exception as e:
                 print(f"⚠️ Kafka polling error: {e}")
                 break
+
             if msg is None:
                 continue
+
             if msg.error():
                 if msg.error().code() == KafkaError._PARTITION_EOF:
+                    finished = True
                     break
                 else:
-                    print("⚠️ Kafka 錯誤：", msg.error())
+                    print(f"⚠️ Kafka 錯誤：{msg.error()}")
                     continue
 
+            # 解析 JSON
             try:
                 record = orjson.loads(msg.value())
             except Exception as e:
                 print(f"⚠️ JSON 解碼錯誤: {e}")
                 continue
 
-            tick_dt_taiwan = parse_tick_datetime(record['datetime'])
+            tick_dt_taiwan = parse_tick_datetime(record.get('datetime'))
             if tick_dt_taiwan is None:
                 continue
 
             if tick_dt_taiwan > end_datetime:
-                print("⏹️ 已達目標時間，停止讀取。")
+                finished = True
                 break
 
             if start_datetime <= tick_dt_taiwan <= end_datetime and not record.get('simtrade', False):
@@ -59,32 +72,33 @@ def fetch_ticks_from_kafka(consumer: Consumer, offsets: list, start_datetime: da
     except KeyboardInterrupt:
         print("🛑 使用者手動中止。")
 
+    # 轉成 DataFrame 並計算累計指標
     df = pd.DataFrame(tick_list)
     if not df.empty:
         df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601')
         df.drop_duplicates(inplace=True)
-        window_size = 300  # 你可以自由調整這個數字
+        window_size = 300
         df['rvwap'] = (
-            (df['close'] * df['volume']).rolling(window_size, min_periods=1).sum() /
-            df['volume'].rolling(window_size, min_periods=1).sum()
+            (df['close'] * df['volume']).rolling(window_size, min_periods=1).sum()
+            / df['volume'].rolling(window_size, min_periods=1).sum()
         )
-        
 
     print(f"✅ 共取得 {len(df)} 筆資料")
-    
-    # 取得最新 consumer 位置 offsets，準備下一輪拉取用
+
+    # 更新 offsets，推進到下一個 offset
     positions = consumer.position(offsets)
-    
     new_offsets = []
     for pos in positions:
         if pos.offset >= 0:
             new_offsets.append(pos)
         else:
-            # 如果 offset 無效，維持原本 offsets
-            original_tp = next((tp for tp in offsets if tp.topic == pos.topic and tp.partition == pos.partition), None)
+            original_tp = next(
+                (tp for tp in offsets if tp.topic == pos.topic and tp.partition == pos.partition),
+                None
+            )
             if original_tp:
                 new_offsets.append(original_tp)
-    
+
     return df, new_offsets
 
 

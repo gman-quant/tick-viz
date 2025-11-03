@@ -113,6 +113,3 @@ async def process_market_session(
         now = datetime.now(tz=config.TAIWAN_TZ)
         if not ctx.real_time_mode or now >= ctx.end_datetime:
             break
-
-        # 等待下一輪
-        await asyncio.sleep(config.FETCH_INTERVAL)
