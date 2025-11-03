@@ -105,7 +105,7 @@ def generate_stats_div(stats):
 
     container = html.Div([
         html.Div([
-            html.Div("TXF即時統計資訊",
+            html.Div("台指期盤中快訊",
                      style={"textAlign": "center", "fontSize": 20, "fontWeight": "bold"}),
             html.Div(f"更新: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
                      style={"position": "absolute", "right": 0, "top": 0,
@@ -144,7 +144,7 @@ def generate_stats_html(stats):
                 color: #ffffff; box-shadow: 0 2px 4px rgba(255,255,255,0.1);">
         <div style="position: relative; width: 100%; margin-bottom: 20px;">
             <div style="text-align: center; font-size: 20px; font-weight: bold;">
-                TXF即時統計資訊
+                台指期盤中快訊
             </div>
             <div style="position: absolute; right: 0; top: 0; font-size: 14px; color: #cccccc;">
                 更新: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
