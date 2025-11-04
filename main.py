@@ -188,3 +188,4 @@ cat /tmp/tickviz.log	                        # 查看 腳本的標準輸出日�
 cat /tmp/tickviz.err	                        # 查看 腳本的錯誤日誌。
 tail -f /tmp/tickviz2.out /tmp/tickviz2.err     # 實時查看腳本的標準輸出與錯誤日誌
 '''
+

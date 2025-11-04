@@ -207,3 +207,4 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
     except Exception as e:
         # 將所有可能的錯誤包裝成一個統一的 Runtime 錯誤
         raise RuntimeError(f"Failed to fetch tick data from Shioaji: {e}") from e
+

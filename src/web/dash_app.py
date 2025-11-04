@@ -15,7 +15,6 @@ from src.processing import kbars
 from src.utils.session_time import get_observation_window
 from src.visualization import candlestick_chart, main_chart, stats_table, report_generator
 
-
 def create_dash_app(ctx, shared_state):
     """建立 Dash 應用（共享狀態由主程式傳入）"""
     app = Dash(__name__, title=ctx.report_title)
@@ -75,19 +74,29 @@ def create_dash_app(ctx, shared_state):
     )
     def update_dashboard(n):
         with shared_state.lock:
-            df = shared_state.latest_df
-            if df is None or df.empty:
-                return go.Figure(), go.Figure(), "等待資料中..."
+            # 讀取預先算好的 DataFrame
+            plot_df = shared_state.plot_df
+            df_kbars = shared_state.kbars_1min
+            txf_prev_close = shared_state.txf_prev_close
+            taiex_prev_close = shared_state.taiex_prev_close
+            
+            # 統計表 compute_stats 很快，但仍需原始 df
+            latest_df = shared_state.latest_df
 
-            fig_main = main_chart.create_tick_analysis_figure(
-                df, shared_state.txf_prev_close, shared_state.taiex_prev_close, ctx
-            )
+        if plot_df is None or plot_df.empty or df_kbars is None or latest_df is None:
+            return go.Figure(), go.Figure(), "等待資料中..."
 
-            df_kbars = kbars.generate_kbars(df, period="1min", ctx=ctx)
-            fig_candle = candlestick_chart.plot_candlestick(df_kbars, ctx)
+        # 直接傳入 plot_df，不再計算
+        fig_main = main_chart.create_tick_analysis_figure(
+            plot_df, txf_prev_close, taiex_prev_close, ctx
+        )
 
-            stats = stats_table.compute_stats(df, shared_state.txf_prev_close)
-            stats_div = stats_table.generate_stats_div(stats)
+        # 直接傳入 df_kbars，不再計算
+        fig_candle = candlestick_chart.plot_candlestick(df_kbars, ctx)
+        
+        # 統計表的計算量很小，暫時保留在 callback 中
+        stats = stats_table.compute_stats(latest_df, txf_prev_close)
+        stats_div = stats_table.generate_stats_div(stats)
 
         return fig_main, fig_candle, stats_div
 
@@ -114,7 +123,9 @@ def create_dash_app(ctx, shared_state):
         if df is None or df.empty:
             return "⚠️　資料不足，無法生成", False, 0
 
-        # 生成圖表與統計資訊
+        # 【不需修改】
+        # generate_figures 函式已被修改為 "接收原始 df，內部自己計算 plot_df"
+        # 由於這是手動點擊，短暫的計算延遲是可接受的
         figures = generate_figures(df, ctx, txf_prev_close, taiex_prev_close)
         stats_html = stats_table.generate_stats_html(stats_table.compute_stats(df, txf_prev_close))
 
@@ -157,3 +168,4 @@ def run_dash_app(ctx, shared_state, port: int = 8080, debug: bool = False):
     thread = Thread(target=_run, daemon=True)
     thread.start()
     return app
+

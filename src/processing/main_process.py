@@ -12,13 +12,21 @@ from src.visualization import candlestick_chart, main_chart, report_generator, s
 from src.utils.misc import clear_console
 from src.web.shared_state import shared_state
 
+# 【新增】導入重度計算函式
+from src.processing.metrics import prepare_plot_data 
+
 
 def generate_figures(df, ctx, txf_prev_close, taiex_prev_close):
     """
     生成主分析圖與各 K 線圖，返回圖表列表
     """
+    
+    # 【修改】在繪圖前先計算好 plot_df
+    plot_df = prepare_plot_data(df, txf_prev_close, taiex_prev_close)
+    
     figures = [
-        main_chart.create_tick_analysis_figure(df, txf_prev_close, taiex_prev_close, ctx)
+        # 【修改】傳入預先算好的 plot_df
+        main_chart.create_tick_analysis_figure(plot_df, txf_prev_close, taiex_prev_close, ctx)
     ]
 
     for period in ['1min', '3min', '5min', '10min']:
@@ -88,13 +96,20 @@ def process_market_session(
                 print("📊 資料獲取完畢，準備處理與繪圖...\n")
 
                 if ctx.real_time_mode:
+                    
+                    # 【優化】在這裡(data_loop 執行緒) 進行重度計算
+                    plot_df = prepare_plot_data(df, txf_prev_close, taiex_prev_close)
+                    df_kbars_1min = kbars.generate_kbars(df, period="1min", ctx=ctx)
+
                     # 更新共享狀態
                     with shared_state.lock:
-                        shared_state.latest_df = df
+                        shared_state.latest_df = df # 原始 DF (統計表可能仍需)
+                        shared_state.plot_df = plot_df # 【新增】預先算好的主圖資料
+                        shared_state.kbars_1min = df_kbars_1min # 【新增】預先算好的 1M K棒
                         shared_state.txf_prev_close = txf_prev_close
                         shared_state.taiex_prev_close = taiex_prev_close
                 else:
-                    # 生成報告
+                    # 歷史模式 (generate_figures 已在上方修改過，所以這裡不需變動)
                     stats_html = stats_table.generate_stats_html(
                         stats_table.compute_stats(df, txf_prev_close)
                     )
@@ -112,3 +127,4 @@ def process_market_session(
         now = datetime.now(tz=config.TAIWAN_TZ)
         if not ctx.real_time_mode or now >= ctx.end_datetime:
             break
+

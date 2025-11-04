@@ -1,16 +1,11 @@
 # src/visualization/main_chart.py
 
-
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from src.utils.session_time import get_observation_window, get_sliding_window
 import config.config as config
 from config.run_context import RunContext
-
-# 導入相依的處理函式
-# 假設您已將 _prepare_plot_data 移至 metrics.py
-from src.processing.metrics import prepare_plot_data 
 
 # ----------------------------------------------------------------------------
 # 以下是原 Notebook 中的繪圖輔助函式，直接複製過來
@@ -71,43 +66,6 @@ def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
         row=row,
         col=col,
     )
-
-# def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
-#     """在 fig 的第2列新增成交量變化圖（Bid 與 Ask 分開繪製）。"""
-#     row, col = 2, 1
-
-#     # --- Bid side（主動買盤）成交變化（綠色區塊）
-#     fig.add_trace(go.Scatter(
-#         x=df["datetime"],
-        
-#         y=df["bid_side_volume_change"],
-#         name="主動買成交量變化(past 300 ticks)",
-#         mode="lines",
-#         line=dict(color="green", width=1),
-#         line_shape="hv",
-#         fill="tozeroy",
-#         fillcolor="rgba(0, 128, 0, 0.2)"
-#     ), row=row, col=col)
-
-#     # --- Ask side（主動賣盤）成交變化（紅色區塊）
-#     fig.add_trace(go.Scatter(
-#         x=df["datetime"],
-#         y=df["ask_side_volume_change"],
-#         name="主動賣成交量變化(past 300 ticks)",
-#         mode="lines",
-#         line=dict(color="red", width=1),
-#         line_shape="hv",
-#         fill="tozeroy",
-#         fillcolor="rgba(255, 0, 0, 0.2)"
-#     ), row=row, col=col)
-
-#     # 設定 Y 軸格式
-#     fig.update_yaxes(
-#         title_text="主動買賣成交量變化(past 300 ticks)",
-#         tickformat=".2f",
-#         row=row,
-#         col=col,
-#     )
 
 def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
     """在 fig 的第3列新增折溢價圖。"""
@@ -192,7 +150,6 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
         secondary_y=True
     )
 
-
 def _configure_layout(fig: go.Figure, ctx: RunContext):
     """設定圖表的整體佈局、標題與圖例。"""
     # 1. 更新圖表的整體佈局
@@ -227,22 +184,21 @@ def _configure_layout(fig: go.Figure, ctx: RunContext):
 # 主要的繪圖函式 (重構後)
 # ----------------------------------------------------------------------------
 
-def create_tick_analysis_figure(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close: float, ctx: RunContext) -> go.Figure:
+# 【修改】函式簽名與註釋
+def create_tick_analysis_figure(plot_df: pd.DataFrame, txf_prev_close: float, taiex_prev_close: float, ctx: RunContext) -> go.Figure:
     """
     視覺化 Tick 資料，整合價格、基差、主動成交量等多維度分析。
     
     Args:
-        df (pd.DataFrame): 包含 Tick 資料的 DataFrame。
+        plot_df (pd.DataFrame): 【注意】必須是已由 prepare_plot_data 處理過的 DataFrame。
         txf_prev_close (float): 台指期貨昨日收盤價。
         taiex_prev_close (float): 加權指數昨日收盤價。
         
     Returns:
         go.Figure: 一個包含完整分析圖的 Plotly Figure 物件。
     """
-    # 1. 準備繪圖資料及衍生指標
-    plot_df = prepare_plot_data(df, txf_prev_close, taiex_prev_close)
 
-    # 2. 建立 4x1 的子圖畫布
+    # 1. 建立 4x1 的子圖畫布
     fig = make_subplots(
         rows=3, cols=1,
         shared_xaxes=True,
@@ -252,14 +208,14 @@ def create_tick_analysis_figure(df: pd.DataFrame, txf_prev_close: float, taiex_p
         subplot_titles=("逐筆成交價", "淨成交強度指標", "成交量")
     )
 
-    # 3. 依序繪製各個子圖
+    # 2. 依序繪製各個子圖
     _add_price_traces(fig, plot_df)
-    #_add_premium_traces(fig, plot_df)
     _add_net_volume_traces(fig, plot_df)
     _add_volume_change_traces(fig, plot_df)
 
-    # 4. 設定圖表全域樣式
+    # 3. 設定圖表全域樣式
     _configure_layout(fig, ctx)
 
-    # 5. 【關鍵修改】回傳 Figure 物件，而不是顯示或儲存它
+    # 4. 回傳 Figure 物件
     return fig
+
