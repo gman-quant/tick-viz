@@ -107,7 +107,7 @@ UPDATE_INTERVAL         = 2
 
 本專案支援兩種運行模式：
 
-### 🟢 即時模式（`real_time_mode=True`）
+### 🟢 即時模式（`real_time_mode=1`）
 
 用於接收來自 Kafka 串流來源的 **即時 tick 資料**。
 
@@ -123,7 +123,7 @@ python main.py --real-time-mode 1
 ```
 啟動後請開啟瀏覽器訪問 http://localhost:8080
 
-### 🔵 歷史模式（`real_time_mode=False`）
+### 🔵 歷史模式（`real_time_mode=0`）
 
 用於回看特定區間的 **歷史 tick 資料**。
 
