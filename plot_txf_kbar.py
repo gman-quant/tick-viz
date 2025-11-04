@@ -197,7 +197,7 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
 
 
 # --- 執行 ---
-df = load_and_preprocess("data/txf_daily.csv")
+df = load_and_preprocess("data/daily_txf.csv")
 plot_candlestick_with_volume(df)
 
 '''

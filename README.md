@@ -146,7 +146,7 @@ python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 
 - 確認歷史日線資料完整性
 - 為報告或分析提供日線圖
 > 輸出：
-> - 日線CSV：`data/txf_daily.csv`
+> - 日線CSV：`data/daily_txf.csv`
 > - 日線圖表：`output/TXF-Daily-Chart.html`
 - 啟動方式：
 ```bash

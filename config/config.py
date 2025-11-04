@@ -31,8 +31,10 @@ UPDATE_INTERVAL = 2    # [秒] UI 更新週期；控制每隔多久重新計算�
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 
+
 # === Data cache settings ===
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 DATA_DIR.mkdir(exist_ok=True)  # 確保目錄存在
+
 
 
