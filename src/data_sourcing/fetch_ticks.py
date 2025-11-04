@@ -1,6 +1,5 @@
 # src/data_sourcing/fetch_ticks.py
 
-
 from datetime import datetime, timedelta, time as dt_time
 from pathlib import Path
 
@@ -20,17 +19,20 @@ def fetch_ticks_from_kafka(
     consumer: Consumer,
     offsets: list,
     start_datetime: datetime,
-    end_datetime: datetime,
-    tick_list: list
+    end_datetime: datetime
 ) -> tuple[pd.DataFrame, list]:
     """
     從 Kafka 擷取指定時間區間內的 tick 資料。
-    單筆 poll + 推進 offsets，保留速度快且避免重複。
+    
+    【重構】:
+    - 移除 tick_list 參數。
+    - 僅返回本次輪詢抓取到的 "新" ticks (new_df)。
+    - 移除所有DataFrame的後處理 (to_datetime, rvwap)，交由主流程 (main_process) 統一處理。
     """
     consumer.assign(offsets)
-    print(f"🔄 從 {start_datetime} (Asia/Taipei) 開始讀取資料...")
 
     finished = False
+    new_tick_list = [] # 【修改】只在函式內部使用，儲存 "新" Ticks
 
     try:
         while not finished:
@@ -41,6 +43,8 @@ def fetch_ticks_from_kafka(
                 break
 
             if msg is None:
+                # 【修改】Poll 沒資料，直接結束此次輪詢
+                finished = True
                 continue
 
             if msg.error():
@@ -67,23 +71,20 @@ def fetch_ticks_from_kafka(
                 break
 
             if start_datetime <= tick_dt_taiwan <= end_datetime and not record.get('simtrade', False):
-                tick_list.append(record)
+                new_tick_list.append(record) # 【修改】加入 "新" Ticks List
 
     except KeyboardInterrupt:
         print("🛑 使用者手動中止。")
+        raise
 
-    # 轉成 DataFrame 並計算累計指標
-    df = pd.DataFrame(tick_list)
+    # 【修改】只轉換本次抓到的 "新" Ticks
+    df = pd.DataFrame(new_tick_list)
+
+    # 【移除】以下所有處理邏輯 (to_datetime, drop_duplicates, rvwap)
+    # 這些將移至 main_process.py 中，對 "main_df" 進行操作
+
     if not df.empty:
-        df['datetime'] = pd.to_datetime(df['datetime'], format='ISO8601')
-        df.drop_duplicates(inplace=True)
-        window_size = 300
-        df['rvwap'] = (
-            (df['close'] * df['volume']).rolling(window_size, min_periods=1).sum()
-            / df['volume'].rolling(window_size, min_periods=1).sum()
-        )
-
-    print(f"✅ 共取得 {len(df)} 筆資料")
+        print(f"✅ 本次輪詢取得 {len(df)} 筆新資料")
 
     # 更新 offsets，推進到下一個 offset
     positions = consumer.position(offsets)
@@ -207,4 +208,4 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
     except Exception as e:
         # 將所有可能的錯誤包裝成一個統一的 Runtime 錯誤
         raise RuntimeError(f"Failed to fetch tick data from Shioaji: {e}") from e
-
+    

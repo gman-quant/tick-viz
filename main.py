@@ -55,10 +55,9 @@ def main(
     session: str | None = None,
 ):
     """
-    主執行流程，支援三種模式：
-    1️⃣ 即時模式 + 自動刷新（Dash）
-    2️⃣ 即時模式 + 靜態報告
-    3️⃣ 歷史模式（多日迭代）
+    主執行流程，支援二種模式：
+    1️⃣ 即時模式 + 靜態報告
+    2️⃣ 歷史模式（多日迭代）
     """
     ctx = RunContext(real_time_mode=real_time_mode)
 
@@ -107,7 +106,7 @@ def main(
             trade_date=date.today(),
             session_type=in_which_session(now_time),
         )
-
+        
         data_loop(ctx)
 
 
@@ -144,7 +143,7 @@ python main.py --real-time-mode 1
 
 🔵 歷史回顧模式
 cd Projects/tick-viz && source venv/bin/activate
-python main.py --real-time-mode 0 --date-start 2025-01-01 --date-end 2025-10-31 --session whole
+python main.py --real-time-mode 0 --date-start 2025-11-03 --date-end 2025-11-03 --session whole
 
  📅 日線圖更新
 source venv/bin/activate && python -m src.processing.kbar.process_all_ticks_to_daily_csv

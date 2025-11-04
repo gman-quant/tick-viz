@@ -27,7 +27,7 @@ TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 # === Report and chart settings ===
 CLEAR_SCREEN_EACH_CYCLE = True
 FETCH_INTERVAL  = 2    # [秒] Consumer 輪詢間隔；控制每次 poll() 等待新 tick 的最長時間
-UPDATE_INTERVAL = 3    # [秒] UI 更新週期；控制每隔多久重新計算與刷新統計資訊
+UPDATE_INTERVAL = 2    # [秒] UI 更新週期；控制每隔多久重新計算與刷新統計資訊
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 

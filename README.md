@@ -89,8 +89,8 @@ TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 
 # === Report and chart settings ===
 CLEAR_SCREEN_EACH_CYCLE = True
-FETCH_INTERVAL = 1     # 每幾秒抓取一批新的 tick（ex: 1 秒）
-UPDATE_INTERVAL = 3    # 每幾秒更新畫面與統計資料（ex: 3 秒）
+FETCH_INTERVAL          = 2    # [秒] Consumer 輪詢間隔；控制每次 poll() 等待新 tick 的最長時間
+UPDATE_INTERVAL         = 2    # [秒] UI 更新週期；控制每隔多久重新計算與刷新統計資訊
 ```
 
 ---
