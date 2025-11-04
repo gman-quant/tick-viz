@@ -2,7 +2,6 @@
 
 from datetime import datetime
 from confluent_kafka import Consumer, TopicPartition
-import asyncio
 
 import config.config as config
 from config.run_context import RunContext
