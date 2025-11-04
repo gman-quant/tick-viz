@@ -5,8 +5,6 @@
 ![Shioaji](https://img.shields.io/badge/Shioaji-required-orange) 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
-
-📈 台指期貨盤中動態分析儀表板 (TXF Intraday Dynamic Analysis Dashboard)
 本專案是專為台指期貨（TXF）分析所打造的高效能儀表板。它能即時消費 Kafka 中的 Tick 數據流，或回測 Shioaji 的歷史資料，透過多維度指標視覺化盤中多空狀態。
 
 核心架構採用多執行緒模型，將「後端資料運算」與「前端 UI 渲染」徹底分離，確保即時儀表板在大量資料更新下依然保持流暢不卡頓。
