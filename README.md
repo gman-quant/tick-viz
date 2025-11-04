@@ -6,20 +6,26 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
 
-本專案旨在提供一個視覺化的儀表板，即時分析或歷史回測台灣指數期貨（TXF）的 tick 級別數據流，並從中洞察盤中多空狀態。
+📈 台指期貨盤中動態分析儀表板 (TXF Intraday Dynamic Analysis Dashboard)
+本專案是專為台指期貨（TXF）分析所打造的高效能儀表板。它能即時消費 Kafka 中的 Tick 數據流，或回測 Shioaji 的歷史資料，透過多維度指標視覺化盤中多空狀態。
+
+核心架構採用多執行緒模型，將「後端資料運算」與「前端 UI 渲染」徹底分離，確保即時儀表板在大量資料更新下依然保持流暢不卡頓。
 
 ---
 
 ## ✨ 主要功能
 
 -   **雙模式數據源**：支援從 `Kafka` 即時消費 tick 數據，或透過 `Shioaji API` 抓取歷史 tick 數據進行分析。
+-   **高效能即時架構**：採用多執行緒模型，將資料處理 (data_loop) 與 UI 渲染 (dash_app) 分離，確保即時儀表板流暢高效。
 -   **多維度指標計算**：即時計算 **VWAP**(成交量加權平均價)、**盤中高低價**、**淨成交強度指標**、**淨主動成交量**與**累計成交量**等技術指標。
 -   **進階圖表視覺化**：
     -   **主分析圖**：整合逐筆成交價格及其相關技術分析圖表。
     -   **量價K棒圖**：不同聚合週期的K線圖(1-min, 5-min, 10-min)。
-    -   **日線K棒圖**：日夜盤之分的日線圖。
--   **自動化報告生成**：將所有圖表與統計數據整合為單一的 `HTML` 報告，並支援在即時模式下**自動定時更新**頁面。
--   **高效率終端監控**：在終端機中提供一個乾淨、會原地更新的狀態面板，方便監控程式運行狀態。
+    -   **日線K棒圖**：獨立腳本，繪製日夜盤之分的日線圖。
+-   **動態儀表板 & 靜態報告**：
+    -   **即時模式**：提供基於 Dash 的動態網頁儀表板（UPDATE_INTERVAL 自動刷新）。
+    -   **歷史模式**：自動生成包含所有圖表與統計數據的單一 HTML 報告。
+-   **高效率終端監控**：在終端機中提供一個乾淨、會原地更新的狀態面板，僅在有新資料時才刷新，安靜且高效。
 
 ---
 
@@ -34,6 +40,7 @@
 ## 🛠️ 技術棧
 
 -   **核心語言**: Python 3.9+
+-   **Web框架**: Dash (by Plotly)
 -   **數據處理**: Pandas
 -   **圖表繪製**: Plotly
 -   **即時數據**: Confluent-Kafka for Python
@@ -80,17 +87,18 @@ KAFKA_BROKER=your_kafka_addreee:9092
 KAFKA_TOPIC=your_topic_name
 ```
 
-修改'config.py' 設定參考如下:
+修改 config/config.py 中的效能調校參數：
 ```python
 # config/config.py
+# [重要] 後端資料迴圈 (data_loop) 的 poll 等待時間。
+# 這是「資料延遲」的來源。
+# consumer.poll() 會阻塞(等待) N 秒，此期間 CPU 佔用為 0%。
+FETCH_INTERVAL          = 2    
 
-# === Timezone setting ===
-TAIWAN_TZ = ZoneInfo("Asia/Taipei")
-
-# === Report and chart settings ===
-CLEAR_SCREEN_EACH_CYCLE = True
-FETCH_INTERVAL          = 2    # [秒] Consumer 輪詢間隔；控制每次 poll() 等待新 tick 的最長時間
-UPDATE_INTERVAL         = 2    # [秒] UI 更新週期；控制每隔多久重新計算與刷新統計資訊
+# [重要] 前端儀表板 (Dash UI) 的刷新頻率。
+# 這是「視覺延遲」的來源。
+# 建議設為 >= FETCH_INTERVAL，以達資源/效能平衡。
+UPDATE_INTERVAL         = 2
 ```
 
 ---
@@ -103,26 +111,26 @@ UPDATE_INTERVAL         = 2    # [秒] UI 更新週期；控制每隔多久重�
 
 用於接收來自 Kafka 串流來源的 **即時 tick 資料**。
 
-- 自動判斷當前時間屬於日盤或夜盤，並建立執行上下文。
-- 啟動本地 **Dash 伺服器**（localhost:8080），提供可動態更新的儀表板。
-- 程式常駐執行，並定期刷新報告與畫面。
-- **左上角「⬜️ 點擊生成報告」按鈕**：  
-  - 功能：將目前儀表板的圖表與統計資料生成 **靜態 HTML 報告**，存至 `output/TXF-Charts-Live-Static.html`。  
-  - 注意：僅在即時模式下可使用，按鈕是浮動的，不佔用主要畫面區域。
+- 啟動後端資料迴圈 (Consumer) 與前端 Dash 伺服器 (Web App)。
+- 後端 (data_loop) 依 FETCH_INTERVAL 頻率從 Kafka 獲取資料並執行重度計算（rolling, kbars ...）。
+- 前端 (dash_app) 依 UPDATE_INTERVAL 頻率刷新圖表，僅讀取已算好的資料，確保 UI 流暢。
+- 左上角「⬜️ 點擊生成報告」按鈕：
+  - 功能：將目前儀表板的圖表與統計資料生成 靜態 HTML 報告，存至 output/TXF-Charts-Live-Static.html。
 - 啟動方式：
 ```bash
 source venv/bin/activate
 python main.py --real-time-mode 1
 ```
+啟動後請開啟瀏覽器訪問 http://localhost:8080
 
 ### 🔵 歷史模式（`real_time_mode=False`）
 
-適用於回看特定區間的 **歷史 tick 資料**。
+用於回看特定區間的 **歷史 tick 資料**。
 
-- 自訂起迄日期。
-- 可分別產出日盤與夜盤報告。
+- 自訂起迄日期（--date-start, --date-end）。
+- 可分別產出日盤與夜盤報告（--session）。
 - 自動略過週末（六、日）。
-- 全部資料處理完畢後自動結束。
+- 全部資料處理完畢後自動結束，並將 HTML 報告存於 output/。
 - 啟動方式：
 ```bash
 source venv/bin/activate
@@ -132,7 +140,7 @@ python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 
 
 ### 📅 日線圖更新
 
-此流程將 tick 資料聚合成日線 K 棒並繪製圖表，適合：
+用於將 tick 資料聚合成日線 K 棒並繪製圖表。
 
 - 更新每日/夜盤日線 CSV
 - 確認歷史日線資料完整性
@@ -140,15 +148,13 @@ python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 
 > 輸出：
 > - 日線CSV：`data/txf_daily.csv`
 > - 日線圖表：`output/TXF-Daily-Chart.html`
-
 - 啟動方式：
 ```bash
 source venv/bin/activate && python -m src.processing.kbar.process_all_ticks_to_daily_csv
 python plot_txf_kbar.py
 ```
 
-
-📂 所有輸出報告會自動儲存至 `output/` 資料夾（可在 `config.py` 中修改）。
+📂 所有輸出報告會自動儲存至 `output/` 資料夾。
 
 ---
 
@@ -164,7 +170,7 @@ TICK-VIZ/
 │   ├── processing/                                # 資料處理模組
 │   │   ├── main_process.py                        # 核心資料流與報告生成
 │   │   ├── kbars.py                               # ticks → 分K（時間型 K棒）
-│   │   ├── metrics.py                             # 技術指標計算（MA、RSI 等）
+│   │   ├── metrics.py                             # 技術指標計算
 │   │   ├── volume_bars.py                         # 成交量型 K棒（Volume-based K bars）
 │   │   └── kbar/                                  # ticks → 日K
 │   │       └── process_all_ticks_to_daily_csv.py  # 聚合生成日K CSV
