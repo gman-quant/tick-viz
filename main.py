@@ -1,7 +1,6 @@
 # main.py
 
 import argparse
-import asyncio
 from datetime import date, datetime, timedelta, timezone
 
 from confluent_kafka import TopicPartition
@@ -20,7 +19,7 @@ from src.web.dash_app import run_dash_app
 # ------------------------------------------------------------
 # 📦 資料處理主循環
 # ------------------------------------------------------------
-async def data_loop(ctx: RunContext, api=None):
+def data_loop(ctx: RunContext, api=None):
     """
     根據執行模式選擇資料來源（Kafka / Shioaji），
     並呼叫主處理流程 process_market_session。
@@ -40,16 +39,16 @@ async def data_loop(ctx: RunContext, api=None):
             fixed_offsets = consumer.offsets_for_times(topic_partitions)
             current_offsets = fixed_offsets.copy()
 
-            await process_market_session(consumer, current_offsets, ctx)
+            process_market_session(consumer, current_offsets, ctx)
     else:
         # Shioaji 模式（歷史回顧）
-        await process_market_session(None, None, ctx, api)
+        process_market_session(None, None, ctx, api)
 
 
 # ------------------------------------------------------------
 # 🚀 主流程：根據模式執行不同邏輯
 # ------------------------------------------------------------
-async def main(
+def main(
     real_time_mode: bool = True,
     date_start: date | None = None,
     date_end: date | None = None,
@@ -92,7 +91,7 @@ async def main(
                         data_source=DataSource.SHIOAJI,
                     )
 
-                    await data_loop(ctx, api)
+                    data_loop(ctx, api)
 
                 current += one_day
 
@@ -109,7 +108,7 @@ async def main(
             session_type=in_which_session(now_time),
         )
 
-        await data_loop(ctx)
+        data_loop(ctx)
 
 
 # ------------------------------------------------------------
@@ -129,13 +128,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    asyncio.run(
-        main(
-            real_time_mode=bool(args.real_time_mode),
-            date_start=args.date_start,
-            date_end=args.date_end,
-            session=args.session,
-        )
+    main(
+        real_time_mode=bool(args.real_time_mode),
+        date_start=args.date_start,
+        date_end=args.date_end,
+        session=args.session,
     )
 
 

@@ -65,3 +65,5 @@ def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close:
     processed_df['close-rvwap'] = processed_df['close'] - processed_df['rvwap']
     
     return processed_df
+
+

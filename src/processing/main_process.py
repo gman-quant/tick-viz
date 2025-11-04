@@ -28,7 +28,7 @@ def generate_figures(df, ctx, txf_prev_close, taiex_prev_close):
     return figures
 
 
-async def process_market_session(
+def process_market_session(
     consumer: Consumer | None,
     current_offsets: list[TopicPartition] | None,
     ctx: RunContext,
