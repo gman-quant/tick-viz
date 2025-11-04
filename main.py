@@ -13,6 +13,7 @@ from src.processing.main_process import process_market_session
 from src.utils.session_time import get_session_range, in_which_session
 from src.utils.time_parser import parse_date
 from src.utils.resource_contexts import kafka_consumer, shioaji_session
+from src.web.shared_state import shared_state
 from src.web.dash_app import run_dash_app
 
 
@@ -99,7 +100,8 @@ async def main(
         # --------------------
         # ⚡ 即時模式
         # --------------------
-        run_dash_app(ctx, port=8080)
+        # 啟動 Dash（共享主程式的 shared_state）
+        run_dash_app(ctx, shared_state, port=8080, debug=False)
 
         now_time = datetime.now(tz=config.TAIWAN_TZ).time()
         ctx = ctx.with_updated(

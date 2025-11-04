@@ -14,11 +14,10 @@ from src.processing.main_process import generate_figures
 from src.processing import kbars
 from src.utils.session_time import get_observation_window
 from src.visualization import candlestick_chart, main_chart, stats_table, report_generator
-from src.web.shared_state import shared_state
 
 
-def create_dash_app(ctx):
-    """建立 Dash 應用"""
+def create_dash_app(ctx, shared_state):
+    """建立 Dash 應用（共享狀態由主程式傳入）"""
     app = Dash(__name__, title=ctx.report_title)
 
     # -----------------------
@@ -56,7 +55,7 @@ def create_dash_app(ctx):
 
         # 延遲回復按鈕文字
         dcc.Interval(id="reset-button-interval", interval=config.UPDATE_INTERVAL * 1000,
-                     n_intervals=0, disabled=True)
+                     n_intervals=0, disabled=False)
     ], style={
         "margin": 0,
         "padding": 0,
@@ -113,7 +112,7 @@ def create_dash_app(ctx):
             taiex_prev_close = shared_state.taiex_prev_close
 
         if df is None or df.empty:
-            return "⚠️　資料不足，無法生成", True, 0
+            return "⚠️　資料不足，無法生成", False, 0
 
         # 生成圖表與統計資訊
         figures = generate_figures(df, ctx, txf_prev_close, taiex_prev_close)
@@ -144,9 +143,9 @@ def create_dash_app(ctx):
     return app
 
 
-def run_dash_app(ctx, port: int = 8080, debug: bool = False):
+def run_dash_app(ctx, shared_state, port: int = 8080, debug: bool = False):
     """啟動 Dash 應用於獨立線程"""
-    app = create_dash_app(ctx)
+    app = create_dash_app(ctx, shared_state)
 
     def _run():
         try:
