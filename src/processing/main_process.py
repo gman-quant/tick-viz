@@ -67,13 +67,9 @@ def process_market_session(
                     start_datetime=ctx.start_datetime,
                     end_datetime=ctx.end_datetime,
                 )
-
-                # --------------------------------------------------
-                # 🚀 【關鍵修正】: 如果沒資料，就安靜地 continue
-                # --------------------------------------------------
+                # --- 若 new_df 為空，則跳過本次迴圈剩餘步驟 ---
                 if new_df.empty:
                     continue 
-                # --------------------------------------------------
 
                 # --- (只有 new_df 不為空時才會執行到這裡) ---
 
@@ -88,7 +84,6 @@ def process_market_session(
                 print(time_now)
                 
                 # --- 【增量處理核心】 ---
-                
                 new_df['datetime'] = pd.to_datetime(new_df['datetime'], format='ISO8601')
                 main_df = pd.concat([main_df, new_df], ignore_index=True)
                 main_df.drop_duplicates(inplace=True) 
@@ -116,7 +111,7 @@ def process_market_session(
             
             else:
                 # --------------------
-                # 📘 歷史回顧模式 (邏輯不變)
+                # 📘 歷史回顧模式
                 # --------------------
                 if config.CLEAR_SCREEN_EACH_CYCLE:
                     clear_console()

@@ -25,7 +25,7 @@ def data_loop(ctx: RunContext, api=None):
     並呼叫主處理流程 process_market_session。
     """
     if ctx.real_time_mode or ctx.data_source == DataSource.KAFKA:
-        # Kafka 模式
+        # Kafka 即時模式
         with kafka_consumer() as consumer:
             start_dt_utc = ctx.start_datetime.astimezone(timezone.utc)
             timestamp_ms = int(start_dt_utc.timestamp() * 1000)
@@ -41,7 +41,7 @@ def data_loop(ctx: RunContext, api=None):
 
             process_market_session(consumer, current_offsets, ctx)
     else:
-        # Shioaji 模式（歷史回顧）
+        # Shioaji 歷史模式
         process_market_session(None, None, ctx, api)
 
 
@@ -143,7 +143,7 @@ python main.py --real-time-mode 1
 
 🔵 歷史回顧模式
 cd Projects/tick-viz && source venv/bin/activate
-python main.py --real-time-mode 0 --date-start 2025-11-03 --date-end 2025-11-03 --session whole
+python main.py --real-time-mode 0 --date-start 2025-11-01 --date-end 2025-11-04 --session whole
 
  📅 日線圖更新
 source venv/bin/activate && python -m src.processing.kbar.process_all_ticks_to_daily_csv

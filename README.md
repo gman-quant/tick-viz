@@ -81,22 +81,15 @@ SHIOAJI_API_KEY=your_shioaji_api_key_here
 SHIOAJI_SECRET_KEY=your_shioaji_secret_key_here
 
 # Kafka broker and topic
-KAFKA_BROKER=your_kafka_addreee:9092
+KAFKA_BROKER=your_kafka_address:9092
 KAFKA_TOPIC=your_topic_name
 ```
 
 修改 config/config.py 中的效能調校參數：
 ```python
 # config/config.py
-# [重要] 後端資料迴圈 (data_loop) 的 poll 等待時間。
-# 這是「資料延遲」的來源。
-# consumer.poll() 會阻塞(等待) N 秒，此期間 CPU 佔用為 0%。
-FETCH_INTERVAL          = 2    
-
-# [重要] 前端儀表板 (Dash UI) 的刷新頻率。
-# 這是「視覺延遲」的來源。
-# 建議設為 >= FETCH_INTERVAL，以達資源/效能平衡。
-UPDATE_INTERVAL         = 2
+FETCH_INTERVAL  = 2    # [秒] consumer.poll() 的最長等待時間
+UPDATE_INTERVAL = 2    # [秒] UI 更新週期
 ```
 
 ---

@@ -90,9 +90,9 @@ def get_sliding_window(
     """
     now = datetime.now(tz=tz)
 
-    # 9:30 前自動縮短 lookahead
-    if now.time() < dt_time(9, 0):
-        lookahead_minutes = 1
+    # # 9:30 前自動縮短 lookahead
+    # if now.time() < dt_time(9, 0):
+    #     lookahead_minutes = 1
 
     adjustment = timedelta(minutes=15 if start.time() == dt_time(8, 30) else 10)
     adjusted_start = start + adjustment

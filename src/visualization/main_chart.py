@@ -7,10 +7,6 @@ from src.utils.session_time import get_observation_window, get_sliding_window
 import config.config as config
 from config.run_context import RunContext
 
-# ----------------------------------------------------------------------------
-# 以下是原 Notebook 中的繪圖輔助函式，直接複製過來
-# 為了簡潔，這裡只顯示函式名稱，您需要將完整內容放入
-# ----------------------------------------------------------------------------
 
 def _add_price_traces(fig: go.Figure, df: pd.DataFrame):
     """在 fig 的第1列新增價格相關走勢圖。"""

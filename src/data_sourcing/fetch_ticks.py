@@ -32,7 +32,7 @@ def fetch_ticks_from_kafka(
     consumer.assign(offsets)
 
     finished = False
-    new_tick_list = [] # 【修改】只在函式內部使用，儲存 "新" Ticks
+    new_tick_list = [] # 只在函式內部使用，儲存 "新" Ticks
 
     try:
         while not finished:
@@ -43,7 +43,7 @@ def fetch_ticks_from_kafka(
                 break
 
             if msg is None:
-                # 【修改】Poll 沒資料，直接結束此次輪詢
+                # Poll 沒資料，直接結束此次輪詢
                 finished = True
                 continue
 
@@ -71,17 +71,14 @@ def fetch_ticks_from_kafka(
                 break
 
             if start_datetime <= tick_dt_taiwan <= end_datetime and not record.get('simtrade', False):
-                new_tick_list.append(record) # 【修改】加入 "新" Ticks List
+                new_tick_list.append(record) # 加入 "新" Ticks List
 
     except KeyboardInterrupt:
         print("🛑 使用者手動中止。")
         raise
 
-    # 【修改】只轉換本次抓到的 "新" Ticks
+    # 只轉換本次抓到的 "新" Ticks
     df = pd.DataFrame(new_tick_list)
-
-    # 【移除】以下所有處理邏輯 (to_datetime, drop_duplicates, rvwap)
-    # 這些將移至 main_process.py 中，對 "main_df" 進行操作
 
     if not df.empty:
         print(f"✅ 本次輪詢取得 {len(df)} 筆新資料")
