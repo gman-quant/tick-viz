@@ -8,7 +8,7 @@ from config.types import SessionType
 
 def get_trading_session(
     trade_date: date,
-    session_type: SessionType = SessionType.UNKNOWN,
+    session_type: SessionType = SessionType.CLOSED,
     real_time_mode: bool = True,
     tz: ZoneInfo = TAIWAN_TZ
 ) -> tuple[datetime, datetime]:
@@ -18,7 +18,7 @@ def get_trading_session(
     now = datetime.now(tz)
     now_time = now.time()
 
-    if real_time_mode or session_type == SessionType.UNKNOWN:
+    if real_time_mode or session_type == SessionType.CLOSED:
         session_type = in_which_session(now_time)
 
     start_date = end_date = trade_date
@@ -42,9 +42,18 @@ def get_trading_session(
 
 def in_which_session(now_time: dt_time) -> SessionType:
     """
-    根據當下時間判斷是日盤還是夜盤
+    根據當下時間判斷是日盤、夜盤、或休市
+    (已加入 SessionType.CLOSED 邏輯)
     """
-    return SessionType.DAY if dt_time(8, 30) <= now_time < dt_time(14, 50) else SessionType.NIGHT
+    # 1. 日盤 (含盤前市撮): 08:30 - 14:45
+    if dt_time(8, 30) <= now_time < dt_time(13, 45):
+        return SessionType.DAY
+    # 2. 夜盤 (含盤前市撮): 14:50 - 05:00 (隔天)
+    elif dt_time(14, 50) <= now_time or now_time < dt_time(5, 0):
+        return SessionType.NIGHT
+    # 3. 其他時段為休市
+    else:
+        return SessionType.CLOSED
 
 def get_session_range(pick: str) -> tuple[int, int]:
     """

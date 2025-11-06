@@ -1,8 +1,15 @@
-# src/processing/kbars.py
+# src/processing/kbars.py (v2, 統一使用 logging)
 
+# Standard Library Imports
+import logging
+
+# Third-Party Imports
 import pandas as pd
+
+# Local Application Imports
 from config.run_context import RunContext
 from config.types import SessionType
+
 
 def generate_kbars(tick: pd.DataFrame, period: str = '1min', ctx: RunContext = None) -> pd.DataFrame:
     """
@@ -15,7 +22,8 @@ def generate_kbars(tick: pd.DataFrame, period: str = '1min', ctx: RunContext = N
     """
 
     if tick.empty:
-        print("無交易資料，跳過。")
+        # logging.warning
+        logging.warning("Kbars: 無交易資料，跳過。") 
         return pd.DataFrame()
 
     # 確保 datetime 為索引

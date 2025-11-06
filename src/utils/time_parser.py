@@ -1,7 +1,13 @@
-# src/utils/time_parser.py
+# src/utils/time_parser.py (v2, 統一使用 logging)
 
+# Standard Library Imports
+import logging
 from datetime import date, datetime
+
+# Third-Party Imports
 from dateutil import parser
+
+# Local Application Imports
 from config.config import TAIWAN_TZ
 
 combine = datetime.combine
@@ -18,7 +24,8 @@ def parse_tick_datetime(raw_dt: str) -> datetime | None:
             dt = dt.astimezone(TAIWAN_TZ)
         return dt
     except Exception as e:
-        print(f"⚠️ 無法解析 datetime: {raw_dt}，錯誤: {e}")
+        # (修改) 改用 logging.warning
+        logging.warning(f"⚠️ 無法解析 datetime: {raw_dt}，錯誤: {e}")
         return None
     
 # 把日期字串轉成 date 物件

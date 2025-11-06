@@ -15,7 +15,7 @@ from src.utils.session_time import get_trading_session
 class RunContext:
     real_time_mode: bool = True
     trade_date: date = field(default_factory=date.today)
-    session_type: SessionType = SessionType.UNKNOWN
+    session_type: SessionType = SessionType.CLOSED
     data_source: DataSource = DataSource.KAFKA
     tz: ZoneInfo = TAIWAN_TZ
 

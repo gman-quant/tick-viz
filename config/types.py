@@ -4,7 +4,7 @@
 from enum import Enum
 
 class SessionType(Enum):
-    UNKNOWN = "unknown"
+    CLOSED = "closed"
     DAY = "day"
     NIGHT = "night"
 

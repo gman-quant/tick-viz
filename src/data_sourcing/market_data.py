@@ -1,17 +1,21 @@
-# src/data_sourcing/market_data.py
+# src/data_sourcing/market_data.py (v2, 統一使用 logging)
 
-from datetime import date, datetime, timedelta, time as dt_time, timezone
+# Standard Library Imports
+import logging
+from datetime import date, datetime, time as dt_time, timedelta, timezone
 from pathlib import Path
 
+# Third-Party Imports
 import pandas as pd
 from confluent_kafka import TopicPartition
 
+# Local Application Imports
 from config.config import KAFKA_TOPIC, TAIWAN_TZ
 from config.run_context import RunContext
 from config.types import SessionType
 from src.data_sourcing import fetch_ticks
-from src.utils.session_time import in_which_session
 from src.utils.resource_contexts import kafka_consumer, shioaji_session
+from src.utils.session_time import in_which_session
 
 
 def get_contract(api, symbol: str):
@@ -37,18 +41,18 @@ def load_or_fetch_kbars(api, query_date: date, symbol: str) -> pd.DataFrame:
     df = pd.DataFrame()
     try:
         df = pd.read_parquet(output_file)
-        print(f"✅ Loaded {symbol.upper()} data from {output_file}")
+        logging.info(f"✅ Loaded {symbol.upper()} data from {output_file}")
     except FileNotFoundError:
-        print(f"⚠️ 檔案不存在：{output_file}，將跳過載入並回傳空 DataFrame。")
+        logging.warning(f"⚠️ 檔案不存在：{output_file}，將跳過載入並回傳空 DataFrame。")
     except pd.errors.EmptyDataError:
-        print(f"⚠️ 檔案為空：{output_file}，將回傳空 DataFrame。")
+        logging.warning(f"⚠️ 檔案為空：{output_file}，將回傳空 DataFrame。")
     except Exception as e:
-        print(f"⚠️ 讀取 {output_file} 時發生未預期錯誤：{e}，將回傳空 DataFrame。")
+        logging.error(f"⚠️ 讀取 {output_file} 時發生未預期錯誤：{e}，將回傳空 DataFrame。")
 
     if not df.empty or api is None:
         return df
 
-    print(f"⚠️ Fetching {symbol.upper()} kbars from API for {query_date}...")
+    logging.info(f"ℹ️ Fetching {symbol.upper()} kbars from API for {query_date}...")
 
     contract = get_contract(api, symbol)
     kbars = api.kbars(
@@ -59,14 +63,14 @@ def load_or_fetch_kbars(api, query_date: date, symbol: str) -> pd.DataFrame:
 
     df = pd.DataFrame({**kbars})
     if df.empty:
-        print(f"❌ API 回傳空資料，無法取得 {symbol.upper()} {query_date} 的 kbars")
+        logging.error(f"❌ API 回傳空資料，無法取得 {symbol.upper()} {query_date} 的 kbars")
         return df
 
     df['ts'] = pd.to_datetime(df['ts'])
     df.rename(columns={'ts': 'datetime'}, inplace=True)
 
     df.to_parquet(output_file)
-    print(f"💾 Saved {symbol.upper()} kbars to {output_file}")
+    logging.info(f"💾 Saved {symbol.upper()} kbars to {output_file}")
     return df
 
 
@@ -121,7 +125,7 @@ def find_previous_close_from_kafka(ctx: RunContext, max_lookback: int = 15) -> t
 
             if not df.empty:
                 txf_close, tse_close = df.iloc[-1]['close'], df.iloc[-1]['underlying_price']
-                print(f"📊 從 Kafka 獲取前收資料: {pre_date} TXF={txf_close}, TSE={tse_close}")
+                logging.info(f"📊 從 Kafka 獲取前收資料: {pre_date} TXF={txf_close}, TSE={tse_close}")
                 return txf_close, tse_close
 
             pre_date -= timedelta(days=1)
@@ -135,6 +139,9 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tu
     尋找最近一個交易日的台指期與加權指數日盤收盤價。
     若 api 為 None，則自動建立 session 後查詢。
     """
+    # (決定日誌前綴，方便追蹤)
+    prefix = "[T_Data]" if ctx.real_time_mode else "[Main]"
+
     if ctx.trade_date >= date(2025, 7, 10):
         result = find_previous_close_from_kafka(ctx, max_lookback)
         if result:
@@ -147,14 +154,14 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tu
         txf_close = _get_last_close(None, query_date, symbol="txf")
         tse_close = _get_last_close(None, query_date, symbol="tse")
         if txf_close is not None and tse_close is not None:
-            print(f"📂 本地資料: {query_date} TXF={txf_close}, TSE={tse_close}")
+            logging.info(f"📂 {prefix} 本地資料: {query_date} TXF={txf_close}, TSE={tse_close}")
             return txf_close, tse_close
 
         if api is not None:
             txf_close = _get_last_close(api, query_date, symbol="txf")
             tse_close = _get_last_close(api, query_date, symbol="tse")
             if txf_close is not None and tse_close is not None:
-                print(f"🌐 API 資料: {query_date} TXF={txf_close}, TSE={tse_close}")
+                logging.info(f"🌐 {prefix} API 資料: {query_date} TXF={txf_close}, TSE={tse_close}")
                 return txf_close, tse_close
 
         return None
@@ -170,7 +177,8 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tu
 
     current_date = ctx.start_datetime.date()
     current_time = ctx.start_datetime.time()
-    session_type = in_which_session(current_time)
+    # (假設 in_which_session 已經更新)
+    session_type = in_which_session(current_time) 
 
     start_date = current_date - timedelta(days=1) if session_type == SessionType.DAY else current_date
 
@@ -183,4 +191,7 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tu
     if result:
         return result
 
-    raise FileNotFoundError(f"❌ 在過去 {max_lookback} 天內找不到 TXF / TSE 收盤價。")
+    # (修改) 在引發錯誤前，先用 logging 記錄
+    error_msg = f"❌ {prefix} 在過去 {max_lookback} 天內找不到 TXF / TSE 收盤價。"
+    logging.error(error_msg)
+    raise FileNotFoundError(error_msg)

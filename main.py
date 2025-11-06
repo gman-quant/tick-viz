@@ -1,52 +1,29 @@
-# main.py
+# main.py (v6, 24/7 伺服器, 統一使用 logging)
 
+# Standard Library Imports
 import argparse
+import logging
+import threading
+import time
 from datetime import date, datetime, timedelta, timezone
 
+# Third-Party Imports
 from confluent_kafka import TopicPartition
 
-import config.config as config
+# Local Application Imports
 from config.run_context import RunContext
-from config.types import SessionType, DataSource
-from src.processing.main_process import process_market_session
-from src.utils.session_time import get_session_range, in_which_session
+from config.types import DataSource, SessionType
+from src.service import data_loop_manager, run_single_session_task
+from src.utils.resource_contexts import shioaji_session
+from src.utils.session_time import get_session_range
 from src.utils.time_parser import parse_date
-from src.utils.resource_contexts import kafka_consumer, shioaji_session
+from src.web.dash_app import create_dash_app
 from src.web.shared_state import shared_state
-from src.web.dash_app import run_dash_app
+from src.service import data_loop_manager, run_single_session_task
 
 
 # ------------------------------------------------------------
-# 📦 資料處理主循環
-# ------------------------------------------------------------
-def data_loop(ctx: RunContext, api=None):
-    """
-    根據執行模式選擇資料來源（Kafka / Shioaji），
-    並呼叫主處理流程 process_market_session。
-    """
-    if ctx.real_time_mode or ctx.data_source == DataSource.KAFKA:
-        # Kafka 即時模式
-        with kafka_consumer() as consumer:
-            start_dt_utc = ctx.start_datetime.astimezone(timezone.utc)
-            timestamp_ms = int(start_dt_utc.timestamp() * 1000)
-
-            metadata = consumer.list_topics(config.KAFKA_TOPIC)
-            partitions = list(metadata.topics[config.KAFKA_TOPIC].partitions.keys())
-            topic_partitions = [
-                TopicPartition(config.KAFKA_TOPIC, p, timestamp_ms) for p in partitions
-            ]
-
-            fixed_offsets = consumer.offsets_for_times(topic_partitions)
-            current_offsets = fixed_offsets.copy()
-
-            process_market_session(consumer, current_offsets, ctx)
-    else:
-        # Shioaji 歷史模式
-        process_market_session(None, None, ctx, api)
-
-
-# ------------------------------------------------------------
-# 🚀 主流程：根據模式執行不同邏輯
+# 主流程
 # ------------------------------------------------------------
 def main(
     real_time_mode: bool = True,
@@ -56,15 +33,16 @@ def main(
 ):
     """
     主執行流程，支援二種模式：
-    1️⃣ 即時模式 + 靜態報告
+    1️⃣ 即時模式 (24/7 Server)
     2️⃣ 歷史模式（多日迭代）
     """
     ctx = RunContext(real_time_mode=real_time_mode)
 
     if not ctx.real_time_mode:
         # --------------------
-        # 📘 歷史回顧模式
+        # 📘 歷史回顧模式 (邏輯不變，僅修改函式名稱)
         # --------------------
+        logging.info("📘 執行歷史回顧模式...")
         with shioaji_session() as api:
             one_day = timedelta(days=1)
             dt_st = date_start or (date.today() - one_day)
@@ -77,12 +55,12 @@ def main(
             while current <= dt_ed:
                 # 跳過週末
                 if current.weekday() >= 5:
-                    print(f"⏩ 跳過週末：{current}")
+                    logging.info(f"⏩ 跳過週末：{current}")
                     current += one_day
                     continue
 
                 for day_session in range(st, ed - 1, -1):
-                    print(f"\n📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
+                    logging.info(f"\n📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
 
                     ctx = ctx.with_updated(
                         trade_date=current,
@@ -90,45 +68,106 @@ def main(
                         data_source=DataSource.SHIOAJI,
                     )
 
-                    data_loop(ctx, api)
+                    # (修改) 
+                    run_single_session_task(ctx, api)
 
                 current += one_day
+        logging.info("✅ 歷史回顧模式執行完畢。")
 
     else:
         # --------------------
-        # ⚡ 即時模式
+        # ⚡ 即時模式 (24/7 伺服器)
         # --------------------
-        # 啟動 Dash（共享主程式的 shared_state）
-        run_dash_app(ctx, shared_state, port=8080, debug=False)
-
-        now_time = datetime.now(tz=config.TAIWAN_TZ).time()
-        ctx = ctx.with_updated(
-            trade_date=date.today(),
-            session_type=in_which_session(now_time),
-        )
+        logging.info("⚡ [Main] 執行 24/7 即時伺服器模式...")
         
-        data_loop(ctx)
+        # A. 將 data_loop_manager (24/7任務) 放到「背景執行緒」
+        logging.info("📊 [Main] GNN 24/7 背景資料管理器 (T_Data)...")
+        data_thread = threading.Thread(
+            target=data_loop_manager, # <--- 執行 24/7 管理器
+            args=(),
+            daemon=True
+        )
+        data_thread.start()
+
+        # B. 將 Dash Server (穩定任務) 放到「主執行緒」
+        logging.info(f"🚀 [Main] 正在啟動 Web Server (MainThread) 於 http://localhost:8080 ...")
+        
+        # 建立一個假的/預設的 ctx 供 Dash 啟動時使用
+        # 真正的 ctx 將由 data_loop_manager 在 T_Data 中管理
+        app_ctx = RunContext(real_time_mode=True) 
+        app = create_dash_app(app_ctx, shared_state) 
+        
+        try:
+            # --- 這是唯一的修改點 ---
+            app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False) # <- 新的
+        
+        except KeyboardInterrupt:
+            logging.info("\n👋 [Main] 收到使用者關閉訊號 (Ctrl+C)...")
+        except Exception as e:
+            logging.exception(f"⚠️ [Main] Dash Server 啟動失敗: {e}")
+        
+        logging.info("✅ [Main] Dash Server 已關閉，程式結束。")
 
 
 # ------------------------------------------------------------
-# 🧭 CLI 參數設定
+# CLI 參數設定
 # ------------------------------------------------------------
 if __name__ == "__main__":
+
+    # --- 1. 設定全域日誌 (Logging) ---
+    logging.basicConfig(
+        # level=logging.INFO 表示「只顯示 INFO 層級以上的日誌」
+        # (會顯示 INFO, WARNING, ERROR, CRITICAL，但會隱藏 DEBUG)
+        level=logging.INFO,  
+        
+        # 設定日誌的輸出格式：
+        # %(asctime)s: 自動插入目前時間
+        # %(levelname)s: 插入日誌層級 (例如 INFO)
+        # %(message)s: 插入您真正的日誌訊息 (例如 [T_Data] 休市中...)
+        format='%(asctime)s - %(levelname)s - %(message)s', 
+        
+        # 設定 %(asctime)s 顯示的時間格式 (年-月-日 時:分:秒)
+        datefmt='%Y-%m-%d %H:%M:%S' 
+    )
+    
+    # --- 2. 讓 Dash/Werkzeug 伺服器安靜 ---
+    # 取得 'werkzeug' (Dash/Flask 底層伺服器) 的 logger 物件
+    werkzeug_logger = logging.getLogger('werkzeug')
+    
+    # (這是關鍵) 將它的層級設為 ERROR，這樣就不會印出 INFO 訊息
+    # (例如 'POST /_dash-update-component... 200 -')
+    # 這樣您的終端機才不會被洗版，只會顯示您自己的日誌或真正的錯誤
+    werkzeug_logger.setLevel(logging.ERROR)
+
+    # --- 3. 建立命令列參數解析器 ---
+    # argparse 用來讀取您在 terminal 輸入的 --real-time-mode 等參數
     parser = argparse.ArgumentParser(description="台指期 Tick 資料處理與繪圖")
 
+    # --- 4. 定義接受的參數 ---
+    # '--real-time-mode' 參數：1=即時, 0=歷史 (預設 1)
     parser.add_argument("--real-time-mode", type=int, choices=[0, 1], default=1,
                         help="即時模式 (1=啟用, 0=停用)")
+    
+    # '--date-start' 參數：歷史回測的開始日期 (使用 parse_date 函式轉換格式)
     parser.add_argument("--date-start", type=parse_date,
                         help="資料開始日期 (格式: YYYY-MM-DD)")
+    
+    # '--date-end' 參數：歷史回測的結束日期
     parser.add_argument("--date-end", type=parse_date,
                         help="資料結束日期 (格式: YYYY-MM-DD)")
+    
+    # '--session' 參數：歷史回測的盤別
     parser.add_argument("--session", type=str, choices=["day", "night", "whole"],
                         help="交易時段: day=日盤, night=夜盤, whole=全部")
 
+    # --- 5. 正式解析使用者輸入的參數 ---
     args = parser.parse_args()
 
+    # --- 6. 呼叫主函式 ---
+    # 以解析後的參數 (args) 作為輸入，啟動 main() 函式，
+    # 程式的主要邏輯 (24/7 伺服器 或 歷史回測) 從這裡開始執行
     main(
-        real_time_mode=bool(args.real_time_mode),
+        real_time_mode=bool(args.real_time_mode), # 將 1/0 轉換為 True/False
         date_start=args.date_start,
         date_end=args.date_end,
         session=args.session,

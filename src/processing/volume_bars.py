@@ -1,8 +1,14 @@
-# src/processing/volume_bars.py
+# src/processing/volume_bars.py (v2, 統一使用 logging)
 
+# Standard Library Imports
+import logging
+
+# Third-Party Imports
 import pandas as pd
 
+# Local Application Imports
 from config.types import SessionType
+
 
 def get_volume_per_bar(session_type: SessionType = SessionType.NIGHT) -> int:
     return 500 if session_type == SessionType.DAY else 250
@@ -13,7 +19,8 @@ def generate_volume_bars(tick: pd.DataFrame, volume_per_bar: int = get_volume_pe
     函數僅依賴 datetime, close, 以及買賣雙方的累計成交量欄位。
     """
     if tick.empty:
-        print("無交易資料，跳過。")
+        # (修改) 改用 logging.warning
+        logging.warning("VolumeBars: 無交易資料，跳過。")
         return pd.DataFrame()
 
     # 1. 計算每個 tick 所屬的 Bar 編號

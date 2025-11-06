@@ -1,7 +1,5 @@
 # src/web/dash_app.py
 
-from threading import Thread
-import logging
 
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
@@ -9,11 +7,11 @@ from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 
 import config.config as config
-from config.types import SessionType
 from src.processing.main_process import generate_figures
-from src.processing import kbars
 from src.utils.session_time import get_observation_window
 from src.visualization import candlestick_chart, main_chart, stats_table, report_generator
+from src.visualization.figure_utils import BLANK_BLACK_FIGURE
+
 
 def create_dash_app(ctx, shared_state):
     """建立 Dash 應用（共享狀態由主程式傳入）"""
@@ -84,7 +82,7 @@ def create_dash_app(ctx, shared_state):
             latest_df = shared_state.latest_df
 
         if plot_df is None or plot_df.empty or df_kbars is None or latest_df is None:
-            return go.Figure(), go.Figure(), "等待資料中..."
+            return BLANK_BLACK_FIGURE, BLANK_BLACK_FIGURE, "等待資料中..."
 
         # 直接傳入 plot_df，不再計算
         fig_main = main_chart.create_tick_analysis_figure(
@@ -153,19 +151,4 @@ def create_dash_app(ctx, shared_state):
 
     return app
 
-
-def run_dash_app(ctx, shared_state, port: int = 8080, debug: bool = False):
-    """啟動 Dash 應用於獨立線程"""
-    app = create_dash_app(ctx, shared_state)
-
-    def _run():
-        try:
-            logging.info(f"✅ Dash server running at http://localhost:{port}")
-            app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=False)
-        except Exception as e:
-            logging.exception("⚠️ Dash 啟動失敗")
-
-    thread = Thread(target=_run, daemon=True)
-    thread.start()
-    return app
 

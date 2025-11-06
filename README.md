@@ -1,13 +1,13 @@
-# 📈 台指期貨盤中動態分析儀表板 (TXF Intraday Analytics Dashboard)
+# 📈 台指期即時分析儀表板 (TXF Real-time Dashboard)
 
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue) 
 ![Apache Kafka](https://img.shields.io/badge/Kafka-required-orange) 
 ![Shioaji](https://img.shields.io/badge/Shioaji-required-orange) 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
-本專案專注於台指期的即時分析與監控，打造高效能可視化儀表板。它能即時消費 Kafka 中的 Tick 數據流，或回測 Shioaji 的歷史資料，透過多維度指標視覺化盤中多空狀態。
-
-核心架構將「後端資料運算」與「前端 UI 渲染」徹底分離，確保即時儀表板在大量資料更新下依然保持流暢不卡頓。
+一個高效能的盤中多空分析工具。 核心架構將「資料處理」與「UI渲染」徹底分離，確保海量 Tick 資料更新下，介面依然流暢。
+- 功能：視覺化盤中多空狀態。
+- 模式：支援即時 Kafka 串流與 Shioaji 歷史回測。
 
 ---
 
@@ -152,51 +152,54 @@ python plot_txf_kbar.py
 
 ```text
 TICK-VIZ/
-├── src/                                           # 核心原始碼
-│   ├── data_sourcing/                             # 數據獲取模組（Kafka、Shioaji、前收盤價）
-│   │   ├── fetch_ticks.py                         # 從 Kafka/Shioaji 取得 tick 資料
-│   │   └── market_data.py                         # 取得市場歷史資料及前收盤價
+├── src/                                  # 核心原始碼
+│   ├── data_sourcing/                    # 數據獲取模組（Kafka、Shioaji、前收盤價）
+│   │   ├── fetch_ticks.py                # 從 Kafka/Shioaji 取得 tick 資料
+│   │   └── market_data.py                # 取得市場歷史資料及前收盤價
 │   │
-│   ├── processing/                                # 資料處理模組
-│   │   ├── main_process.py                        # 核心資料流與報告生成
-│   │   ├── kbars.py                               # ticks → 分K（時間型 K棒）
-│   │   ├── metrics.py                             # 技術指標計算
-│   │   ├── volume_bars.py                         # 成交量型 K棒（Volume-based K bars）
-│   │   └── kbar/                                  # ticks → 日K
-│   │       └── process_all_ticks_to_daily_csv.py  # 聚合生成日K CSV
+│   ├── processing/                       # 資料處理模組
+│   │   ├── main_process.py               # 核心資料流與報告生成
+│   │   ├── kbars.py                      # ticks → 分K（時間型 K棒）
+│   │   ├── metrics.py                    # 技術指標計算
+│   │   ├── volume_bars.py                # 成交量型 K棒（Volume-based K bars）
+│   │   └── kbar/                         # ticks → 日K
+│   │       └── process_all_ticks_to_daily_csv.py # 聚合生成日K CSV
 │   │
-│   ├── utils/                                     # 工具模組
-│   │   ├── misc.py                                # 雜項工具函式
-│   │   ├── resource_contexts.py                   # 資源管理上下文
-│   │   ├── session_time.py                        # 交易日盤/夜盤判斷與時間
-│   │   └── time_parser.py                         # 字串與 datetime 互轉
+│   ├── utils/                            # 工具模組
+│   │   ├── misc.py                       # 雜項工具函式
+│   │   ├── resource_contexts.py          # 資源管理上下文
+│   │   ├── session_time.py               # 交易日盤/夜盤判斷與時間
+│   │   └── time_parser.py                # 字串與 datetime 互轉
 │   │
-│   ├── visualization/                             # 圖表與報告產出模組
-│   │   ├── stats_table.py                         # 統計表格生成（Dash & HTML）
-│   │   ├── main_chart.py                          # 主分析圖表
-│   │   ├── candlestick_chart.py                   # K棒圖表
-│   │   └── report_generator.py                    # 靜態 HTML 報告生成
+│   ├── visualization/                    # 圖表與報告產出模組
+│   │   ├── stats_table.py                # 統計表格生成（Dash & HTML）
+│   │   ├── main_chart.py                 # 主分析圖表
+│   │   ├── candlestick_chart.py          # K棒圖表
+│   │   ├── report_generator.py           # 靜態 HTML 報告生成
+│   │   └── figure_utils.py               # 共用圖表樣式與輔助函式
 │   │
-│   └── web/                                       # Web/Dash 相關功能
-│       ├── dash_app.py                            # Dash App 建立與回呼
-│       ├── shared_state.py                        # Web共享狀態（thread-safe）
-│       └── assets/                                # CSS/JS/靜態資源
-│           └── style.css                          # 自訂樣式
+│   ├── web/                              # Web/Dash 相關功能
+│   │   ├── dash_app.py                   # Dash App 建立與回呼
+│   │   ├── shared_state.py               # Web共享狀態（thread-safe）
+│   │   └── assets/                       # CSS/JS/靜態資源
+│   │       └── style.css                 # 自訂樣式
+│   │
+│   └── service.py                        # 24/7 服務核心邏輯 (data_loop_manager)
 │
-├── config/                                        # 專案設定與型別
-│   ├── config.py                                  # 全域參數、API 金鑰等
-│   ├── run_context.py                             # 執行上下文 RunContext
-│   └── types.py                                   # 自定型別與列舉（SessionType、DataSource）
+├── config/                               # 專案設定與型別
+│   ├── config.py                         # 全域參數、API 金鑰等
+│   ├── run_context.py                    # 執行上下文 RunContext
+│   └── types.py                          # 自定型別與列舉（SessionType、DataSource）
 │
-├── output/                                        # 預設報告輸出資料夾（HTML、圖表等）
-├── data/                                          # 本地快取 Tick/Kbars 資料（Parquet）
-├── docs/                                          # 文件、截圖、開發紀錄
-├── main.py                                        # 專案主程式（即時與歷史模式）
-├── plot_txf_kbar.py                               # TXF 日K圖繪製工具
-├── requirements.txt                               # Python 套件依賴清單
-├── .env.example                                   # 環境變數範例
-├── LICENSE                                        # 專案授權
-└── README.md                                      # 專案說明文件
+├── output/                               # 預設報告輸出資料夾（HTML、圖表等）
+├── data/                                 # 本地快取 Tick/Kbars 資料（Parquet）
+├── docs/                                 # 文件、截圖、開發紀錄
+├── main.py                               # 專案主程式 (入口與協調)
+├── plot_txf_kbar.py                      # TXF 日K圖繪製工具
+├── requirements.txt                      # Python 套件依賴清單
+├── .env.example                          # 環境變數範例
+├── LICENSE                               # 專案授權
+└── README.md                             # 專案說明文件
 ```
 
 ---

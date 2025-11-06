@@ -1,10 +1,13 @@
-import pandas as pd
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import plotly.io as pio
-import webbrowser
+# 1. Standard Library Imports
 from pathlib import Path
 
+# 2. Third-Party Imports
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.io as pio
+from plotly.subplots import make_subplots
+
+# 3. Local Application Imports
 from config.config import OUTPUT_DIR
 
 

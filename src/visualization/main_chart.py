@@ -1,55 +1,57 @@
-# src/visualization/main_chart.py
+# src/visualization/main_chart.py (v2, 重構版)
 
+# Standard Library Imports
+import logging
+
+# Third-Party Imports
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from src.utils.session_time import get_observation_window, get_sliding_window
-import config.config as config
+
+# Local Application Imports
 from config.run_context import RunContext
+import src.visualization.figure_utils as fig_utils
 
 
 def _add_price_traces(fig: go.Figure, df: pd.DataFrame):
     """在 fig 的第1列新增價格相關走勢圖。"""
     row, col = 1, 1
-    # 疊加其他指標線 (使用原始高密度資料)
-    # fig.add_trace(go.Scattergl(x=df["datetime"], y=df["underlying_price"], name="[現貨] TAIEX", line=dict(color="blue", width=1), visible='legendonly'), row=row, col=col)
-    # fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rrp_by_taiex"], name="[期貨] 參考價", line=dict(color="gray", width=1), visible='legendonly'), row=row, col=col)
+    
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["close"], name="[期貨] TXF", line=dict(color="rgba(255, 255, 255, 0.5)", width=1)), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rvwap"], name="RVWAP", line=dict(color="yellow", dash="solid", width=1)), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["avg_price"], name="VWAP", line=dict(color="orange", dash="solid", width=1)), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rrp_rhigh"], name="[期貨] 參考價", line=dict(color='rgba(144, 238, 144, 0.3)', width=1), visible=True), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rrp_rlow"], name="[期貨] 參考價", line=dict(color='rgba(255, 192, 203, 0.3)', width=1), visible=True), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["high"], name="High", line=dict(color="green", dash="dash", width=1)), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["low"], name="Low", line=dict(color="Red", dash="dash", width=1)), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["high"], name="High", line=dict(color=fig_utils.COLOR_INCREASING, dash="dash", width=1)), row=row, col=col) # (修改)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["low"], name="Low", line=dict(color=fig_utils.COLOR_DECREASING, dash="dash", width=1)), row=row, col=col) # (修改)
 
-    # # 更新 Y 軸設定
-    fig.update_yaxes(title_text="價格", tickformat=".0f", row=row, col=col,) 
+    # 更新 Y 軸設定 (使用共用設定)
+    fig.update_yaxes(**fig_utils.PRICE_YAXIS_SETTINGS, row=row, col=col)
     fig.update_xaxes(rangeslider_visible=False, row=row, col=col)
 
 def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
     """在 fig 的第2列新增成交量變化圖（Bid 與 Ask 分開繪製）。"""
     row, col = 2, 1
 
-    # --- Bid side（主動買盤）成交變化（綠色區塊）
+    # (使用共用顏色)
     fig.add_trace(go.Scatter(
         x=df["datetime"],
-        
         y=df["net_agg_vol_change"].where(df["net_agg_vol_change"] > 0),
         name="淨成交強度指標",
         mode="lines",
-        line=dict(color="green", width=1),
+        line=dict(color=fig_utils.COLOR_INCREASING, width=1),
         line_shape="hv",
         fill="tozeroy",
         fillcolor="rgba(0, 128, 0, 0.2)"
     ), row=row, col=col)
 
-    # --- Ask side（主動賣盤）成交變化（紅色區塊）
+    # (使用共用顏色)
     fig.add_trace(go.Scatter(
         x=df["datetime"],
-        y=df["net_agg_vol_change"].where(df["net_agg_vol_change"] < 0),  # ⚠️ 顯示在下方，向下延伸
+        y=df["net_agg_vol_change"].where(df["net_agg_vol_change"] < 0), 
         name="淨成交強度指標",
         mode="lines",
-        line=dict(color="red", width=1),
+        line=dict(color=fig_utils.COLOR_DECREASING, width=1),
         line_shape="hv",
         fill="tozeroy",
         fillcolor="rgba(255, 0, 0, 0.2)"
@@ -61,46 +63,46 @@ def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
         tickformat=".2f",
         row=row,
         col=col,
+        showgrid=True,
     )
 
-def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
-    """在 fig 的第3列新增折溢價圖。"""
-    row, col = 3, 1
-    # fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_premium"], name="[期貨-現貨] 折溢價", line=dict(color="blue", width=1), visible='legendonly'), row=row, col=col)
-    # fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_to_rrp_premium"], name="[期貨-參考價] 折溢價", line=dict(color="gray", width=1), visible='legendonly'), row=row, col=col)
-    # fig.add_trace(go.Scatter(x=df["datetime"], y=df["fut_to_vwap_premium"], name="[期貨-VWAP] 折溢價", line=dict(color="orange", width=1), visible='legendonly'), row=row, col=col)
-    fig.add_trace(go.Scatter(x=df["datetime"], y=df["close-rvwap"], name="Close - RVWAP", line=dict(color="gray", width=1)), row=row, col=col, secondary_y=False)
-    fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap_to_vwap_premium"], name="RVWAP - VWAP", line=dict(color="yellow", width=1.5)), row=row, col=col, secondary_y=True)
-    # fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap-rrp_rh"], name="[RVWAP-RRP_H] 折溢價", line=dict(color='rgba(144, 238, 144, 0.3)', width=1)), row=row, col=col)
-    # fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap-rrp_rl"], name="[RVWAP-RRP_L] 折溢價", line=dict(color='rgba(255, 192, 203, 0.3)', width=1)), row=row, col=col)
-    # fig.add_trace(go.Scatter(x=df["datetime"], y=df["rrp_rh-rrp_rl"], name="[RRP_H-L] 折溢價", line=dict(color="gray", width=1)), row=row, col=col)
-    # 左軸
-    fig.update_yaxes(
-        title_text="折溢價 (Close - RVWAP)",
-        tickformat=".0f",
-        autorange=True,
-        matches=None,
-        nticks=10,
-        row=row, col=col,
-        secondary_y=False
-    )
-    # 右軸
-    fig.update_yaxes(
-        title_text="折溢價 (RVWAP - VWAP)",
-        tickformat=".0f",
-        showgrid=False,
-        autorange=True,
-        zeroline=False,
-        matches=None,
-        nticks=10,
-        ticks="outside",
-        row=row, col=col,
-        secondary_y=True
-    )
+# def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
+#     """在 fig 的第3列新增折溢價圖。(此函式中圖表較特殊，暫不套用共用Y軸)"""
+#     row, col = 3, 1
+    
+#     fig.add_trace(go.Scatter(x=df["datetime"], y=df["close-rvwap"], name="Close - RVWAP", line=dict(color="gray", width=1)), row=row, col=col, secondary_y=False)
+#     fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap_to_vwap_premium"], name="RVWAP - VWAP", line=dict(color="yellow", width=1.5)), row=row, col=col, secondary_y=True)
+    
+#     # 左軸
+#     fig.update_yaxes(
+#         title_text="折溢價 (Close - RVWAP)",
+#         tickformat=".0f",
+#         autorange=True,
+#         matches=None,
+#         nticks=10,
+#         row=row, col=col,
+#         secondary_y=False,
+#         showgrid=True,
+#     )
+#     # 右軸
+#     fig.update_yaxes(
+#         title_text="折溢價 (RVWAP - VWAP)",
+#         tickformat=".0f",
+#         showgrid=True,
+#         autorange=True,
+#         zeroline=False,
+#         matches=None,
+#         nticks=10,
+#         ticks="outside",
+#         row=row, col=col,
+#         secondary_y=True
+#     )
 
 def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
-    """在 fig 的第4列新增淨主動成交量圖。"""
+    """在 fig 的第3列(原第4列)新增淨主動成交量圖。"""
     row, col = 3, 1
+    
+    # 移至 secondary_y=True (右軸)
     fig.add_trace(go.Scatter(
         x=df["datetime"], 
         y=df["total_volume"], 
@@ -109,32 +111,43 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
         line=dict(color="rgba(255, 255, 0, 0.4)"), 
         line_shape="hv"),
         row=row, col=col,
-        secondary_y=True
+        secondary_y=True 
     )
+    # 移至 secondary_y=False (左軸)
     fig.add_trace(go.Scatter(
         x=df["datetime"], 
         y=df["cumu_net_agg_vol"].where(df["cumu_net_agg_vol"] > 0), 
         name="淨主動成交量(多方)", mode="lines", 
-        line=dict(color="green"), 
+        line=dict(color=fig_utils.COLOR_INCREASING),
         line_shape="hv",
         fill="tozeroy", 
         fillcolor="rgba(0, 128, 0, 0.4)"), 
         row=row, col=col,
         secondary_y=False
     )
+    # 移至 secondary_y=False (左軸)
     fig.add_trace(go.Scatter(
         x=df["datetime"], 
         y=df["cumu_net_agg_vol"].where(df["cumu_net_agg_vol"] < 0), 
         name="淨主動成交量(空方)", 
         mode="lines", 
-        line=dict(color="red"), 
+        line=dict(color=fig_utils.COLOR_DECREASING),
         line_shape="hv",
         fill="tozeroy", 
         fillcolor="rgba(255, 0, 0, 0.4)"), 
         row=row, col=col,
         secondary_y=False
     )
-    fig.update_yaxes(title_text="淨主動成交量", tickformat=".0f", row=row, col=col, autorange=True, secondary_y=False)
+    
+    # 更新 Y 軸設定
+    fig.update_yaxes(
+        title_text="淨主動成交量", 
+        tickformat=".0f", 
+        row=row, col=col, 
+        autorange=True, 
+        secondary_y=False,
+        showgrid=True,
+    )
     fig.update_yaxes(
         title_text="累計成交量", 
         tickformat=".0f",
@@ -148,59 +161,43 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
 
 def _configure_layout(fig: go.Figure, ctx: RunContext):
     """設定圖表的整體佈局、標題與圖例。"""
-    # 1. 更新圖表的整體佈局
+    
+    # 使用共用設定，並覆蓋 legend
     fig.update_layout(
-        hovermode='x unified',
         title=dict(text="TXF技術分析圖表", y=0.95),
-        template='plotly_dark',
         height=1600,
         showlegend=True,
+        **fig_utils.COMMON_LAYOUT_SETTINGS,
         legend=dict(x=0.5, y=1.03, orientation="h", xanchor="center", yanchor="bottom"),
     )
 
-    if ctx.real_time_mode:
-        st_dt, ed_dt = get_sliding_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
-    else:
-        st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
-    # 2. 將通用設定一次性應用到所有 X 軸上
+    # 使用共用設定
     fig.update_xaxes(
-        showspikes=True, 
-        spikemode='across', 
-        spikesnap='cursor', 
-        showline=True,
-        spikethickness=1,
-        # 【關鍵修改】強制顯示所有子圖的 x 軸刻度標籤
-        showticklabels=True,
-        range=[st_dt, ed_dt],
+        range=fig_utils.get_time_range(ctx),
         autorange=False,
+        **fig_utils.COMMON_XAXIS_SETTINGS
     )
 
 
 # ----------------------------------------------------------------------------
-# 主要的繪圖函式 (重構後)
+# 主要的繪圖函式
 # ----------------------------------------------------------------------------
-
-# 【修改】函式簽名與註釋
 def create_tick_analysis_figure(plot_df: pd.DataFrame, txf_prev_close: float, taiex_prev_close: float, ctx: RunContext) -> go.Figure:
     """
     視覺化 Tick 資料，整合價格、基差、主動成交量等多維度分析。
-    
-    Args:
-        plot_df (pd.DataFrame): 【注意】必須是已由 prepare_plot_data 處理過的 DataFrame。
-        txf_prev_close (float): 台指期貨昨日收盤價。
-        taiex_prev_close (float): 加權指數昨日收盤價。
-        
-    Returns:
-        go.Figure: 一個包含完整分析圖的 Plotly Figure 物件。
     """
+    # 空白資料處理
+    if plot_df is None or plot_df.empty:
+        logging.warning("Main Chart: 無交易資料，跳過繪圖。")
+        return fig_utils.BLANK_BLACK_FIGURE
 
-    # 1. 建立 4x1 的子圖畫布
+    # 1. 建立 3x1 的子圖畫布 (原 4x1)
     fig = make_subplots(
         rows=3, cols=1,
         shared_xaxes=True,
         row_heights=[0.5, 0.25, 0.25],
         vertical_spacing=0.05,
-        specs=[[{}], [{}], [{"secondary_y": True}]],
+        specs=[[{}], [{}], [{"secondary_y": True}]], # 第3列使用雙Y軸
         subplot_titles=("逐筆成交價", "淨成交強度指標", "成交量")
     )
 
@@ -214,4 +211,3 @@ def create_tick_analysis_figure(plot_df: pd.DataFrame, txf_prev_close: float, ta
 
     # 4. 回傳 Figure 物件
     return fig
-

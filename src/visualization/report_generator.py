@@ -1,11 +1,15 @@
-# src/visualization/report_generator.py
+# src/visualization/report_generator.py (v2, 統一使用 logging)
 
+# Standard Library Imports
+import logging
 from datetime import datetime
 from typing import List
 
+# Third-Party Imports
 import plotly.graph_objects as go
 import plotly.io as pio
 
+# Local Application Imports
 from config.config import OUTPUT_DIR
 from config.run_context import RunContext
 
@@ -21,9 +25,7 @@ def generate_html_report(
     Args:
         figures (List[go.Figure]): 一個包含多個 Plotly Figure 物件的列表。
         stats_html (str): 包含盤中統計資訊的 HTML 字串。
-        output_path (Path): 最終 HTML 報告的完整儲存路徑。
-        report_title (str): HTML 網頁的標題。
-        refresh_interval (int): 網頁自動刷新的秒數。
+        ctx (RunContext): 執行時的上下文，用於取得報告標題等。
     """
 
     output_path = OUTPUT_DIR / f"{ctx.report_title}.html"
@@ -37,8 +39,6 @@ def generate_html_report(
     for fig in figures:
         if fig:
             # 將每個 figure 轉為 HTML 片段，並附加到 body 字串中
-            # include_plotlyjs='cdn' -> 使用網路上的 JS 函式庫，使檔案變小
-            # full_html=False -> 只產生圖表的 <div> 區塊，不產生完整的 <html> 結構
             charts_html_body += pio.to_html(fig, include_plotlyjs='cdn', full_html=False)
 
     # 用當下時間當作「更新標記」
@@ -71,7 +71,8 @@ def generate_html_report(
     
     # 將組合好的 HTML 內容寫入指定的檔案
     output_path.write_text(full_html_content, encoding="utf-8")
-    print(f"✅ 報告已成功生成至: {output_path}")
+    
+    # (修改) 改用 logging.info
+    logging.info(f"✅ [Report] 報告已成功生成至: {output_path}")
     http_url = f"http://localhost:8080/{ctx.report_title}.html"
-    print(f"🌐 報表網址：{http_url}\n")
-
+    logging.info(f"🌐 [Report] 報表網址：{http_url}\n")

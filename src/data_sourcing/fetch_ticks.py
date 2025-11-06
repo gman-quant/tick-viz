@@ -1,19 +1,24 @@
-# src/data_sourcing/fetch_ticks.py
+# src/data_sourcing/fetch_ticks.py (v2, 統一使用 logging)
 
-from datetime import datetime, timedelta, time as dt_time
+# Standard Library Imports
+import logging
+from datetime import datetime, time as dt_time, timedelta
 from pathlib import Path
 
+# Third-Party Imports
 import orjson
 import pandas as pd
 import shioaji as sj
 from confluent_kafka import Consumer, KafkaError
 
-from config.config import DATA_DIR, TAIWAN_TZ, FETCH_INTERVAL
+# Local Application Imports
+from config.config import DATA_DIR, FETCH_INTERVAL, TAIWAN_TZ
 from config.run_context import RunContext
 from config.types import SessionType
 from src.data_sourcing.market_data import get_contract
-from src.utils.time_parser import parse_tick_datetime
 from src.utils.resource_contexts import shioaji_session
+from src.utils.time_parser import parse_tick_datetime
+
 
 def fetch_ticks_from_kafka(
     consumer: Consumer,
@@ -32,18 +37,17 @@ def fetch_ticks_from_kafka(
     consumer.assign(offsets)
 
     finished = False
-    new_tick_list = [] # 只在函式內部使用，儲存 "新" Ticks
+    new_tick_list = [] 
 
     try:
         while not finished:
             try:
                 msg = consumer.poll(FETCH_INTERVAL)
             except Exception as e:
-                print(f"⚠️ Kafka polling error: {e}")
+                logging.error(f"⚠️ [T_Data] Kafka polling error: {e}")
                 break
 
             if msg is None:
-                # Poll 沒資料，直接結束此次輪詢
                 finished = True
                 continue
 
@@ -52,14 +56,14 @@ def fetch_ticks_from_kafka(
                     finished = True
                     break
                 else:
-                    print(f"⚠️ Kafka 錯誤：{msg.error()}")
+                    logging.warning(f"⚠️ [T_Data] Kafka 訊息錯誤：{msg.error()}")
                     continue
 
             # 解析 JSON
             try:
                 record = orjson.loads(msg.value())
             except Exception as e:
-                print(f"⚠️ JSON 解碼錯誤: {e}")
+                logging.warning(f"⚠️ [T_Data] JSON 解碼錯誤: {e}")
                 continue
 
             tick_dt_taiwan = parse_tick_datetime(record.get('datetime'))
@@ -71,17 +75,18 @@ def fetch_ticks_from_kafka(
                 break
 
             if start_datetime <= tick_dt_taiwan <= end_datetime and not record.get('simtrade', False):
-                new_tick_list.append(record) # 加入 "新" Ticks List
+                new_tick_list.append(record) 
 
     except KeyboardInterrupt:
-        print("🛑 使用者手動中止。")
+        logging.info("🛑 [T_Data] 使用者手動中止 (in fetch_ticks_from_kafka)。")
         raise
 
     # 只轉換本次抓到的 "新" Ticks
     df = pd.DataFrame(new_tick_list)
 
     if not df.empty:
-        print(f"✅ 本次輪詢取得 {len(df)} 筆新資料")
+        # (這個訊息可能會洗版，如果您覺得太吵，可以註解掉)
+        logging.info(f"✅ [T_Data] 本次輪詢取得 {len(df)} 筆新資料")
 
     # 更新 offsets，推進到下一個 offset
     positions = consumer.position(offsets)
@@ -114,7 +119,7 @@ def _get_or_fetch_contract_ticks(
     if not api:
         raise ConnectionError("Shioaji API session not available for fetching data.")
 
-    print(f"Cache not found for {cache_file.name}. Fetching from API...")
+    logging.info(f"💾 [Main] Cache not found for {cache_file.name}. Fetching from API...")
     ticks = api.ticks(contract=contract, date=date)
     if not ticks['ts']:
         raise ValueError(f"No tick data found for {contract.code} on {date}.")
@@ -129,12 +134,6 @@ def _get_or_fetch_contract_ticks(
 def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.DataFrame:
     """
     Fetches and processes tick data from Shioaji, using local cache if available.
-    
-    Logic:
-    1. Fetch daily tick data for both TXF and TSE (from cache or API).
-    2. Merge the datasets.
-    3. Filter the merged data for the specific time window.
-    4. Calculate cumulative metrics on the filtered window.
     """
     try:
         # --- 設定日期與檔案路徑 ---
@@ -145,7 +144,6 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         tse_file = DATA_DIR / f"tse-ticks_{date_str}.parquet"
 
         # --- 獲取資料 (優先從快取讀取) ---
-        # 只有當檔案不存在時，才需要建立 API 連線
         if not txf_file.exists() or not tse_file.exists():
             if api is None:
                 with shioaji_session() as sj_api:
@@ -163,20 +161,16 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
             df_tse = pd.read_parquet(tse_file)
 
         # --- 資料處理與合併 ---
-        # 複製第一列，並將 close 設為 tse_prev_close，時間提前 30 分鐘，確保 merge_asof 有對應值
         first_row_df = pd.DataFrame([df_tse.iloc[0].copy()])
         first_row_df['datetime'] = first_row_df['datetime'] - timedelta(minutes=30)
         first_row_df['close'] = tse_prev_close
 
-        # 合併調整後的 df_tse 和原始 df_tse，並過濾時間早於 13:46
         df_tse_adjusted = pd.concat([first_row_df, df_tse], ignore_index=True)
         df_tse_adjusted = df_tse_adjusted[df_tse_adjusted['datetime'].dt.time < dt_time(13, 46)]
 
-        # 統一時區並排序，準備合併
         df_txf['datetime'] = pd.to_datetime(df_txf['datetime']).dt.tz_convert(TAIWAN_TZ)
         df_tse_adjusted['datetime'] = pd.to_datetime(df_tse_adjusted['datetime']).dt.tz_convert(TAIWAN_TZ)
 
-        # 使用 merge_asof 對齊 datetime，取最近的先前 TSE close 價
         df_merged = pd.merge_asof(
             df_txf,
             df_tse_adjusted[['datetime', 'close']],
@@ -186,11 +180,9 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         ).set_index('datetime')
 
         # --- 篩選與計算 ---
-        # 1. 先篩選出指定時間窗口
         df_window = df_merged.loc[ctx.start_datetime : ctx.end_datetime].copy().reset_index()
 
-        # 2. 僅對此窗口內的資料計算累計指標
-        window_size = 300  # 你可以自由調整這個數字
+        window_size = 300
         return df_window.rename(columns={'close_TSE': 'underlying_price'}).assign(
             bid_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 1, 0).cumsum(),
             ask_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 2, 0).cumsum(),
@@ -203,6 +195,8 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         )
     
     except Exception as e:
-        # 將所有可能的錯誤包裝成一個統一的 Runtime 錯誤
-        raise RuntimeError(f"Failed to fetch tick data from Shioaji: {e}") from e
-    
+        # (修改) 使用 logging.exception 記錄完整錯誤堆疊
+        logging.exception(f"❌ [Main] 歷史模式 {ctx.trade_date} {ctx.session_type.name} 獲取資料失敗: {e}")
+        # 重新引發錯誤，讓 main_process 知道此任務失敗
+        raise
+
