@@ -33,7 +33,7 @@ def generate_figures(df, ctx, txf_prev_close, taiex_prev_close):
 
     for period in ['1min', '3min', '5min', '10min']:
         df_kbars = kbars.generate_kbars(df, period=period, ctx=ctx)
-        figures.append(candlestick_chart.plot_candlestick(df_kbars, ctx))
+        figures.append(candlestick_chart.plot_candlestick(df_kbars, period=period, ctx=ctx))
 
     return figures
 

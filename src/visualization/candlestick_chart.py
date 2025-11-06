@@ -86,7 +86,7 @@ def plot_candlestick_with_volume_delta(df: pd.DataFrame, ctx: RunContext):
     return fig
 
 
-def plot_candlestick(df: pd.DataFrame, ctx: RunContext):
+def plot_candlestick(df: pd.DataFrame, period: str, ctx: RunContext):
     """
     繪製單純的 K 線圖 (Candlestick) 與成交量。
     """
@@ -94,15 +94,12 @@ def plot_candlestick(df: pd.DataFrame, ctx: RunContext):
         logging.warning("Candlestick (Time-based): 無交易資料，跳過繪圖。")
         return fig_utils.BLANK_BLACK_FIGURE
 
-    delta_seconds = (df['datetime'].iloc[1] - df['datetime'].iloc[0]).total_seconds()
-    delta_minutes = int(delta_seconds // 60)
-
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,
         vertical_spacing=0.1,
         row_heights=[0.65, 0.35],
-        subplot_titles=(f'{delta_minutes}-min K-Bars', f'{delta_minutes}-min Volume')
+        subplot_titles=(f'{period}-min K-Bars', f'{period}-min Volume')
     )
 
     # 上方 K 線圖 (使用共用顏色)
@@ -128,7 +125,7 @@ def plot_candlestick(df: pd.DataFrame, ctx: RunContext):
 
     # 設定樣式 (使用共用設定)
     fig.update_layout(
-        title_text=f'{delta_minutes}-min K-Bars with Volume',
+        title_text=f'{period}-min K-Bars with Volume',
         height=800,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         **fig_utils.COMMON_LAYOUT_SETTINGS

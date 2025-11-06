@@ -90,7 +90,7 @@ def create_dash_app(ctx, shared_state):
         )
 
         # 直接傳入 df_kbars，不再計算
-        fig_candle = candlestick_chart.plot_candlestick(df_kbars, ctx)
+        fig_candle = candlestick_chart.plot_candlestick(df_kbars, period='1min', ctx=ctx)
         
         # 統計表的計算量很小，暫時保留在 callback 中
         stats = stats_table.compute_stats(latest_df, txf_prev_close)
