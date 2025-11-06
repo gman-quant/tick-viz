@@ -5,7 +5,7 @@
 ![Shioaji](https://img.shields.io/badge/Shioaji-required-orange) 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
-一個高效能的盤中多空分析工具。 核心架構將「資料處理」與「UI渲染」徹底分離，確保海量 Tick 資料更新下，介面依然流暢。
+本專案旨在開發台指期即時盤中多空分析工具。 核心架構將「資料處理」與「UI渲染」徹底分離，確保海量 Tick 資料更新下，介面依然流暢。
 - 功能：視覺化盤中多空狀態。
 - 模式：支援即時 Kafka 串流與 Shioaji 歷史回測。
 
