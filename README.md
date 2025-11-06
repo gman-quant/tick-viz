@@ -191,7 +191,7 @@ TICK-VIZ/
 │   │   ├── stats_table.py        # │  ├─ 統計表格生成
 │   │   ├── main_chart.py         # │  ├─ 主分析圖
 │   │   ├── candlestick_chart.py  # │  ├─ K 棒圖
-│   │   ├── report_generator.py   # │  └─ 靜態 HTML 報告生成
+│   │   └── report_generator.py   # │  └─ 靜態 HTML 報告生成
 │   │                               │
 │   └── web/                      # └─ 📂 Web/Dash 相關功能
 │       ├── dash_app.py           #    ├─ Dash App 的 Layout 與 Callbacks
