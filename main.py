@@ -5,7 +5,7 @@ import argparse
 import logging
 import threading
 import time
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
 # Third-Party Imports
 from confluent_kafka import TopicPartition
@@ -13,13 +13,12 @@ from confluent_kafka import TopicPartition
 # Local Application Imports
 from config.run_context import RunContext
 from config.types import DataSource, SessionType
-from src.service import data_loop_manager, run_single_session_task
+from src.core.loop_manager import data_loop_manager, run_single_session_task
 from src.utils.resource_contexts import shioaji_session
 from src.utils.session_time import get_session_range
 from src.utils.time_parser import parse_date
 from src.web.dash_app import create_dash_app
 from src.web.shared_state import shared_state
-from src.service import data_loop_manager, run_single_session_task
 
 
 # ------------------------------------------------------------
@@ -68,7 +67,6 @@ def main(
                         data_source=DataSource.SHIOAJI,
                     )
 
-                    # (修改) 
                     run_single_session_task(ctx, api)
 
                 current += one_day
@@ -91,11 +89,7 @@ def main(
 
         # B. 將 Dash Server (穩定任務) 放到「主執行緒」
         logging.info(f"🚀 [Main] 正在啟動 Web Server (MainThread) 於 http://localhost:8080 ...")
-        
-        # 建立一個假的/預設的 ctx 供 Dash 啟動時使用
-        # 真正的 ctx 將由 data_loop_manager 在 T_Data 中管理
-        app_ctx = RunContext(real_time_mode=True) 
-        app = create_dash_app(app_ctx, shared_state) 
+        app = create_dash_app(shared_state) 
         
         try:
             # --- 這是唯一的修改點 ---
@@ -185,8 +179,9 @@ cd Projects/tick-viz && source venv/bin/activate
 python main.py --real-time-mode 0 --date-start 2025-11-01 --date-end 2025-11-04 --session whole
 
  📅 日線圖更新
-source venv/bin/activate && python -m src.processing.kbar.process_all_ticks_to_daily_csv
-python plot_txf_kbar.py
+cd Projects/tick-viz && source venv/bin/activate
+python -m scripts.generate_daily_csv
+python -m scripts.plot_txf_kbar
 
 📦 生成 requirements.txt
 pip freeze > requirements.txt

@@ -4,17 +4,17 @@
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
-import plotly.graph_objects as go
 
 import config.config as config
-from src.processing.main_process import generate_figures
+from src.core.session_processor import generate_figures
 from src.utils.session_time import get_observation_window
 from src.visualization import candlestick_chart, main_chart, stats_table, report_generator
 from src.visualization.figure_utils import BLANK_BLACK_FIGURE
 
 
-def create_dash_app(ctx, shared_state):
+def create_dash_app(shared_state):
     """建立 Dash 應用（共享狀態由主程式傳入）"""
+    ctx = shared_state.context
     app = Dash(__name__, title=ctx.report_title)
 
     # -----------------------
@@ -73,6 +73,7 @@ def create_dash_app(ctx, shared_state):
     def update_dashboard(n):
         with shared_state.lock:
             # 讀取預先算好的 DataFrame
+            ctx = shared_state.context
             plot_df = shared_state.plot_df
             df_kbars = shared_state.kbars_1min
             txf_prev_close = shared_state.txf_prev_close
@@ -114,6 +115,7 @@ def create_dash_app(ctx, shared_state):
 
         # 取得共享資料
         with shared_state.lock:
+            ctx = shared_state.context
             df = shared_state.latest_df
             txf_prev_close = shared_state.txf_prev_close
             taiex_prev_close = shared_state.taiex_prev_close

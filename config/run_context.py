@@ -8,7 +8,7 @@ from typing import Optional
 
 from config.config import TAIWAN_TZ
 from config.types import SessionType, DataSource
-from src.processing.volume_bars import get_volume_per_bar
+from src.processing.bars.volume_bars import get_volume_per_bar
 from src.utils.session_time import get_trading_session
 
 @dataclass(frozen=True)

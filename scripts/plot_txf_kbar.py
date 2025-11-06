@@ -1,13 +1,13 @@
-# 1. Standard Library Imports
+# Standard Library Imports
 from pathlib import Path
 
-# 2. Third-Party Imports
+# Third-Party Imports
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 
-# 3. Local Application Imports
+# Local Application Imports
 from config.config import OUTPUT_DIR
 
 
@@ -195,16 +195,14 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
     output_path.write_text(html_str, encoding="utf-8")
     print(f"✅ 輸出 HTML: {output_path.resolve()}")
 
-    # 自動開啟（可依需要取消註解）
-    # webbrowser.open(output_path.resolve().as_uri())
-
 
 # --- 執行 ---
 df = load_and_preprocess("data/daily_txf.csv")
 plot_candlestick_with_volume(df)
 
 '''
+cd Projects/tick-viz
 source venv/bin/activate
-python -m src.processing.kbar.process_all_ticks_to_daily_csv
-python plot_txf_kbar.py
+python -m scripts.generate_daily_csv
+python -m scripts.plot_txf_kbar
 '''

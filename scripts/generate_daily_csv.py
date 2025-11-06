@@ -22,7 +22,7 @@ def convert_tick_to_daily(df_tick: pl.DataFrame, file_date: str) -> pl.DataFrame
         ).alias("session"),
         (pl.col("close") * pl.col("volume")).alias("pv")  # 為了計算 VWAP
     ])
-
+    
     df_daily = df.group_by("session").agg([
         pl.first("datetime").dt.date().alias("date"),
         pl.first("price").alias("open"),
@@ -94,6 +94,8 @@ def process_all_ticks():
             df_new = df_new.with_columns([pl.col(col).cast(dtype)])
     # 合併
     df_combined = pl.concat([df_existing, df_new])
+    # 過濾掉 session 為 closed 的資料
+    df_combined = df_combined.filter(pl.col("session") != "closed")
     # 排序
     session_order = {"day": 0, "night": 1}
     df_sorted = (
@@ -127,5 +129,5 @@ if __name__ == "__main__":
     process_all_ticks()
 
 '''
-python -m src.processing.kbar.process_all_ticks_to_daily_csv
+python -m scripts.generate_daily_csv
 '''

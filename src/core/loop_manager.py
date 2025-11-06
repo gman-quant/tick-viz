@@ -12,7 +12,7 @@ from confluent_kafka import TopicPartition
 import config.config as config
 from config.run_context import RunContext
 from config.types import DataSource, SessionType
-from src.processing.main_process import process_market_session
+from src.core.session_processor import process_market_session
 from src.utils.resource_contexts import kafka_consumer
 from src.utils.session_time import in_which_session
 from src.web.shared_state import shared_state
@@ -33,8 +33,9 @@ def run_single_session_task(ctx: RunContext, api=None):
         # Kafka 即時模式
         logging.info(f"📊 [T_Data] 資料處理任務 (run_single_session_task) 已啟動 ({ctx.session_type.name})。")
         
-        logging.info(f"🧹 [T_Data] 正在清除舊資料，準備 {ctx.session_type.name}...")
+        logging.info(f"🧹 [T_Data] 正在清除舊資料，準備 {ctx.session_type.name} SESSION...")
         with shared_state.lock:
+            shared_state.context = ctx
             shared_state.latest_df = None
             shared_state.plot_df = None
             shared_state.kbars_1min = None
@@ -91,11 +92,13 @@ def data_loop_manager():
     
     while True:
         try:
-            now_time = datetime.now(tz=config.TAIWAN_TZ).time()
-            today = datetime.now(tz=config.TAIWAN_TZ).date()
+            now = datetime.now(tz=config.TAIWAN_TZ)
+            now_time = now.time()
+            today = now.date()
             active_session_type = in_which_session(now_time)
 
             if active_session_type == SessionType.CLOSED:
+                # ... (休市邏輯不變) ...
                 if current_running_session_key is not None:
                     logging.info(f"ℹ️ [T_Data] {current_running_session_key} 已收盤。")
                     logging.info("     畫面將保留最後狀態。等待下一交易時段...")
@@ -109,19 +112,23 @@ def data_loop_manager():
             new_session_key = f"{today}-{active_session_type.name}"
             
             if new_session_key == current_running_session_key:
-                logging.warning(f"⚠️ [T_Data] 偵測到 {new_session_key} 已在運行中(??)，60 秒後檢查。")
+                # 這是最常見的情況：交易時段正在運行中，60 秒後再檢查。
                 time.sleep(60)
                 continue
 
-            logging.info(f"🚀 [T_Data] 偵測到新交易時段: {new_session_key}")
+            # --- (換盤/新盤偵測，只在這裡計算一次時間) ---
+            logging.info(f"🚀 [T_Data] 偵測到新交易時段: {new_session_key} session")
             current_running_session_key = new_session_key 
-
+            
+            # 建立完整的 RunContext
             ctx = RunContext(
                 real_time_mode=True,
                 trade_date=today,
                 session_type=active_session_type
             )
+            # --- (一次性計算結束) ---
             
+            # 啟動處理該盤資料的任務 (這個任務會持續運行直到收盤)
             run_single_session_task(ctx, api=None)
             
         except Exception as e:
