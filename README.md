@@ -170,11 +170,11 @@ TICK-VIZ/
 │   ├── core/                     # ├─ 📂 【應用核心】(負責協調、狀態和流程控制)
 │   │   ├── loop_manager.py       # │  ├─ 【外層核心】24/7 服務管理器 (原 service.py)
 │   │   └── session_processor.py  # │  └─ 【內層核心】「單一盤別」資料處理迴圈 (原 processing/main_process.py)
-│   │                                │
-│   ├── data_sourcing/            # └─ 📂 數據獲取 (從 Kafka/Shioaji 取得資料)
+│   │                               │
+│   ├── data_sourcing/            # ├─ 📂 數據獲取 (從 Kafka/Shioaji 取得資料)
 │   │   ├── fetch_ticks.py        # │  ├─ 獲取 Tick
 │   │   └── market_data.py        # │  └─ 獲取市場歷史資料 (例如：前收盤價)
-│   │                                │
+│   │                               │
 │   ├── processing/               # ├─ 📂 【資料處理】(純粹的資料轉換與計算)
 │   │   ├── bars/                 # │  ├─ 📂 K 棒合成
 │   │   │   ├── time_bars.py      # │  │  ├─ 時間型 K 棒 (原 kbars.py)
