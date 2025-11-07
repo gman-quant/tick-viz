@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from confluent_kafka import TopicPartition
 
 # Local Application Imports
-import config.config as config
+from config.config import KAFKA_TOPIC, TAIWAN_TZ
 from config.run_context import RunContext
 from config.types import DataSource, SessionType
 from src.core.session_processor import process_market_session
@@ -26,21 +26,21 @@ def run_single_session_task(ctx: RunContext, api=None):
     執行「單一盤別」的資料處理 (Kafka 或 Shioaji)。
     (此版本包含 Kafka 啟動重試機制)
     """
-    if not ctx.real_time_mode or ctx.data_source == DataSource.SHIOAJI:
+    if not ctx.real_time_mode and ctx.data_source == DataSource.SHIOAJI:
         # Shioaji 歷史模式
         process_market_session(None, None, ctx, api)
-    else:
-        # Kafka 即時模式
+        return
+    if ctx.real_time_mode or ctx.data_source == DataSource.KAFKA:
+        # Kafka 即時模式 or 歷史模式(data from Kafka)
         logging.info(f"📊 [T_Data] 資料處理任務 (run_single_session_task) 已啟動 ({ctx.session_type.name})。")
         
         logging.info(f"🧹 [T_Data] 正在清除舊資料，準備 {ctx.session_type.name} SESSION...")
         with shared_state.lock:
-            shared_state.context = ctx
             shared_state.latest_df = None
-            shared_state.plot_df = None
-            shared_state.kbars_1min = None
             shared_state.txf_prev_close = None
             shared_state.taiex_prev_close = None
+            shared_state.plot_df = None
+            shared_state.kbars_1min = None
         
         try:
             with kafka_consumer() as consumer:
@@ -52,10 +52,10 @@ def run_single_session_task(ctx: RunContext, api=None):
                         start_dt_utc = ctx.start_datetime.astimezone(timezone.utc)
                         timestamp_ms = int(start_dt_utc.timestamp() * 1000)
 
-                        metadata = consumer.list_topics(config.KAFKA_TOPIC)
-                        partitions = list(metadata.topics[config.KAFKA_TOPIC].partitions.keys())
+                        metadata = consumer.list_topics(KAFKA_TOPIC)
+                        partitions = list(metadata.topics[KAFKA_TOPIC].partitions.keys())
                         topic_partitions = [
-                            TopicPartition(config.KAFKA_TOPIC, p, timestamp_ms) for p in partitions
+                            TopicPartition(KAFKA_TOPIC, p, timestamp_ms) for p in partitions
                         ]
                         fixed_offsets = consumer.offsets_for_times(topic_partitions)
                         
@@ -70,10 +70,10 @@ def run_single_session_task(ctx: RunContext, api=None):
                         logging.error(f"🔥 [T_Data] Kafka 初始化時發生錯誤: {e}")
                         logging.info("     10 秒後自動重試...")
                         time.sleep(10)
-                        
+
                 logging.info("✅ [T_Data] Offsets 已鎖定，進入 process_market_session...")
                 process_market_session(consumer, current_offsets, ctx)
-                logging.info(f"✅ [T_Data] {ctx.session_type.name} 任務執行完畢。")
+                logging.info(f"✅ [T_Data] {ctx.session_type.name} 任務執行完畢。\n")
 
         except Exception as e:
             logging.exception(f"🔥 [T_Data] run_single_session_task 發生致命錯誤: {e}")
@@ -92,44 +92,37 @@ def data_loop_manager():
     
     while True:
         try:
-            now = datetime.now(tz=config.TAIWAN_TZ)
-            now_time = now.time()
-            today = now.date()
-            active_session_type = in_which_session(now_time)
+            current_session_type = in_which_session()
 
-            if active_session_type == SessionType.CLOSED:
+            if current_session_type == SessionType.CLOSED:
                 # ... (休市邏輯不變) ...
                 if current_running_session_key is not None:
                     logging.info(f"ℹ️ [T_Data] {current_running_session_key} 已收盤。")
-                    logging.info("     畫面將保留最後狀態。等待下一交易時段...")
+                    logging.info("畫面將保留最後狀態。等待下一交易時段...")
                     current_running_session_key = None 
                 else:
                     logging.info(f"💤 [T_Data] 休市中... 每 60 秒檢查一次。")
-                
-                time.sleep(60)
+                    time.sleep(60)
                 continue 
-
-            new_session_key = f"{today}-{active_session_type.name}"
             
-            if new_session_key == current_running_session_key:
-                # 這是最常見的情況：交易時段正在運行中，60 秒後再檢查。
-                time.sleep(60)
-                continue
+            today = datetime.now(tz=TAIWAN_TZ).date()
+            new_session_key = f"{today}-{current_session_type.name}"
 
             # --- (換盤/新盤偵測，只在這裡計算一次時間) ---
             logging.info(f"🚀 [T_Data] 偵測到新交易時段: {new_session_key} session")
             current_running_session_key = new_session_key 
             
             # 建立完整的 RunContext
-            ctx = RunContext(
-                real_time_mode=True,
-                trade_date=today,
-                session_type=active_session_type
-            )
+            with shared_state.lock:
+                shared_state.context = RunContext(
+                    trade_date=today,
+                    session_type=current_session_type
+                )
+
             # --- (一次性計算結束) ---
             
             # 啟動處理該盤資料的任務 (這個任務會持續運行直到收盤)
-            run_single_session_task(ctx, api=None)
+            run_single_session_task(shared_state.context, api=None)
             
         except Exception as e:
             logging.exception(f"🔥 [T_Data] data_loop_manager 發生嚴重錯誤: {e}")

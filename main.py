@@ -14,6 +14,7 @@ from confluent_kafka import TopicPartition
 from config.run_context import RunContext
 from config.types import DataSource, SessionType
 from src.core.loop_manager import data_loop_manager, run_single_session_task
+from src.utils.misc import clear_console
 from src.utils.resource_contexts import shioaji_session
 from src.utils.session_time import get_session_range
 from src.utils.time_parser import parse_date
@@ -25,22 +26,22 @@ from src.web.shared_state import shared_state
 # 主流程
 # ------------------------------------------------------------
 def main(
-    real_time_mode: bool = True,
+    real_time_mode:    bool = True,
     date_start: date | None = None,
-    date_end: date | None = None,
-    session: str | None = None,
+    date_end:   date | None = None,
+    session:     str | None = None,
 ):
     """
     主執行流程，支援二種模式：
     1️⃣ 即時模式 (24/7 Server)
     2️⃣ 歷史模式（多日迭代）
     """
-    ctx = RunContext(real_time_mode=real_time_mode)
 
-    if not ctx.real_time_mode:
+    if not real_time_mode:
         # --------------------
         # 📘 歷史回顧模式 (邏輯不變，僅修改函式名稱)
         # --------------------
+        clear_console()
         logging.info("📘 執行歷史回顧模式...")
         with shioaji_session() as api:
             one_day = timedelta(days=1)
@@ -59,17 +60,18 @@ def main(
                     continue
 
                 for day_session in range(st, ed - 1, -1):
-                    logging.info(f"\n📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
+                    logging.info(f"📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
 
-                    ctx = ctx.with_updated(
+                    ctx = RunContext(
                         trade_date=current,
                         session_type=SessionType.DAY if day_session else SessionType.NIGHT,
-                        data_source=DataSource.SHIOAJI,
+                        real_time_mode=False,
+                        data_source=DataSource.SHIOAJI
                     )
-
                     run_single_session_task(ctx, api)
 
                 current += one_day
+                
         logging.info("✅ 歷史回顧模式執行完畢。")
 
     else:
@@ -92,8 +94,7 @@ def main(
         app = create_dash_app(shared_state) 
         
         try:
-            # --- 這是唯一的修改點 ---
-            app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False) # <- 新的
+            app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)
         
         except KeyboardInterrupt:
             logging.info("\n👋 [Main] 收到使用者關閉訊號 (Ctrl+C)...")
@@ -176,7 +177,7 @@ python main.py --real-time-mode 1
 
 🔵 歷史回顧模式
 cd Projects/tick-viz && source venv/bin/activate
-python main.py --real-time-mode 0 --date-start 2025-11-01 --date-end 2025-11-04 --session whole
+python main.py --real-time-mode 0 --date-start 2025-11-06 --date-end 2025-11-06 --session whole
 
  📅 日線圖更新
 cd Projects/tick-viz && source venv/bin/activate

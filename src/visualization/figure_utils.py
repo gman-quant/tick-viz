@@ -4,7 +4,8 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # 3. Local Application Imports
-import config.config as config
+from config.config import TAIWAN_TZ
+from config.types import SessionType
 from config.run_context import RunContext
 from src.utils.session_time import get_observation_window, get_sliding_window
 
@@ -76,6 +77,6 @@ def get_time_range(ctx: RunContext) -> tuple[datetime, datetime]:
     根據即時或歷史模式，取得正確的圖表 X 軸時間範圍。
     """
     if ctx.real_time_mode:
-        return get_sliding_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
+        return get_sliding_window(ctx.start_datetime, ctx.end_datetime, TAIWAN_TZ)
     else:
-        return get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
+        return get_observation_window(ctx.start_datetime, ctx.end_datetime, TAIWAN_TZ)

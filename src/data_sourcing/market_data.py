@@ -177,7 +177,6 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tu
 
     current_date = ctx.start_datetime.date()
     current_time = ctx.start_datetime.time()
-    # (假設 in_which_session 已經更新)
     session_type = in_which_session(current_time) 
 
     start_date = current_date - timedelta(days=1) if session_type == SessionType.DAY else current_date
@@ -191,7 +190,7 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tu
     if result:
         return result
 
-    # (修改) 在引發錯誤前，先用 logging 記錄
+    # 在引發錯誤前，先用 logging 記錄
     error_msg = f"❌ {prefix} 在過去 {max_lookback} 天內找不到 TXF / TSE 收盤價。"
     logging.error(error_msg)
     raise FileNotFoundError(error_msg)

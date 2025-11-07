@@ -4,6 +4,7 @@
 import logging
 from datetime import datetime, time as dt_time, timedelta
 from pathlib import Path
+import time
 
 # Third-Party Imports
 import orjson
@@ -22,44 +23,38 @@ from src.utils.time_parser import parse_tick_datetime
 
 def fetch_ticks_from_kafka(
     consumer: Consumer,
-    offsets: list,
+    offsets: list, # [TopicPartition]
     start_datetime: datetime,
     end_datetime: datetime
-) -> tuple[pd.DataFrame, list]:
+) -> tuple[pd.DataFrame | None, list]:
     """
     從 Kafka 擷取指定時間區間內的 tick 資料。
-    
-    【重構】:
-    - 移除 tick_list 參數。
-    - 僅返回本次輪詢抓取到的 "新" ticks (new_df)。
-    - 移除所有DataFrame的後處理 (to_datetime, rvwap)，交由主流程 (main_process) 統一處理。
     """
     consumer.assign(offsets)
 
-    finished = False
     new_tick_list = [] 
 
     try:
-        while not finished:
-            try:
-                msg = consumer.poll(FETCH_INTERVAL)
-            except Exception as e:
-                logging.error(f"⚠️ [T_Data] Kafka polling error: {e}")
+        while True:
+            # === 1. 抓取訊息 ===
+            msg = consumer.poll(FETCH_INTERVAL)
+
+            # === 2. 處理閒置 (Poll 超時) - 這是「即時交易」的正常出口 ===
+            if msg is None:
                 break
 
-            if msg is None:
-                finished = True
-                continue
-
+            # === 3. 處理 Kafka 錯誤 - 這是「歷史資料」的出口 ===
             if msg.error():
                 if msg.error().code() == KafkaError._PARTITION_EOF:
-                    finished = True
+                    # 讀到了 Topic 的結尾，正常退出
+                    logging.debug("✅ [T_Data] 讀取到 Kafka Partition 結尾 (EOF)。")
                     break
                 else:
+                    # 其他 Kafka 錯誤
                     logging.warning(f"⚠️ [T_Data] Kafka 訊息錯誤：{msg.error()}")
                     continue
 
-            # 解析 JSON
+            # === 4. 處理訊息內容 (已重新排序邏輯) ===
             try:
                 record = orjson.loads(msg.value())
             except Exception as e:
@@ -67,42 +62,43 @@ def fetch_ticks_from_kafka(
                 continue
 
             tick_dt_taiwan = parse_tick_datetime(record.get('datetime'))
+
+            # 優先排除無效資料
             if tick_dt_taiwan is None:
                 continue
-
-            if tick_dt_taiwan > end_datetime:
-                finished = True
-                break
-
+            # 篩選我們想要的資料
             if start_datetime <= tick_dt_taiwan <= end_datetime and not record.get('simtrade', False):
-                new_tick_list.append(record) 
-
+                new_tick_list.append(record)
+                continue
+            # 處理「歷史回測」的出口
+            if tick_dt_taiwan > end_datetime:
+                break
+            
     except KeyboardInterrupt:
         logging.info("🛑 [T_Data] 使用者手動中止 (in fetch_ticks_from_kafka)。")
         raise
 
-    # 只轉換本次抓到的 "新" Ticks
-    df = pd.DataFrame(new_tick_list)
+    # === 4. 處理返回結果 ===
+    if not new_tick_list:
+        return None, offsets # 保持 "舊的" offsets，下次重試
+    
+    # 5. 更新 offsets (單一topic，單一partition)
 
-    if not df.empty:
-        # (這個訊息可能會洗版，如果您覺得太吵，可以註解掉)
-        logging.info(f"✅ [T_Data] 本次輪詢取得 {len(df)} 筆新資料")
-
-    # 更新 offsets，推進到下一個 offset
-    positions = consumer.position(offsets)
-    new_offsets = []
-    for pos in positions:
-        if pos.offset >= 0:
-            new_offsets.append(pos)
-        else:
-            original_tp = next(
-                (tp for tp in offsets if tp.topic == pos.topic and tp.partition == pos.partition),
-                None
-            )
-            if original_tp:
-                new_offsets.append(original_tp)
-
-    return df, new_offsets
+    # 取得「原始的」 TopicPartition (我們知道只有 1 個)
+    original_tp = offsets[0]
+    # 取得「最新的」 TopicPartition (我們也知道只有 1 個)
+    # (注意：consumer.position() 仍然會回傳一個 list)
+    pos = consumer.position(offsets)[0]
+    # 檢查「最新的」是否有效
+    if pos.offset >= 0:
+        # 有效，更新 new_offsets 為「最新的」
+        new_offsets = [pos]
+    else:
+        # 無效，讓 new_offsets 保持為「原始的」
+        # (等同於下次重試)
+        new_offsets = [original_tp]
+    
+    return pd.DataFrame(new_tick_list), new_offsets
 
 
 # --- 抽取輔助函式，處理資料獲取與快取 ---

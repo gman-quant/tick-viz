@@ -71,7 +71,7 @@ def create_dash_app(shared_state):
         [Input("update-interval", "n_intervals")]
     )
     def update_dashboard(n):
-        with shared_state.lock:
+        with shared_state.lock:            
             # 讀取預先算好的 DataFrame
             ctx = shared_state.context
             plot_df = shared_state.plot_df

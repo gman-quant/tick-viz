@@ -27,12 +27,11 @@ TAIWAN_TZ = ZoneInfo("Asia/Taipei")
 
 # === Trading Session Times ===
 DAY_START   = dt_time( 8, 30)
-DAY_END     = dt_time(13, 45, 5) # 5 秒緩衝
+DAY_END     = dt_time(13, 45, 15) # 15 秒緩衝
 NIGHT_START = dt_time(14, 50)
-NIGHT_END   = dt_time( 5,  0, 5) # 5 秒緩衝
+NIGHT_END   = dt_time( 5,  0, 15) # 15 秒緩衝
 
 # === Report and chart settings ===
-CLEAR_SCREEN_EACH_CYCLE = True
 FETCH_INTERVAL  = 2    # [秒] consumer.poll() 的最長等待時間
 UPDATE_INTERVAL = 2    # [秒] UI 更新週期
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
@@ -41,3 +40,4 @@ OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 # === Data cache settings ===
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 DATA_DIR.mkdir(exist_ok=True)  # 確保目錄存在
+

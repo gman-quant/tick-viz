@@ -27,11 +27,6 @@ def generate_html_report(
         stats_html (str): 包含盤中統計資訊的 HTML 字串。
         ctx (RunContext): 執行時的上下文，用於取得報告標題等。
     """
-
-    output_path = OUTPUT_DIR / f"{ctx.report_title}.html"
-    # 確保輸出目錄存在
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    
     # 初始化一個空字串，用來存放所有圖表的 HTML
     charts_html_body = ""
     
@@ -69,10 +64,17 @@ def generate_html_report(
     </html>
     """
     
+    output_path = OUTPUT_DIR / f"{ctx.report_title}.html"
+    # 確保輸出目錄存在
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     # 將組合好的 HTML 內容寫入指定的檔案
     output_path.write_text(full_html_content, encoding="utf-8")
     
-    # (修改) 改用 logging.info
-    logging.info(f"✅ [Report] 報告已成功生成至: {output_path}")
-    http_url = f"http://localhost:8080/{ctx.report_title}.html"
-    logging.info(f"🌐 [Report] 報表網址：{http_url}\n")
+    url = (
+        f"http://localhost:8080/{ctx.report_title}.html"
+        if ctx.real_time_mode
+        else f"file://{output_path.resolve()}"
+    )
+    logging.info(f"🌐 [Report] 報表網址：{url}\n")
+
+    

@@ -168,8 +168,8 @@ TICK-VIZ/
 │
 ├── src/                          # 📂 核心原始碼 (所有應用程式邏輯)
 │   ├── core/                     # ├─ 📂 【應用核心】(負責協調、狀態和流程控制)
-│   │   ├── loop_manager.py       # │  ├─ 【外層核心】24/7 服務管理器 (原 service.py)
-│   │   └── session_processor.py  # │  └─ 【內層核心】「單一盤別」資料處理迴圈 (原 processing/main_process.py)
+│   │   ├── loop_manager.py       # │  ├─ 【外層核心】24/7 服務管理器
+│   │   └── session_processor.py  # │  └─ 【內層核心】「單一盤別」資料處理迴圈
 │   │                               │
 │   ├── data_sourcing/            # ├─ 📂 數據獲取 (從 Kafka/Shioaji 取得資料)
 │   │   ├── fetch_ticks.py        # │  ├─ 獲取 Tick
@@ -177,7 +177,7 @@ TICK-VIZ/
 │   │                               │
 │   ├── processing/               # ├─ 📂 【資料處理】(純粹的資料轉換與計算)
 │   │   ├── bars/                 # │  ├─ 📂 K 棒合成
-│   │   │   ├── time_bars.py      # │  │  ├─ 時間型 K 棒 (原 kbars.py)
+│   │   │   ├── time_bars.py      # │  │  ├─ 時間型 K 棒
 │   │   │   └── volume_bars.py    # │  │  └─ 成交量型 K 棒
 │   │   └── metrics.py            # │  └─ 計算技術指標 (如 RVWAP) 並準備繪圖用 DF
 │   │                               │

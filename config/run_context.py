@@ -1,29 +1,31 @@
 # config/run_context.py
 
-
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
-from typing import Optional
 
 from config.config import TAIWAN_TZ
 from config.types import SessionType, DataSource
 from src.processing.bars.volume_bars import get_volume_per_bar
-from src.utils.session_time import get_trading_session
+from src.utils.session_time import get_trading_session, in_which_session
 
 @dataclass(frozen=True)
 class RunContext:
-    real_time_mode: bool = True
-    trade_date: date = field(default_factory=date.today)
-    session_type: SessionType = SessionType.CLOSED
+    real_time_mode:    bool = True
     data_source: DataSource = DataSource.KAFKA
-    tz: ZoneInfo = TAIWAN_TZ
-
-    # 使用 Optional，允許使用者手動輸入，也可留空
-    start_datetime: Optional[datetime] = None
-    end_datetime: Optional[datetime] = None
+    tz:            ZoneInfo = TAIWAN_TZ
+    trade_date:          date | None = None
+    session_type: SessionType | None = None 
+    start_datetime:  datetime | None = None
+    end_datetime:    datetime | None = None
 
     def __post_init__(self):
+        if self.trade_date is None:
+            today = datetime.now(self.tz).date()
+            object.__setattr__(self, 'trade_date', today)
+        if self.real_time_mode and self.session_type is None:
+            session_type = in_which_session()
+            object.__setattr__(self, 'session_type', session_type)
         if self.start_datetime is None or self.end_datetime is None:
             start_dt, end_dt = get_trading_session(
                 self.trade_date, self.session_type, self.real_time_mode, self.tz
