@@ -42,43 +42,29 @@
 
 ---
 
-- 🏗️ 核心架構 (即時模式)
+## 🏗️ 核心架構 (即時模式)
 
 本專案的後端 T_Data 服務採用「狀態機」與「任務執行者」分離的設計，確保 24/7 穩定運行與盤別切換的強固性。
 
-1. **data_loop_manager (狀態機 / 總機)**：
+1. data_loop_manager (狀態機 & 服務管理器)：
 
-  - 這是在背景 24/7 運行的「總機」（src/core/loop_manager.py）。
+  - src/service.py 中的 24/7 迴圈，負責偵測當前時段（日盤、夜盤、休市）。
 
-  - 它唯一的工作是不斷偵測現在是「日盤」、「夜盤」或「休市」。
+  - 職責：判斷是否應啟動新盤別，建立 RunContext，並呼叫 run_single_session_task。
 
-  - 當偵測到「新開盤」時（例如從「休市」變為「日/夜 盤」），它會啟動下方的「任務執行者」。
+2. run_single_session_task (盤別生命週期管理器)：
 
-2. **run_single_session_task (任務啟動 / 專案經理)**：
+  - src/service.py 中的函式，負責「單一盤別」（例如今日日盤）的完整生命週期。
 
-  - 當「總機」偵測到新開盤時，此任務會被啟動一次（位於 src/core/loop_manager.py 中）。
+  - 職責：清除舊狀態、使用 offsets_for_times 精確初始化 Kafka offset，然後呼叫並等待 process_market_session 執行完畢。
 
-  - 它扮演「專案經理」，負責初始化該盤別的資源，例如：
+3. process_market_session (增量資料處理迴圈)：
 
-    - 清除 shared_state 中的舊盤別資料。
+  - src/processing/main_process.py 中的核心迴圈，負責「盤中」的持續運算。
 
-    - 【關鍵】 使用 offsets_for_times 精確取得 Kafka 在「開盤時間點」的 offset，確保資料一筆不漏。
+  - 職責：不斷從 Kafka 獲取新資料、進行增量計算（如 RVWAP）、並將結果更新至 shared_state 供前端使用。
 
-    - 處理開盤前的重試（直到取得有效 offset）。
-
-3. **process_market_session (資料處理 / 執行者)**：
-
-  - 當「專案經理」準備好資源後，此迴圈會接手（src/core/session_processor.py）。
-
-  - 它扮演「執行者」，持續運行直到收盤，負責：
-
-    - 從 Kafka 獲取即時資料 (fetch_ticks_from_kafka)。
-
-    - 執行技術分析計算（rolling vwap, kbars ...）。
-
-    - 將算好的資料寫入 shared_state 供前端使用。
-
-  - 當它偵測到收盤（例如 fetch_ticks... 觸發時鐘出口），此迴圈結束，並返回「總機」等待下個盤別。
+  - 此迴圈結束（例如偵測到收盤）後，控制權交還給 run_single_session_task，後者隨之結束，data_loop_manager 再次進入偵測狀態。
 
 ---
 
@@ -151,7 +137,7 @@ UPDATE_INTERVAL = 2    # [秒] UI 更新週期
 
 - 啟動：同時啟動「後端資料服務 (T_Data)」與「前端 Dash 伺服器 (WebApp)」。
 
-- 後端：請參考上方的 ## 🏗️ 核心架構 說明。
+- 後端：請參考上方的 [核心架構說明](#🏗️-核心架構-即時模式)。
 
 - 前端 (WebApp)：Dash 儀表板會定期（UPDATE_INTERVAL）讀取後端已算好的資料來更新圖表，確保 UI 流暢。
 
