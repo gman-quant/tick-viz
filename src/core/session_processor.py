@@ -1,4 +1,4 @@
-# src/processing/main_process.py (v2, 統一使用 logging)
+# src/processing/main_process.py
 
 # Standard Library Imports
 from datetime import datetime
@@ -13,30 +13,13 @@ from confluent_kafka import Consumer, TopicPartition
 from config.config import TAIWAN_TZ
 from config.run_context import RunContext
 from config.types import DataSource, SessionType
-from src.exceptions import MarketClosedError
-from src.data_sourcing import fetch_ticks, market_data
-from src.processing.bars import kbars
+from src.data_sourcing.fetch_ticks import fetch_ticks_from_kafka, fetch_ticks_from_shioaji
+from src.data_sourcing.market_data import find_previous_close
+from src.processing.bars.kbars import generate_kbars
 from src.processing.metrics import prepare_plot_data 
-from src.visualization import candlestick_chart, main_chart, report_generator, stats_table
+from src.visualization import stats_table
+from src.visualization.report_generator import generate_html_report
 from src.web.shared_state import shared_state
-
-
-def generate_figures(df, ctx, txf_prev_close, taiex_prev_close):
-    """
-    生成主分析圖與各 K 線 圖，返回圖表列表
-    """
-    plot_df = prepare_plot_data(df, txf_prev_close, taiex_prev_close)
-    
-    figures = [
-        main_chart.create_tick_analysis_figure(plot_df, txf_prev_close, taiex_prev_close, ctx)
-    ]
-
-    for period in ['1min', '3min', '5min', '10min']:
-        df_kbars = kbars.generate_kbars(df, period=period, ctx=ctx)
-        figures.append(candlestick_chart.plot_candlestick(df_kbars, period=period, ctx=ctx)) 
-
-    return figures
-
 
 def process_market_session(
     consumer: Consumer | None,
@@ -56,7 +39,7 @@ def process_market_session(
     )
 
     logging.info(f"🔁 [T_Data] 正在 (重新) 取得 {ctx.session_type.name} 的前日收盤價...")
-    txf_prev_close, taiex_prev_close = market_data.find_previous_close(ctx, api)
+    txf_prev_close, taiex_prev_close = find_previous_close(ctx, api)
 
     with shared_state.lock:
         shared_state.txf_prev_close = txf_prev_close
@@ -66,10 +49,10 @@ def process_market_session(
 
     while True:
         try:
-            # 根據數據源擷取並處理資料，繪製圖表
+            # 根據數據源擷取並處理資料
             if ctx.real_time_mode or ctx.data_source == DataSource.KAFKA:
 
-                new_df, current_offsets = fetch_ticks.fetch_ticks_from_kafka(
+                new_df, current_offsets = fetch_ticks_from_kafka(
                     consumer=consumer,
                     offsets=current_offsets,
                     start_datetime=ctx.start_datetime,
@@ -93,7 +76,7 @@ def process_market_session(
                 
                 df = main_df 
                 plot_df = prepare_plot_data(df, txf_prev_close, taiex_prev_close)
-                df_kbars_1min = kbars.generate_kbars(df, period="1min", ctx=ctx)
+                df_kbars_1min = generate_kbars(df, period="1min", ctx=ctx)
 
                 with shared_state.lock:
                     shared_state.latest_df = df
@@ -103,12 +86,13 @@ def process_market_session(
                 # --------------------
                 # 📘 歷史回顧模式
                 # --------------------
-                df = fetch_ticks.fetch_ticks_from_shioaji(
+                df = fetch_ticks_from_shioaji(
                     ctx=ctx,
                     api=api,
                     tse_prev_close=taiex_prev_close
                 )
             
+            # 紀錄資料筆數
             logging.info(f"📈 資料總筆數: {len(df)} 筆。")
 
             # 歷史模式下，生成靜態報告
@@ -120,11 +104,12 @@ def process_market_session(
                     stats_html = stats_table.generate_stats_html(
                         stats_table.compute_stats(df, txf_prev_close)
                     )
-                    figures = generate_figures(df, ctx, txf_prev_close, taiex_prev_close)
-                    report_generator.generate_html_report(
-                        figures=figures,
+                    generate_html_report(
+                        df=df,
                         stats_html=stats_html,
-                        ctx=ctx
+                        ctx=ctx,
+                        txf_prev_close=txf_prev_close,
+                        taiex_prev_close=taiex_prev_close
                     )
                     break  # 歷史模式只跑一次
 
