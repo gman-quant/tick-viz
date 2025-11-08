@@ -3,6 +3,8 @@
 from datetime import datetime, time as dt_time, timedelta, date
 from zoneinfo import ZoneInfo
 
+import pandas as pd
+
 from config.config import (
     TAIWAN_TZ, 
     DAY_START, 
@@ -72,21 +74,18 @@ def get_session_range(pick: str) -> tuple[int, int]:
     }
     return mapping.get(pick.lower(), (0, 1))
 
-def get_observation_window(start: datetime, end: datetime, tz: ZoneInfo) -> tuple[datetime, datetime]:
+def get_observation_window(df: pd.DataFrame, start: datetime) -> tuple[datetime, datetime]:
     """
     完整的開始與結束時間，固定在 start 與 end
     """
-    now = datetime.now(tz=tz)
-    adjustment = timedelta(minutes=15 if start.time() == DAY_START else 10)
-    adjusted_start = start + adjustment
-    adjusted_end = min(end, now + timedelta(minutes=0))
-    return adjusted_start, adjusted_end
+    adjusted_start = start + timedelta(minutes=15 if start.time() == DAY_START else 10)
+    end = df['datetime'].iloc[-1] if not df.empty else adjusted_start
+    return adjusted_start, end
 
 
 def get_sliding_window(
+    df: pd.DataFrame,
     start: datetime,
-    end: datetime,
-    tz: ZoneInfo,
     lookback_minutes: int = 30,
 ) -> tuple[datetime, datetime]:
     """
@@ -94,13 +93,9 @@ def get_sliding_window(
     - 若尚未收盤，依 now 做滑動
     - 若已收盤，視窗直接固定在 start 與 end
     """
-    now = datetime.now(tz=tz)
     adjusted_start = start + timedelta(minutes=15 if start.time() == DAY_START else 10)
-    if now > end:
-        # 已收盤 → 固定範圍
-        return adjusted_start, end
-    # 尚未收盤 → 正常滑動邏輯
-    window_start = max(adjusted_start, now - timedelta(minutes=lookback_minutes))
-    return window_start, now
+    end = df['datetime'].iloc[-1] if not df.empty else adjusted_start
+    window_start = max(adjusted_start, end - timedelta(minutes=lookback_minutes))
+    return window_start, end
 
 
