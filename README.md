@@ -48,23 +48,23 @@
 
 1. data_loop_manager (狀態機 & 服務管理器)：
 
-  - src/service.py 中的 24/7 迴圈，負責偵測當前時段（日盤、夜盤、休市）。
+    - src/service.py 中的 24/7 迴圈，負責偵測當前時段（日盤、夜盤、休市）。
 
-  - 職責：判斷是否應啟動新盤別，建立 RunContext，並呼叫 run_single_session_task。
+    - 職責：判斷是否應啟動新盤別，建立 RunContext，並呼叫 run_single_session_task。
 
 2. run_single_session_task (盤別生命週期管理器)：
 
-  - src/service.py 中的函式，負責「單一盤別」（例如今日日盤）的完整生命週期。
+    - src/service.py 中的函式，負責「單一盤別」（例如今日日盤）的完整生命週期。
 
-  - 職責：清除舊狀態、使用 offsets_for_times 精確初始化 Kafka offset，然後呼叫並等待 process_market_session 執行完畢。
+    - 職責：清除舊狀態、使用 offsets_for_times 精確初始化 Kafka offset，然後呼叫並等待 process_market_session 執行完畢。
 
 3. process_market_session (增量資料處理迴圈)：
 
-  - src/processing/main_process.py 中的核心迴圈，負責「盤中」的持續運算。
+    - src/processing/main_process.py 中的核心迴圈，負責「盤中」的持續運算。
 
-  - 職責：不斷從 Kafka 獲取新資料、進行增量計算（如 RVWAP）、並將結果更新至 shared_state 供前端使用。
+    - 職責：不斷從 Kafka 獲取新資料、進行增量計算（如 RVWAP）、並將結果更新至 shared_state 供前端使用。
 
-  - 此迴圈結束（例如偵測到收盤）後，控制權交還給 run_single_session_task，後者隨之結束，data_loop_manager 再次進入偵測狀態。
+    - 此迴圈結束（例如偵測到收盤）後，控制權交還給 run_single_session_task，後者隨之結束，data_loop_manager 再次進入偵測狀態。
 
 ---
 
