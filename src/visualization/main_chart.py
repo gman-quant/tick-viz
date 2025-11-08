@@ -159,7 +159,7 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
         secondary_y=True
     )
 
-def _configure_layout(fig: go.Figure, ctx: RunContext):
+def _configure_layout(fig: go.Figure, df: pd.DataFrame, ctx: RunContext):
     """設定圖表的整體佈局、標題與圖例。"""
     
     # 使用共用設定，並覆蓋 legend
@@ -173,7 +173,7 @@ def _configure_layout(fig: go.Figure, ctx: RunContext):
 
     # 使用共用設定
     fig.update_xaxes(
-        range=fig_utils.get_time_range(ctx),
+        range=fig_utils.get_time_range(df, ctx),
         autorange=False,
         **fig_utils.COMMON_XAXIS_SETTINGS
     )
@@ -207,7 +207,7 @@ def create_tick_analysis_figure(plot_df: pd.DataFrame, txf_prev_close: float, ta
     _add_volume_change_traces(fig, plot_df)
 
     # 3. 設定圖表全域樣式
-    _configure_layout(fig, ctx)
+    _configure_layout(fig, plot_df, ctx)
 
     # 4. 回傳 Figure 物件
     return fig

@@ -78,7 +78,7 @@ import src.visualization.figure_utils as fig_utils
 
 #     fig.update_xaxes(
 #         row=2, col=1,
-#         range=fig_utils.get_time_range(ctx),
+#         range=fig_utils.get_time_range(df, ctx),
 #         autorange=False,
 #         **fig_utils.COMMON_XAXIS_SETTINGS
 #     )
@@ -137,7 +137,7 @@ def plot_candlestick(df: pd.DataFrame, period: str, ctx: RunContext):
 
     # (使用共用設定)
     fig.update_xaxes(
-        range=fig_utils.get_time_range(ctx),
+        range=fig_utils.get_time_range(df, ctx),
         autorange=False,
         **fig_utils.COMMON_XAXIS_SETTINGS # (修改)
     )

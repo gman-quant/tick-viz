@@ -1,11 +1,10 @@
 # src/visualization/figure_utils.py (v2, 擴充版)
 
 import plotly.graph_objects as go
+import pandas as pd
 from datetime import datetime
 
-# 3. Local Application Imports
-from config.config import TAIWAN_TZ
-from config.types import SessionType
+# Local Application Imports
 from config.run_context import RunContext
 from src.utils.session_time import get_observation_window, get_sliding_window
 
@@ -72,11 +71,11 @@ VOLUME_YAXIS_SETTINGS = dict(
 # 4. 共用輔助函式
 # ------------------------------------------------------------
 
-def get_time_range(ctx: RunContext) -> tuple[datetime, datetime]:
+def get_time_range(df: pd.DataFrame, ctx: RunContext) -> tuple[datetime, datetime]:
     """
     根據即時或歷史模式，取得正確的圖表 X 軸時間範圍。
     """
     if ctx.real_time_mode:
-        return get_sliding_window(ctx.start_datetime, ctx.end_datetime, TAIWAN_TZ)
+        return get_sliding_window(df, ctx.start_datetime)
     else:
-        return get_observation_window(ctx.start_datetime, ctx.end_datetime, TAIWAN_TZ)
+        return get_observation_window(df, ctx.start_datetime)
