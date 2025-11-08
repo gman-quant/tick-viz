@@ -5,24 +5,17 @@
 ![Shioaji](https://img.shields.io/badge/Shioaji-required-orange) 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
-本專案旨在開發台指期即時盤中多空分析工具。 核心架構將「資料處理」與「UI渲染」徹底分離，確保海量 Tick 資料更新下，介面依然流暢。
-- 功能：視覺化盤中多空狀態。
-- 模式：支援即時 Kafka 串流與 Shioaji 歷史回測。
+本專案為一套台指期即時盤中多空分析工具。
 
----
+核心架構將**「資料處理 (後端 T_Data)」與「UI 渲染 (前端 WebApp)」**徹底分離，確保在海量的 Tick 資料湧入下，儀表板介面依然保持高效流暢。
 
-## ✨ 主要功能
+- 主要功能：即時計算關鍵多空指標（如 VWAP, Rolling VWAP, 1 分 K），並視覺化盤中多空狀態。
 
--   **雙模式數據源**：支援從 `Kafka` 即時消費 tick 數據，或透過 `Shioaji API` 抓取歷史 tick 數據進行分析。
--   **高效能即時架構**：採用多執行緒模型，將資料處理 (data_loop) 與 UI 渲染 (dash_app) 分離，確保即時儀表板流暢高效。
--   **多維度指標計算**：即時計算技術分析指標 **VWAP**、**High&Low**、**淨成交強度指標**等，可依需求自行設計。
--   **進階圖表視覺化**：
-    -   **主分析圖**：整合逐筆成交價格及其相關技術分析圖表。
-    -   **量價K棒圖**：不同聚合週期的K線圖(1-min, 5-min, 10-min)。
-    -   **日線K棒圖**：獨立腳本，繪製日夜盤之分的日線圖。
--   **動態儀表板 & 靜態報告**：
-    -   **即時模式**：提供基於 Dash 的動態網頁儀表板（UPDATE_INTERVAL 自動刷新）。
-    -   **歷史模式**：自動生成包含所有圖表與統計數據的單一 HTML 報告。
+- 支援模式：
+
+  - 即時：串接即時 Kafka 串流，提供 24/7 盤中監控儀表板。
+
+  - 歷史：支援 Shioaji API 或 Kafka 歷史資料，用於回測並生成靜態 HTML 報告。
 
 ---
 
@@ -34,14 +27,69 @@
 
 ---
 
-## 🛠️ 技術棧
+## ✨ 主要功能
+
+-   雙模式資料源：支援從 `Kafka` 即時消費 tick 資料，或透過 `Shioaji API` 抓取歷史 tick 資料進行分析。
+-   高效能即時架構：採用多執行緒模型，將資料處理 (data_loop) 與 UI 渲染 (dash_app) 分離，確保即時儀表板流暢高效。
+-   多維度指標計算：即時計算技術分析指標 VWAP、High&Low、淨成交強度指標等，可依需求自行設計。
+-   進階圖表視覺化：
+    -   主分析圖：整合逐筆成交價格及其相關技術分析圖表。
+    -   量價K棒圖：多週期的K線圖(1, 3, 5, 10 分)。
+    -   日線K棒圖：獨立模組，支援日夜盤分段視覺化。
+-   動態儀表板 & 靜態報告：
+    -   即時模式：提供基於 Dash 的動態網頁儀表板，支援自動刷新（UPDATE_INTERVAL）。
+    -   歷史模式：自動生成整合圖表與統計摘要的單一 HTML 報告。
+
+---
+
+- 🏗️ 核心架構 (即時模式)
+
+本專案的後端 T_Data 服務採用「狀態機」與「任務執行者」分離的設計，確保 24/7 穩定運行與盤別切換的強固性。
+
+1. **data_loop_manager (狀態機 / 總機)**：
+
+  - 這是在背景 24/7 運行的「總機」（src/core/loop_manager.py）。
+
+  - 它唯一的工作是不斷偵測現在是「日盤」、「夜盤」或「休市」。
+
+  - 當偵測到「新開盤」時（例如從「休市」變為「日/夜 盤」），它會啟動下方的「任務執行者」。
+
+2. **run_single_session_task (任務啟動 / 專案經理)**：
+
+  - 當「總機」偵測到新開盤時，此任務會被啟動一次（位於 src/core/loop_manager.py 中）。
+
+  - 它扮演「專案經理」，負責初始化該盤別的資源，例如：
+
+    - 清除 shared_state 中的舊盤別資料。
+
+    - 【關鍵】 使用 offsets_for_times 精確取得 Kafka 在「開盤時間點」的 offset，確保資料一筆不漏。
+
+    - 處理開盤前的重試（直到取得有效 offset）。
+
+3. **process_market_session (資料處理 / 執行者)**：
+
+  - 當「專案經理」準備好資源後，此迴圈會接手（src/core/session_processor.py）。
+
+  - 它扮演「執行者」，持續運行直到收盤，負責：
+
+    - 從 Kafka 獲取即時資料 (fetch_ticks_from_kafka)。
+
+    - 執行技術分析計算（rolling vwap, kbars ...）。
+
+    - 將算好的資料寫入 shared_state 供前端使用。
+
+  - 當它偵測到收盤（例如 fetch_ticks... 觸發時鐘出口），此迴圈結束，並返回「總機」等待下個盤別。
+
+---
+
+## 🛠️ 使用技術
 
 -   **核心語言**: Python 3.9+
 -   **Web框架**: Dash (by Plotly)
--   **數據處理**: Pandas
+-   **資料處理**: Pandas
 -   **圖表繪製**: Plotly
--   **即時數據**: Confluent-Kafka for Python
--   **歷史數據**: Shioaji (永豐金證券 API)
+-   **即時資料**: Confluent-Kafka for Python
+-   **歷史資料**: Shioaji (永豐金證券 API)
 
 ---
 
@@ -70,10 +118,10 @@ pip install -r requirements.txt
 ```
 
 #### 4. 進行環境設定
-建立'.env'，設定可參考'.env.example' 如下:
+建立.env 檔案（可複製 .env.example），並填入以下資訊：
 
 ```python
-# tick-viz/.env.example
+# tick-viz/.env
 
 # Shioaji API credentials
 SHIOAJI_API_KEY=your_shioaji_api_key_here
@@ -99,13 +147,20 @@ UPDATE_INTERVAL = 2    # [秒] UI 更新週期
 
 ### 🟢 即時模式（`real_time_mode=1`）
 
-用於接收來自 Kafka 串流來源的 **即時 tick 資料**。
+- 用於接收來自 Kafka 串流來源的 即時 tick 資料，並啟動 24/7 儀表板。
 
-- 啟動後端資料迴圈 (Consumer) 與前端 Dash 伺服器 (Web App)。
-- 後端 (data_loop) 從 Kafka 獲取資料並執行技術分析計算（rolling vwap, kbars ...）。
-- 前端 (dash_app) Dash 更新圖表，僅讀取已算好的資料，確保 UI 流暢。
-- 左上角「⬜️ 點擊生成報告」按鈕：
-  - 功能：將目前儀表板的圖表與統計資料生成 靜態 HTML 報告，存至 output/TXF-Charts-Live-Static.html。
+- 啟動：同時啟動「後端資料服務 (T_Data)」與「前端 Dash 伺服器 (WebApp)」。
+
+- 後端：請參考上方的 ## 🏗️ 核心架構 說明。
+
+- 前端 (WebApp)：Dash 儀表板會定期（UPDATE_INTERVAL）讀取後端已算好的資料來更新圖表，確保 UI 流暢。
+
+- 靜態報告：
+
+  - 左上角「⬜️ 點擊生成報告」按鈕。
+
+  - 功能：將目前儀表板的圖表與統計資料，生成一份靜態 HTML 報告，存至 output/TXF-Charts-Live-Static.html。
+
 - 啟動方式：
 ```bash
 source venv/bin/activate
@@ -115,12 +170,20 @@ python main.py --real-time-mode 1
 
 ### 🔵 歷史模式（`real_time_mode=0`）
 
-用於回看特定區間的 **歷史 tick 資料**。
+- 用於回測特定日期區間的歷史 tick 資料（可來自 Kafka 或 Shioaji）。
 
-- 自訂起迄日期（--date-start, --date-end）。
-- 可分別產出日盤與夜盤報告（--session）。
-- 自動略例假日。
-- 全部資料處理完畢後自動結束，並將 HTML 報告存於 output/。
+- 功能：
+
+  - 可自訂起迄日期（--date-start, --date-end）。
+
+  - 可分別產出日盤與夜盤報告（--session）。
+
+  - 自動略過台股例假日。
+
+  - 此模式**不啟動**即時儀表板。
+
+  - 程式會在全部資料處理完畢後自動結束，並將 HTML 靜態報告存於 output/。
+
 - 啟動方式：
 ```bash
 source venv/bin/activate
@@ -130,14 +193,14 @@ python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 
 
 ### 📅 日線圖更新
 
-用於將 tick 資料聚合成日線 K 棒並繪製圖表。
+- 用於將 tick 資料聚合成日線 K 棒並繪製圖表，此為獨立腳本。
 
-- 更新每日/夜盤日線 CSV
-- 確認歷史日線資料完整性
-- 為報告或分析提供日線圖
-> 輸出：
-> - 日線CSV：`data/daily_txf.csv`
-> - 日線圖表：`output/TXF-Daily-Chart.html`
+- 功能：
+
+  - 更新 data/daily_txf.csv（包含日盤與夜盤的日線資料）。
+
+  - 繪製日線圖表 output/TXF-Daily-Chart.html。
+
 - 啟動方式：
 ```bash
 source venv/bin/activate
@@ -171,7 +234,7 @@ TICK-VIZ/
 │   │   ├── loop_manager.py       # │  ├─ 【外層核心】24/7 服務管理器
 │   │   └── session_processor.py  # │  └─ 【內層核心】「單一盤別」資料處理迴圈
 │   │                               │
-│   ├── data_sourcing/            # ├─ 📂 數據獲取 (從 Kafka/Shioaji 取得資料)
+│   ├── data_sourcing/            # ├─ 📂 資料獲取 (從 Kafka/Shioaji 取得資料)
 │   │   ├── fetch_ticks.py        # │  ├─ 獲取 Tick
 │   │   └── market_data.py        # │  └─ 獲取市場歷史資料 (例如：前收盤價)
 │   │                               │
