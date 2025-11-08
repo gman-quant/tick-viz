@@ -4,13 +4,12 @@
 import logging
 from datetime import datetime, time as dt_time, timedelta
 from pathlib import Path
-import time
 
 # Third-Party Imports
 import orjson
 import pandas as pd
 import shioaji as sj
-from confluent_kafka import Consumer, KafkaError
+from confluent_kafka import Consumer, KafkaError, TopicPartition
 
 # Local Application Imports
 from config.config import DATA_DIR, FETCH_INTERVAL, TAIWAN_TZ
@@ -23,7 +22,7 @@ from src.utils.time_parser import parse_tick_datetime
 
 def fetch_ticks_from_kafka(
     consumer: Consumer,
-    offsets: list, # [TopicPartition]
+    offsets: list[TopicPartition], 
     start_datetime: datetime,
     end_datetime: datetime
 ) -> tuple[pd.DataFrame | None, list]:
