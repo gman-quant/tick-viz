@@ -6,10 +6,10 @@ from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 
 import config.config as config
-from src.core.session_processor import generate_figures
-from src.utils.session_time import get_observation_window
-from src.visualization import candlestick_chart, main_chart, stats_table, report_generator
+
+from src.visualization import candlestick_chart, main_chart, stats_table
 from src.visualization.figure_utils import BLANK_BLACK_FIGURE
+from src.visualization.report_generator import generate_html_report
 
 
 def create_dash_app(shared_state):
@@ -122,18 +122,18 @@ def create_dash_app(shared_state):
 
         if df is None or df.empty:
             return "⚠️　資料不足，無法生成", False, 0
-
-        # 【不需修改】
-        # generate_figures 函式已被修改為 "接收原始 df，內部自己計算 plot_df"
-        # 由於這是手動點擊，短暫的計算延遲是可接受的
-        figures = generate_figures(df, ctx, txf_prev_close, taiex_prev_close)
+        
+        # 生成統計資訊
         stats_html = stats_table.generate_stats_html(stats_table.compute_stats(df, txf_prev_close))
 
         # 建立靜態報告
-        st_dt, ed_dt = get_observation_window(ctx.start_datetime, ctx.end_datetime, config.TAIWAN_TZ)
-        for fig in figures:
-            fig.update_xaxes(range=[st_dt, ed_dt])
-        report_generator.generate_html_report(figures=figures, stats_html=stats_html, ctx=ctx)
+        generate_html_report(
+            df=df,
+            stats_html=stats_html,
+            ctx=ctx,
+            txf_prev_close=txf_prev_close,
+            taiex_prev_close=taiex_prev_close
+        )
 
         # ✅ 成功提示 + 啟動倒數回復
         return "✅　已生成新報告", False, 0
