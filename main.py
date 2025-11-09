@@ -1,4 +1,4 @@
-# main.py (v6, 24/7 伺服器, 統一使用 logging)
+# main.py
 
 # Standard Library Imports
 import argparse
@@ -28,15 +28,11 @@ def main(
     session:     str | None = None,
 ):
     """
-    主執行流程，支援二種模式：
-    1️⃣ 即時模式 (24/7 Server)
-    2️⃣ 歷史模式（多日迭代）
+    主執行流程，支援即時模式 (24/7 Server) 與歷史模式（多日迭代）。
     """
 
     if not real_time_mode:
-        # --------------------
-        # 📘 歷史回顧模式 (邏輯不變，僅修改函式名稱)
-        # --------------------
+        # --- 歷史回顧模式 ---
         clear_console()
         logging.info("📘 執行歷史回顧模式...")
         with shioaji_session() as api:
@@ -55,6 +51,7 @@ def main(
                     current += one_day
                     continue
 
+                # 迭代處理日盤與夜盤
                 for day_session in range(st, ed - 1, -1):
                     logging.info(f"📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
 
@@ -71,22 +68,20 @@ def main(
         logging.info("✅ 歷史回顧模式執行完畢。")
 
     else:
-        # --------------------
-        # ⚡ 即時模式 (24/7 伺服器)
-        # --------------------
+        # --- 即時 24/7 伺服器模式 ---
         logging.info("⚡ [Main] 執行 24/7 即時伺服器模式...")
         
-        # A. 將 data_loop_manager (24/7任務) 放到「背景執行緒」
-        logging.info("📊 [Main] GNN 24/7 背景資料管理器 (T_Data)...")
+        # --- 啟動背景資料處理執行緒 ---
+        logging.info("📊 [Main] 啟動 24/7 背景資料管理器 (T_Data)...")
         data_thread = threading.Thread(
-            target=data_loop_manager, # <--- 執行 24/7 管理器
+            target=data_loop_manager,
             args=(),
             daemon=True
         )
         data_thread.start()
 
-        # B. 將 Dash Server (穩定任務) 放到「主執行緒」
-        logging.info(f"🚀 [Main] 正在啟動 Web Server (MainThread) 於 http://localhost:8080 ...")
+        # --- 啟動前景 Web Server (主執行緒) ---
+        logging.info(f"🚀 [Main] 啟動 Web Server (MainThread) 於 http://localhost:8080 ...")
         app = create_dash_app(shared_state) 
         
         try:
@@ -101,64 +96,44 @@ def main(
 
 
 # ------------------------------------------------------------
-# CLI 參數設定
+# 程式進入點
 # ------------------------------------------------------------
 if __name__ == "__main__":
 
-    # --- 1. 設定全域日誌 (Logging) ---
+    # --- 1. 設定全域日誌格式 ---
     logging.basicConfig(
-        # level=logging.INFO 表示「只顯示 INFO 層級以上的日誌」
-        # (會顯示 INFO, WARNING, ERROR, CRITICAL，但會隱藏 DEBUG)
-        level=logging.INFO,  
-        
-        # 設定日誌的輸出格式：
-        # %(asctime)s: 自動插入目前時間
-        # %(levelname)s: 插入日誌層級 (例如 INFO)
-        # %(message)s: 插入您真正的日誌訊息 (例如 [T_Data] 休市中...)
-        format='%(asctime)s - %(levelname)s - %(message)s', 
-        
-        # 設定 %(asctime)s 顯示的時間格式 (年-月-日 時:分:秒)
-        datefmt='%Y-%m-%d %H:%M:%S' 
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
     )
     
-    # --- 2. 讓 Dash/Werkzeug 伺服器安靜 ---
-    # 取得 'werkzeug' (Dash/Flask 底層伺服器) 的 logger 物件
+    # --- 2. 靜音 Dash/Werkzeug 伺服器日誌 ---
+    # (避免 'POST /_dash-update-component... 200 -' 洗版)
     werkzeug_logger = logging.getLogger('werkzeug')
-    
-    # (這是關鍵) 將它的層級設為 ERROR，這樣就不會印出 INFO 訊息
-    # (例如 'POST /_dash-update-component... 200 -')
-    # 這樣您的終端機才不會被洗版，只會顯示您自己的日誌或真正的錯誤
     werkzeug_logger.setLevel(logging.ERROR)
 
     # --- 3. 建立命令列參數解析器 ---
-    # argparse 用來讀取您在 terminal 輸入的 --real-time-mode 等參數
     parser = argparse.ArgumentParser(description="台指期 Tick 資料處理與繪圖")
 
-    # --- 4. 定義接受的參數 ---
-    # '--real-time-mode' 參數：1=即時, 0=歷史 (預設 1)
+    # --- 4. 定義 CLI 參數 ---
     parser.add_argument("--real-time-mode", type=int, choices=[0, 1], default=1,
                         help="即時模式 (1=啟用, 0=停用)")
     
-    # '--date-start' 參數：歷史回測的開始日期 (使用 parse_date 函式轉換格式)
     parser.add_argument("--date-start", type=parse_date,
                         help="資料開始日期 (格式: YYYY-MM-DD)")
     
-    # '--date-end' 參數：歷史回測的結束日期
     parser.add_argument("--date-end", type=parse_date,
                         help="資料結束日期 (格式: YYYY-MM-DD)")
     
-    # '--session' 參數：歷史回測的盤別
     parser.add_argument("--session", type=str, choices=["day", "night", "whole"],
                         help="交易時段: day=日盤, night=夜盤, whole=全部")
 
-    # --- 5. 正式解析使用者輸入的參數 ---
+    # --- 5. 解析傳入參數 ---
     args = parser.parse_args()
 
-    # --- 6. 呼叫主函式 ---
-    # 以解析後的參數 (args) 作為輸入，啟動 main() 函式，
-    # 程式的主要邏輯 (24/7 伺服器 或 歷史回測) 從這裡開始執行
+    # --- 6. 執行主程式 ---
     main(
-        real_time_mode=bool(args.real_time_mode), # 將 1/0 轉換為 True/False
+        real_time_mode=bool(args.real_time_mode),
         date_start=args.date_start,
         date_end=args.date_end,
         session=args.session,

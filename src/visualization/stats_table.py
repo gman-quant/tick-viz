@@ -1,9 +1,14 @@
 # src/visualization/stats_table.py
 
-from dash import html
+# Standard Library Imports
 from datetime import datetime
 
+# Third-Party Imports
+from dash import html
 
+# ------------------------------------------------------------
+# 📦 統計計算
+# ------------------------------------------------------------
 def compute_stats(df, txf_prev_close):
     """
     計算統計數值，返回 dict
@@ -37,16 +42,20 @@ def compute_stats(df, txf_prev_close):
         "pct_close_change": pct_close_change
     }
 
-
+# ------------------------------------------------------------
+# 🎨 視覺輔助
+# ------------------------------------------------------------
 def color(val):
     """正負顏色判斷"""
     return "green" if val >= 0 else "red"
 
-
+# ------------------------------------------------------------
+# 📊 Dash 動態元件生成
+# ------------------------------------------------------------
 def generate_stats_div(stats):
-    """生成 Dash 元件版統計表格"""
+    """生成 Dash 元件版統計表格 (用於即時網頁)"""
     
-    # 表頭單元格樣式（有底線）
+    # --- 1. 定義樣式 ---
     header_style = {
         "padding": "2px",
         "borderBottom": "1px solid #888",
@@ -54,14 +63,13 @@ def generate_stats_div(stats):
         "fontWeight": "bold",
         "width": f"{100/8:.1f}%"
     }
-
-    # 資料列單元格樣式（無底線）
     cell_style = {
         "padding": "2px",
         "color": "white",
         "width": f"{100/8:.1f}%"
     }
 
+    # --- 2. 準備資料 ---
     headers = ["日漲跌", "波幅", "開盤跳空", "開盤",
                "最高", "最低", "最新價", "收盤漲跌"]
 
@@ -87,6 +95,7 @@ def generate_stats_div(stats):
         color(stats['pct_close_change'])
     ]
 
+    # --- 3. 組合 Dash 元件 ---
     row = html.Tr([
         html.Td(value, style={**cell_style, "color": c})
         for value, c in zip(row_values, colors)
@@ -125,9 +134,11 @@ def generate_stats_div(stats):
 
     return container
 
-
+# ------------------------------------------------------------
+# 📄 靜態 HTML 字串生成
+# ------------------------------------------------------------
 def generate_stats_html(stats):
-    """輸出 HTML 字串版統計表格（表頭加底線，數字列不加底線）"""
+    """輸出 HTML 字串版統計表格 (用於靜態報告)"""
     
     color_style = lambda val: "color: green;" if val >= 0 else "color: red;"
     cols = ''.join(['<col style="width:12.5%;">' for _ in range(8)])

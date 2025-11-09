@@ -1,27 +1,38 @@
 # src/utils/resource_contexts.py
-# 使用內容管理器，確保 API 安全登入與登出
 
-
+# Standard Library Imports
 from contextlib import contextmanager
+
+# Third-Party Imports
 from confluent_kafka import Consumer
 import shioaji as sj
 
+# Local Application Imports
 import config.config as config
 
-
+# ------------------------------------------------------------
+# 📦 Shioaji API 連線管理
+# ------------------------------------------------------------
 @contextmanager
 def shioaji_session():
-    """A context manager to safely handle Shioaji API login and logout."""
+    """
+    使用 Context Manager 安全地處理 Shioaji API 登入與登出。
+    """
     api = sj.Shioaji(simulation=True)
     try:
         api.login(api_key=config.SHIOAJI_API_KEY, secret_key=config.SHIOAJI_SECRET_KEY)
         yield api
     finally:
         api.logout()
-        
+
+# ------------------------------------------------------------
+# 📦 Kafka 消費者連線管理
+# ------------------------------------------------------------
 @contextmanager
 def kafka_consumer():
-    """Context manager for Kafka Consumer with safe teardown."""
+    """
+    使用 Context Manager 安全地處理 Kafka Consumer 建立與關閉。
+    """
     consumer = Consumer({
         'bootstrap.servers': config.KAFKA_BROKER,
         'group.id': config.KAFKA_GROUP_ID,
@@ -32,4 +43,3 @@ def kafka_consumer():
         yield consumer
     finally:
         consumer.close()
-

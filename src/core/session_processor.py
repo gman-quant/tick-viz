@@ -28,17 +28,14 @@ def process_market_session(
     api=None
 ):
     """
-    即時或歷史資料處理主流程
+    即時或歷史資料處理主流程。
+    - 即時模式 (real_time_mode=True): 進入 Kafka 輪詢迴圈。
+    - 歷史模式 (real_time_mode=False): 執行一次 Shioaji/Kafka 資料抓取與報告生成。
     """
     main_df = pd.DataFrame() 
 
-    mode_info = f"模式: {'即時動態' if ctx.real_time_mode else '歷史回顧'}"
-    session_info = (
-        f"🕒 交易日期: {ctx.start_datetime.date()}"
-        f"({'日盤' if ctx.session_type == SessionType.DAY else '夜盤'})"
-    )
-
-    logging.info(f"🔁 [T_Data] 正在 (重新) 取得 {ctx.session_type.name} 的前日收盤價...")
+    # --- 1. 初始化：取得前日收盤價 ---
+    logging.info(f"🔁 [T_Data] 正在取得 {ctx.session_type.name} 的前日收盤價...")
     txf_prev_close, taiex_prev_close = find_previous_close(ctx, api)
 
     with shared_state.lock:
@@ -47,34 +44,43 @@ def process_market_session(
     
     logging.info("✅ [T_Data] process_market_session 初始化完成。")
 
+    # --- 2. 進入資料處理迴圈 ---
+    # (即時模式下，此迴圈會持續執行直到收盤；歷史模式下，執行一次後 break)
     while True:
         try:
-            # 根據數據源擷取並處理資料
+            # --- (A) 即時模式 / Kafka 歷史模式 ---
             if ctx.real_time_mode or ctx.data_source == DataSource.KAFKA:
-
+                
+                # --- 抓取新 Ticks ---
                 new_df, current_offsets = fetch_ticks_from_kafka(
                     consumer=consumer,
                     offsets=current_offsets,
                     start_datetime=ctx.start_datetime,
                     end_datetime=ctx.end_datetime,
                 )
+                
+                # --- 檢查收盤或無資料 ---
                 if new_df is None:
                     if datetime.now(TAIWAN_TZ) >= ctx.end_datetime:
+                        logging.info(f"ℹ️ [T_Data] {ctx.session_type.name} 收盤時間已到，結束任務。")
                         break  # 收盤時間到，結束任務
                     continue   # 無新資料，繼續輪詢
 
-                # --- 【增量處理核心】 ---
+                # --- 即時增量處理 ---
                 new_df['datetime'] = pd.to_datetime(new_df['datetime'], format='ISO8601')
                 main_df = pd.concat([main_df, new_df], ignore_index=True)
-                main_df.drop_duplicates(inplace=True) 
+                main_df.drop_duplicates(inplace=True) # 確保唯一性
                 
+                # --- 計算指標 ---
                 window_size = 300
                 main_df['rvwap'] = (
                     (main_df['close'] * main_df['volume']).rolling(window_size, min_periods=1).sum()
                     / main_df['volume'].rolling(window_size, min_periods=1).sum()
                 )
                 
-                df = main_df 
+                df = main_df # 將處理完的 main_df 指派給 df
+                
+                # --- 更新共用狀態 (Web/Dash) ---
                 plot_df = prepare_plot_data(df, txf_prev_close, taiex_prev_close)
                 df_kbars_1min = generate_kbars(df, period="1min", ctx=ctx)
 
@@ -82,20 +88,18 @@ def process_market_session(
                     shared_state.latest_df = df
                     shared_state.plot_df = plot_df
                     shared_state.kbars_1min = df_kbars_1min
+            
+            # --- (B) Shioaji 歷史模式 ---
             else:
-                # --------------------
-                # 📘 歷史回顧模式
-                # --------------------
                 df = fetch_ticks_from_shioaji(
                     ctx=ctx,
                     api=api,
                     tse_prev_close=taiex_prev_close
                 )
             
-            # 紀錄資料筆數
-            logging.info(f"📈 資料總筆數: {len(df)} 筆。")
+            logging.info(f"📈 資料總筆數: {len(df)}")
 
-            # 歷史模式下，生成靜態報告
+            # --- 3. 靜態報告生成 (僅歷史模式) ---
             if not ctx.real_time_mode:
                 if df is None or df.empty:
                      logging.warning("⚠️ 沒有新資料，請確認時間或來源。")
@@ -111,7 +115,7 @@ def process_market_session(
                         txf_prev_close=txf_prev_close,
                         taiex_prev_close=taiex_prev_close
                     )
-                    break  # 歷史模式只跑一次
+                break # 歷史模式只跑一次
 
         except KeyboardInterrupt:
             logging.info("\n🛑 收到使用者中斷 (Ctrl+C)，正在結束 process_market_session...")
@@ -126,5 +130,3 @@ def process_market_session(
             else:
                 logging.error("     歷史模式發生錯誤，中斷此任務。")
                 break
-
-

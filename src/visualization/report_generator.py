@@ -1,3 +1,5 @@
+# src/visualization/report_generator.py
+
 # Standard Library Imports
 import logging
 from datetime import datetime
@@ -14,17 +16,24 @@ from src.processing.bars.kbars import generate_kbars
 from src.visualization import candlestick_chart, main_chart
 
 
+# ------------------------------------------------------------
+# 📦 圖表生成
+# ------------------------------------------------------------
 def _generate_figures(df, ctx, txf_prev_close, taiex_prev_close):
     """
-    生成主分析圖與各 K 線 圖，返回圖表列表
+    生成主分析圖與各 K 線圖，返回圖表物件列表 (List[go.Figure])。
     """
     logging.debug("⚙️ 正在生成 Plotly 圖表...")
+    
+    # --- 1. 準備繪圖資料 ---
     plot_df = prepare_plot_data(df, txf_prev_close, taiex_prev_close)
     
+    # --- 2. 生成主分析圖 ---
     figures = [
         main_chart.create_tick_analysis_figure(plot_df, txf_prev_close, taiex_prev_close, ctx)
     ]
 
+    # --- 3. 生成各週期 K 線圖 ---
     for period in ['1min', '3min', '5min', '10min']:
         df_kbars = generate_kbars(df, period=period, ctx=ctx)
         figures.append(candlestick_chart.plot_candlestick(df_kbars, period=period, ctx=ctx)) 
@@ -32,7 +41,9 @@ def _generate_figures(df, ctx, txf_prev_close, taiex_prev_close):
     logging.debug(f"✅ 成功生成 {len(figures)} 張圖表。")
     return figures
 
-
+# ------------------------------------------------------------
+# 📄 靜態 HTML 報告生成
+# ------------------------------------------------------------
 def generate_html_report(
     df: pd.DataFrame,
     stats_html: str,
@@ -44,22 +55,20 @@ def generate_html_report(
     將多個 Plotly 圖表和統計數據的 HTML 字串，合併成一個完整的 HTML 報告檔案。
     """
     
-    # === 關鍵修正：在函式內部自己呼叫 _generate_figures ===
+    # --- 1. 生成所有圖表物件 ---
     figures = _generate_figures(df, ctx, txf_prev_close, taiex_prev_close)
     
-    # 初始化一個空字串，用來存放所有圖表的 HTML
+    # --- 2. 將圖表物件轉換為 HTML 字串 ---
     charts_html_body = ""
-    
-    # 遍歷所有 (現在已定義的) figure 物件
     for fig in figures:
         if fig:
-            # 將每個 figure 轉為 HTML 片段，並附加到 body 字串中
+            # include_plotlyjs='cdn' 確保 HTML 檔案能離線開啟
+            # full_html=False 只生成圖表的 <div> 片段
             charts_html_body += pio.to_html(fig, include_plotlyjs='cdn', full_html=False)
 
-    # 用當下時間當作「更新標記」
+    # --- 3. 組合完整的 HTML 頁面 ---
     last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # 使用 f-string 組合出最終的完整 HTML 結構
     full_html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -68,7 +77,6 @@ def generate_html_report(
         <meta name="last-updated" content="{last_updated}">
         <title>{ctx.report_title}</title>
         <style>
-            /* 您可以在這裡定義一些 CSS 樣式 */
             body {{
                 background-color: black;
                 color: white;
@@ -77,22 +85,25 @@ def generate_html_report(
         </style>
     </head>
     <body>
+        <!-- 插入統計表格 HTML -->
         {stats_html}
         
+        <!-- 插入所有圖表 HTML -->
         {charts_html_body}
     </body>
     </html>
     """
     
+    # --- 4. 寫入檔案 ---
     output_path = OUTPUT_DIR / f"{ctx.report_title}.html"
-    # 確保輸出目錄存在
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    # 將組合好的 HTML 內容寫入指定的檔案
     output_path.write_text(full_html_content, encoding="utf-8")
     
+    # --- 5. 輸出日誌 ---
     url = (
         f"http://localhost:8080/{ctx.report_title}.html"
         if ctx.real_time_mode
         else f"file://{output_path.resolve()}"
     )
     logging.info(f"🌐 [Report] 報表網址：{url}\n")
+
