@@ -1,4 +1,4 @@
-# src/utils/session_time.py (v2, 重構版)
+# src/utils/session_time.py
 
 # Standard Library Imports
 from datetime import datetime, time as dt_time, timedelta, date

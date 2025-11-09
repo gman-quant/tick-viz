@@ -1,8 +1,11 @@
-# src/visualization/figure_utils.py (v2, 擴充版)
+# src/visualization/figure_utils.py
 
-import plotly.graph_objects as go
-import pandas as pd
+# Standard Library Imports
 from datetime import datetime
+
+# Third-Party Imports
+import pandas as pd
+import plotly.graph_objects as go
 
 # Local Application Imports
 from config.run_context import RunContext
@@ -21,7 +24,7 @@ COLOR_DECREASING = 'red'
 COLOR_CANDLE_VOL_DAY = 'yellow'
 
 # ------------------------------------------------------------
-# 2. 共用圖表物件
+# 2. 共用圖表物件 (空白圖)
 # ------------------------------------------------------------
 BLANK_BLACK_FIGURE = go.Figure(
     layout=go.Layout(
@@ -36,14 +39,14 @@ BLANK_BLACK_FIGURE = go.Figure(
 # 3. 共用樣式字典 (Layouts)
 # ------------------------------------------------------------
 
-# Dash App 中圖表 (K線圖、主圖) 的共用版面設定
+# --- (A) 主要 Layout (K線圖、主圖) ---
 COMMON_LAYOUT_SETTINGS = dict(
     template='plotly_dark',             # 套用暗黑主題
     hovermode='x unified',              # X軸統一 hover 效果
     xaxis_rangeslider_visible=False,    # 關閉 X 軸的範圍滑桿
 )
 
-# 共用的 X 軸樣式 (適用所有子圖)
+# --- (B) 共用 X 軸樣式 (適用所有子圖) ---
 COMMON_XAXIS_SETTINGS = dict(
     showspikes=True,
     spikemode='across',
@@ -54,21 +57,21 @@ COMMON_XAXIS_SETTINGS = dict(
     showgrid=True,
 )
 
-# 共用的 Y 軸樣式 (價格)
+# --- (C) 共用 Y 軸樣式 (價格) ---
 PRICE_YAXIS_SETTINGS = dict(
     title_text="Price", 
     tickformat=".0f", 
     showgrid=True, 
 )
 
-# 共用的 Y 軸樣式 (成交量)
+# --- (D) 共用 Y 軸樣式 (成交量) ---
 VOLUME_YAXIS_SETTINGS = dict(
     title_text="Volume",
     showgrid=True, 
 )
 
 # ------------------------------------------------------------
-# 4. 共用輔助函式
+# 4. 共用輔助函式 (X 軸時間範圍)
 # ------------------------------------------------------------
 
 def get_time_range(df: pd.DataFrame, ctx: RunContext) -> tuple[datetime, datetime]:
@@ -76,6 +79,8 @@ def get_time_range(df: pd.DataFrame, ctx: RunContext) -> tuple[datetime, datetim
     根據即時或歷史模式，取得正確的圖表 X 軸時間範圍。
     """
     if ctx.real_time_mode:
+        # 即時模式：顯示最後 30 分鐘的滑動視窗
         return get_sliding_window(df, ctx.start_datetime)
     else:
+        # 歷史模式：顯示開盤後的完整固定視窗
         return get_observation_window(df, ctx.start_datetime)

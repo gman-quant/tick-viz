@@ -1,6 +1,8 @@
-/* ============================= */
-/* 全局背景與文字顏色 */
-/* ============================= */
+/* assets/style.css */
+
+/* ----------------------------- */
+/* 1. 全局基礎樣式 (背景, 文字)
+/* ----------------------------- */
 html, body {
     margin: 0 !important;
     padding: 0 !important;
@@ -11,7 +13,9 @@ html, body {
     font-family: 'Inter', sans-serif, 'Microsoft JhengHei' !important; /* 全局字體 */
 }
 
-/* Dash React root 外層 */
+/* ----------------------------- */
+/* 2. Dash 根元件樣式
+/* ----------------------------- */
 #react-entry-point {
     margin: 0 !important;
     padding: 0 !important;
@@ -20,14 +24,16 @@ html, body {
     background-color: black !important;
 }
 
-/* Dash 圖表背景保持黑色 */
+/* ----------------------------- */
+/* 3. Dash 圖表背景
+/* ----------------------------- */
 .dash-graph div.js-plotly-plot {
     background-color: black !important;
 }
 
-/* ============================= */
-/* 其他元件全局文字樣式（避免重複） */
-/* ============================= */
+/* ----------------------------- */
+/* 4. 全局字體 (強制覆蓋)
+/* ----------------------------- */
 body, body * {
     font-family: 'Inter', sans-serif, 'Microsoft JhengHei' !important;
 }
