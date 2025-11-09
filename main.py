@@ -59,7 +59,7 @@ def main(
                         trade_date=current,
                         session_type=SessionType.DAY if day_session else SessionType.NIGHT,
                         real_time_mode=False,
-                        data_source=DataSource.KAFKA
+                        data_source=DataSource.SHIOAJI # 亦可用 DataSource.KAFKA 
                     )
                     run_single_session_task(ctx, api)
 
