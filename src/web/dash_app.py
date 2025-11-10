@@ -6,7 +6,8 @@ from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 
 # Local Application Imports
-import config.config as config
+from config.config import UPDATE_INTERVAL
+from config.types import SessionType
 from src.visualization import candlestick_chart, main_chart, stats_table
 from src.visualization.figure_utils import BLANK_BLACK_FIGURE
 from src.visualization.report_generator import generate_html_report
@@ -52,8 +53,8 @@ def create_dash_app(shared_state):
         dcc.Graph(id="candlestick-chart"),
 
         # --- (D) 定時器 (Callbacks 用) ---
-        dcc.Interval(id="update-interval", interval=config.UPDATE_INTERVAL * 1000),
-        dcc.Interval(id="reset-button-interval", interval=config.UPDATE_INTERVAL * 1000,
+        dcc.Interval(id="update-interval",       interval=UPDATE_INTERVAL * 1000),
+        dcc.Interval(id="reset-button-interval", interval=UPDATE_INTERVAL * 1000,
                      n_intervals=0, disabled=False)
     ], style={
         "margin": 0,
@@ -73,6 +74,10 @@ def create_dash_app(shared_state):
         [Input("update-interval", "n_intervals")]
     )
     def update_dashboard(n):
+        # --- 0. 檢查是否處於休市 ---
+        if shared_state.context.session_type == SessionType.CLOSED:
+            raise PreventUpdate
+
         # --- 1. 從 shared_state 安全讀取資料 ---
         with shared_state.lock:            
             ctx = shared_state.context

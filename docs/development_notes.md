@@ -1,6 +1,20 @@
-# docs/development_notes.md
+# tick-viz 本地開發指南
 
-[TOC]
+- [tick-viz 本地開發指南](#tick-viz-本地開發指南)
+  - [1. 24/7 伺服器管理 (macOS Launchd)](#1-247-伺服器管理-macos-launchd)
+    - [1.1. 開發前 (暫停 24/7 服務)](#11-開發前-暫停-247-服務)
+    - [1.2. 開發後 (恢復 24/7 服務)](#12-開發後-恢復-247-服務)
+    - [1.3. 除錯與日誌](#13-除錯與日誌)
+      - [其他 launchctl 常用指令](#其他-launchctl-常用指令)
+      - [編輯設定檔 (.plist)](#編輯設定檔-plist)
+      - [編輯腳本與查看日誌](#編輯腳本與查看日誌)
+  - [2. Git 開發筆記](#2-git-開發筆記)
+    - [2.1. 暫時忽略本地 Config 修改](#21-暫時忽略本地-config-修改)
+  - [3. 專案手動執行指令](#3-專案手動執行指令)
+    - [3.1. 啟動 24/7 即時伺服器](#31-啟動-247-即時伺服器)
+    - [3.2. 執行歷史回測模式](#32-執行歷史回測模式)
+    - [3.3. 執行靜態圖表腳本](#33-執行靜態圖表腳本)
+
 
 ## 1. 24/7 伺服器管理 (macOS Launchd)
 
@@ -24,7 +38,9 @@ launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.garrett.tickviz2.plist
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.garrett.tickviz2.plist
 ```
 
-### 1.3. launchd 除錯指令
+### 1.3. 除錯與日誌
+
+#### 其他 launchctl 常用指令
 ```bash
 # 查看所有與 tickviz 相關的代理程式
 launchctl list | grep tickviz
@@ -34,6 +50,30 @@ launchctl kickstart -k gui/$(id -u)/com.garrett.tickviz2
 
 # 查看代理程式的狀態、日誌與退出碼
 launchctl print gui/$(id -u)/com.garrett.tickviz2
+```
+
+#### 編輯設定檔 (.plist)
+```bash
+nano ~/Library/LaunchAgents/com.garrett.tickviz.plist
+nano ~/Library/LaunchAgents/com.garrett.tickviz2.plist
+```
+
+#### 編輯腳本與查看日誌
+```bash
+# 編輯啟動腳本
+nano ~/Library/Scripts/update_daily_chart.sh
+nano ~/Library/Scripts/monitor_realtime_txf.sh
+
+# 查看標準輸出 (stdout) 日誌
+cat /tmp/tickviz.log
+cat /tmp/tickviz2.out
+
+# 查看錯誤 (stderr) 日誌
+cat /tmp/tickviz.err
+cat /tmp/tickviz2.err
+
+# 實時監控輸出與錯誤日誌
+tail -f /tmp/tickviz2.out /tmp/tickviz2.err
 ```
 
 ## 2. Git 開發筆記

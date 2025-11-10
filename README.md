@@ -1,4 +1,4 @@
-# 📈 台指期即時分析儀表板 (TXF Real-time Dashboard)
+# 台指期即時分析儀表板 (TXF Real-time Dashboard)
 
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue) 
 ![Apache Kafka](https://img.shields.io/badge/Kafka-required-orange) 
@@ -19,7 +19,26 @@
 
 ---
 
-## 📸 儀表板預覽
+- [台指期即時分析儀表板 (TXF Real-time Dashboard)](#台指期即時分析儀表板-txf-real-time-dashboard)
+  - [儀表板預覽](#儀表板預覽)
+  - [主要功能](#主要功能)
+  - [核心架構 (即時模式)](#核心架構-即時模式)
+  - [使用技術](#使用技術)
+  - [安裝與設定](#安裝與設定)
+      - [1. 複製本專案](#1-複製本專案)
+      - [2. 建立並啟用虛擬環境](#2-建立並啟用虛擬環境)
+      - [3. 安裝相依套件](#3-安裝相依套件)
+      - [4. 進行環境設定](#4-進行環境設定)
+  - [使用方式](#使用方式)
+    - [即時模式（`real_time_mode=1`）](#即時模式real_time_mode1)
+    - [歷史模式（`real_time_mode=0`）](#歷史模式real_time_mode0)
+    - [日線圖更新](#日線圖更新)
+  - [專案結構](#專案結構)
+  - [📄 授權條款](#-授權條款)
+
+---
+
+## 儀表板預覽
 ![1](docs/1.png)
 ![2](docs/2.png)
 ![3](docs/3.png)
@@ -27,7 +46,7 @@
 
 ---
 
-## ✨ 主要功能
+## 主要功能
 
 -   雙模式資料源：支援從 `Kafka` 即時消費 tick 資料，或透過 `Shioaji API` 抓取歷史 tick 資料進行分析。
 -   高效能即時架構：採用多執行緒模型，將資料處理 (data_loop) 與 UI 渲染 (dash_app) 分離，確保即時儀表板流暢高效。
@@ -42,7 +61,7 @@
 
 ---
 
-## 🏗️ 核心架構 (即時模式)
+## 核心架構 (即時模式)
 
 本專案的後端 T_Data 服務採用「狀態機」與「任務執行者」分離的設計，確保 24/7 穩定運行與盤別切換的強固性。
 
@@ -68,7 +87,7 @@
 
 ---
 
-## 🛠️ 使用技術
+## 使用技術
 
 -   **核心語言**: Python 3.9+
 -   **Web框架**: Dash (by Plotly)
@@ -79,7 +98,7 @@
 
 ---
 
-## 🚀 安裝與設定
+## 安裝與設定
 
 #### 1. 複製本專案
 ```bash
@@ -127,11 +146,11 @@ UPDATE_INTERVAL = 2    # [秒] UI 更新週期
 
 ---
 
-## 💡 使用方式
+## 使用方式
 
 本專案支援兩種運行模式：
 
-### 🟢 即時模式（`real_time_mode=1`）
+### 即時模式（`real_time_mode=1`）
 
 - 用於接收來自 Kafka 串流來源的 即時 tick 資料，並啟動 24/7 儀表板。
 
@@ -154,7 +173,7 @@ python main.py --real-time-mode 1
 ```
 啟動後請開啟瀏覽器訪問 http://localhost:8080
 
-### 🔵 歷史模式（`real_time_mode=0`）
+### 歷史模式（`real_time_mode=0`）
 
 - 用於回測特定日期區間的歷史 tick 資料（可來自 Kafka 或 Shioaji）。
 
@@ -177,7 +196,7 @@ python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 
 # --session 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
 ```
 
-### 📅 日線圖更新
+### 日線圖更新
 
 - 用於將 tick 資料聚合成日線 K 棒並繪製圖表，此為獨立腳本。
 
@@ -198,7 +217,7 @@ python -m scripts.plot_txf_kbar
 
 ---
 
-## 📁 專案結構
+## 專案結構
 
 ```text
 TICK-VIZ/

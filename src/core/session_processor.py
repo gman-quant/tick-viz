@@ -130,3 +130,4 @@ def process_market_session(
             else:
                 logging.error("     歷史模式發生錯誤，中斷此任務。")
                 break
+
