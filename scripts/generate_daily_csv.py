@@ -32,7 +32,7 @@ def convert_tick_to_daily(df_tick: pl.DataFrame, file_date: str) -> pl.DataFrame
         pl.col("close").alias("price"),
         # (判斷 Tick 屬於日盤、夜盤或休市)
         pl.col("datetime").map_elements(
-            lambda x: in_which_session(x.time()).value,
+            lambda x: in_which_session(x).value,
             return_dtype=pl.String
         ).alias("session"),
         (pl.col("close") * pl.col("volume")).alias("pv")  # (為了計算 VWAP)

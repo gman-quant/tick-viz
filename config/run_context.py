@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from config.config import TAIWAN_TZ
 from config.types import SessionType, DataSource
 from src.processing.bars.volume_bars import get_volume_per_bar
-from src.utils.session_time import get_trading_session, in_which_session
+from src.utils.session_time import get_session_datetime_range, in_which_session
 
 # ------------------------------------------------------------
 # 📦 執行環境 (Context)
@@ -53,7 +53,7 @@ class RunContext:
             
         # --- 3. 自動計算 start/end datetime (若為 None) ---
         if self.start_datetime is None or self.end_datetime is None:
-            start_dt, end_dt = get_trading_session(
+            start_dt, end_dt = get_session_datetime_range(
                 self.trade_date, self.session_type, self.real_time_mode, self.tz
             )
             object.__setattr__(self, 'start_datetime', start_dt)
@@ -77,48 +77,28 @@ class RunContext:
             return f"TXF-Charts_{self.trade_date.strftime('%Y-%m-%d')}_{session_flag}_{self.data_source.value}"
 
     # ------------------------------------------------------------
-    # 📦 (Method) 不可變更新 (Immutable Update)
+    # 📦 (Method) 取得「靜態報告」用的 Context
     # ------------------------------------------------------------
-    def with_updated(self, **kwargs) -> "RunContext":
+    def as_static_report_context(self) -> "RunContext":
         """
-        (Immutable) 
-        建立一個「新的」 RunContext 實例，並更新指定的值。
+        (Immutable - 專用函式)
+        建立一個「新的」、專用於「靜態報告」的 RunContext 實例。
+
+        此函式只做一件事：將 real_time_mode 設為 False。
         
-        這是 'frozen' class 必要的更新模式。
-        它會自動重算 start/end datetime (如果相關欄位被變更)。
+        (這會自動觸發 get_time_range (in figure_utils) 
+        使用「完整盤勢」的「固定視窗」，而非「即時」的「滑動視窗」。)
         """
         
-        # --- 1. 取得新值 (若無則用舊值) ---
-        new_real_time_mode = kwargs.get("real_time_mode", self.real_time_mode)
-        new_trade_date = kwargs.get("trade_date", self.trade_date)
-        new_session_type = kwargs.get("session_type", self.session_type)
-        new_data_source=kwargs.get("data_source", self.data_source)
-        new_tz = kwargs.get("tz", self.tz)
-
-        # --- 2. 判斷是否需要重算 start/end datetime ---
-        need_recompute_time = any([
-            "trade_date" in kwargs,
-            "session_type" in kwargs,
-            "real_time_mode" in kwargs,
-            "tz" in kwargs,
-        ])
-
-        if need_recompute_time:
-            start_dt, end_dt = get_trading_session(
-                new_trade_date, new_session_type, new_real_time_mode, new_tz
-            )
-        else:
-            start_dt = self.start_datetime
-            end_dt = self.end_datetime
-
-        # --- 3. 回傳「新的」實例 ---
+        # --- 回傳一個「新的」實例，只修改 real_time_mode ---
         return RunContext(
-            real_time_mode=new_real_time_mode,
-            trade_date=new_trade_date,
-            session_type=new_session_type,
-            data_source=new_data_source,
-            tz=new_tz,
-            start_datetime=start_dt,
-            end_datetime=end_dt
+            real_time_mode=False, # <--- 唯一的關鍵變更
+            
+            # (所有其他欄位 100% 複製 'self' 的現有值)
+            data_source=self.data_source,
+            tz=self.tz,
+            trade_date=self.trade_date,
+            session_type=self.session_type, 
+            start_datetime=self.start_datetime, # <--- 複製現有值
+            end_datetime=self.end_datetime     # <--- 複製現有值
         )
-    

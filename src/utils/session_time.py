@@ -20,7 +20,7 @@ from config.types import SessionType
 # ------------------------------------------------------------
 # 📦 交易時段 (Session) 計算
 # ------------------------------------------------------------
-def get_trading_session(
+def get_session_datetime_range(
     trade_date: date,
     session_type: SessionType = None,
     real_time_mode: bool = True,
@@ -31,11 +31,11 @@ def get_trading_session(
     """
     
     # --- 1. 取得當前時間 (即時模式用) ---
-    now = datetime.now(tz)
-    now_time = now.time()
+    now_dt   = datetime.now(tz)
+    now_time = now_dt.time()
 
     if real_time_mode and session_type is None:
-        session_type = in_which_session(now_time)
+        session_type = in_which_session(now_dt)
 
     start_date = end_date = trade_date
 
@@ -64,21 +64,37 @@ def get_trading_session(
     return start_dt, end_dt
 
 # ------------------------------------------------------------
-# 📦 盤別判斷
+# 📦 盤別判斷 (v4, 邏輯重構版)
 # ------------------------------------------------------------
-def in_which_session(now_time: dt_time | None = None) -> SessionType:
+def in_which_session(now_dt: datetime | None = None) -> SessionType:
     """
-    根據當下時間判斷是日盤、夜盤、或休市
+    根據當下「日期」和「時間」判斷是日盤、夜盤、或休市
+    (已加入 "週" 的判斷，修復週日夜盤誤判問題)
     """
-    if now_time is None:
-        now_time = datetime.now(tz=TAIWAN_TZ).time()
+    if now_dt is None:
+        now_dt = datetime.now(tz=TAIWAN_TZ)
 
-    if DAY_START <= now_time < DAY_END:
-        return SessionType.DAY
-    elif NIGHT_START <= now_time or now_time < NIGHT_END:
-        return SessionType.NIGHT
-    else:
-        return SessionType.CLOSED
+    now_time    = now_dt.time()
+    now_weekday = now_dt.weekday() # 0=Mon, 1=Tue, ..., 5=Sat, 6=Sun
+
+    # --- 1. 處理週一至週五 (Mon-Fri) ---
+    if 0 <= now_weekday <= 4: 
+        # (A) 日盤 (08:30 - 13:45)
+        if DAY_START <= now_time < DAY_END:
+            return SessionType.DAY
+        # (B) 夜盤 (下午時段) (14:50 - 23:59)
+        if now_time >= NIGHT_START:
+            return SessionType.NIGHT
+    
+    # --- 2. 處理凌晨時段 (週二 ~ 週六) (Tue-Sat) ---
+    # (這屬於前一個交易日的夜盤: 00:00 - 05:00)
+    if 1 <= now_weekday <= 5: 
+        if now_time < NIGHT_END: 
+            return SessionType.NIGHT
+
+    # --- 3. 其他所有時間 (休市) ---
+    # (含週六 05:00 後、所有週日、交易日的 5:00-8:30, 13:45-14:50)
+    return SessionType.CLOSED
 
 # ------------------------------------------------------------
 # 📦 (歷史回測) 盤別範圍

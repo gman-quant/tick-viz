@@ -15,7 +15,6 @@ from config.run_context import RunContext
 from config.types import SessionType
 from src.data_sourcing import fetch_ticks
 from src.utils.resource_contexts import kafka_consumer, shioaji_session
-from src.utils.session_time import in_which_session
 
 
 # ------------------------------------------------------------
@@ -211,9 +210,8 @@ def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tu
         return None
 
     # --- (C) 決定回溯起始日期 ---
-    current_date = ctx.start_datetime.date()
-    current_time = ctx.start_datetime.time()
-    session_type = in_which_session(current_time) 
+    current_date = ctx.trade_date
+    session_type = ctx.session_type
     
     # (日盤 T-1；夜盤 T)
     start_date = current_date - timedelta(days=1) if session_type == SessionType.DAY else current_date

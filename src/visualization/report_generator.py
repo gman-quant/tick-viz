@@ -17,7 +17,7 @@ from src.visualization import candlestick_chart, main_chart
 
 
 # ------------------------------------------------------------
-# 📦 圖表生成
+# 📦 1. 圖表生成 (輔助函式)
 # ------------------------------------------------------------
 def _generate_figures(df, ctx, txf_prev_close, taiex_prev_close):
     """
@@ -25,18 +25,23 @@ def _generate_figures(df, ctx, txf_prev_close, taiex_prev_close):
     """
     logging.debug("⚙️ 正在生成 Plotly 圖表...")
     
-    # --- 1. 準備繪圖資料 ---
+    # --- (A) 建立「靜態報告」專用的 Context ---
+    # (建立一個新 Context，並將 real_time_mode 設為 False)
+    # (這能確保：get_time_range (in figure_utils) 會使用「完整盤勢」而非「滑動視窗」)
+    report_ctx = ctx.as_static_report_context()
+
+    # --- (B) 準備繪圖資料 ---
     plot_df = prepare_plot_data(df, txf_prev_close, taiex_prev_close)
     
-    # --- 2. 生成主分析圖 ---
+    # --- (C) 生成主分析圖 (使用 'report_ctx') ---
     figures = [
-        main_chart.create_tick_analysis_figure(plot_df, txf_prev_close, taiex_prev_close, ctx)
+        main_chart.create_tick_analysis_figure(plot_df, txf_prev_close, taiex_prev_close, report_ctx)
     ]
 
-    # --- 3. 生成各週期 K 線圖 ---
+    # --- (D) 生成各週期 K 線圖 (使用 'report_ctx') ---
     for period in ['1min', '3min', '5min', '10min']:
-        df_kbars = generate_kbars(df, period=period, ctx=ctx)
-        figures.append(candlestick_chart.plot_candlestick(df_kbars, period=period, ctx=ctx)) 
+        df_kbars = generate_kbars(df, period=period, ctx=report_ctx)
+        figures.append(candlestick_chart.plot_candlestick(df_kbars, period=period, ctx=report_ctx)) 
 
     logging.debug(f"✅ 成功生成 {len(figures)} 張圖表。")
     return figures
@@ -54,7 +59,6 @@ def generate_html_report(
     """
     將多個 Plotly 圖表和統計數據的 HTML 字串，合併成一個完整的 HTML 報告檔案。
     """
-    
     # --- 1. 生成所有圖表物件 ---
     figures = _generate_figures(df, ctx, txf_prev_close, taiex_prev_close)
     
