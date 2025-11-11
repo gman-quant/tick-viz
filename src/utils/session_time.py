@@ -179,7 +179,7 @@ def get_observation_window(df: pd.DataFrame, start: datetime) -> tuple[datetime,
 def get_sliding_window(
     df: pd.DataFrame,
     start: datetime,
-    lookback_minutes: int = 30,
+    lookback_minutes: int = 120,
 ) -> tuple[datetime, datetime]:
     """
     (繪圖用) 計算「滑動」時間視窗

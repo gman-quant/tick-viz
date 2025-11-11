@@ -55,7 +55,6 @@ def process_market_session(
                 new_df, current_offsets = fetch_ticks_from_kafka(
                     consumer=consumer,
                     offsets=current_offsets,
-                    start_datetime=ctx.start_datetime,
                     end_datetime=ctx.end_datetime,
                 )
                 

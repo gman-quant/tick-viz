@@ -146,7 +146,6 @@ def find_previous_close_from_kafka(ctx: RunContext, max_lookback: int = 15) -> t
             df, _ = fetch_ticks.fetch_ticks_from_kafka(
                 consumer=consumer,
                 offsets=fixed_offsets,
-                start_datetime=start_datetime,
                 end_datetime=end_datetime,
             )
 

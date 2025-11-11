@@ -199,7 +199,7 @@ def data_loop_manager():
                         )
                     
                     # (2. 計算「下一個日盤」開盤時間，並設為「休眠直到」的時間戳)
-                    holiday_sleep_until = get_next_valid_day_session_start(today)
+                    holiday_sleep_until = get_next_valid_day_session_start(now_dt)
                     logging.warning(f"     啟動「假日休市」模式，將休眠直到 {holiday_sleep_until}")
                     
                     # (3. 重設 "運行中" 標記)
