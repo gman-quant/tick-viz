@@ -52,52 +52,6 @@ def get_next_valid_day_session_start(now_dt: datetime) -> datetime:
     return datetime.combine(next_day, DAY_START).replace(tzinfo=TAIWAN_TZ)
 
 # ------------------------------------------------------------
-# 📦 交易時段 (Session) 計算
-# ------------------------------------------------------------
-def get_session_datetime_range(
-    trade_date: date,
-    session_type: SessionType = None,
-    real_time_mode: bool = True,
-    tz: ZoneInfo = TAIWAN_TZ
-) -> tuple[datetime, datetime]:
-    """
-    根據交易日、盤別與即時模式，計算出正確的 session 開始與結束時間
-    """
-    
-    # --- 1. 取得當前時間 (即時模式用) ---
-    now_dt   = datetime.now(tz)
-    now_time = now_dt.time()
-
-    if real_time_mode and session_type is None:
-        session_type = in_which_session(now_dt)
-
-    start_date = end_date = trade_date
-
-    # --- 2. 判斷日盤時段 ---
-    if session_type == SessionType.DAY or (session_type == SessionType.CLOSED and DAY_START <= now_time < NIGHT_START):
-        start_time, end_time = DAY_START, DAY_END
-    
-    # --- 3. 判斷夜盤時段 (需處理日期變換) ---
-    else:
-        start_time, end_time = NIGHT_START, NIGHT_END
-        one_day = timedelta(days=1)
-
-        if not real_time_mode:
-            # 歷史模式：夜盤結束日在 T+1
-            end_date += one_day
-        elif now_time < start_time:
-            # 即時模式 (午夜後)：夜盤開始日在 T-1
-            start_date -= one_day
-        else:
-            # 即時模式 (午夜前)：夜盤結束日在 T+1
-            end_date += one_day
-
-    # --- 4. 組合回傳 ---
-    start_dt = datetime.combine(start_date, start_time).replace(tzinfo=tz)
-    end_dt   = datetime.combine(end_date, end_time).replace(tzinfo=tz)
-    return start_dt, end_dt
-
-# ------------------------------------------------------------
 # 📦 盤別判斷
 # ------------------------------------------------------------
 def in_which_session(now_dt: datetime | None = None) -> SessionType:
@@ -151,6 +105,52 @@ def in_which_session(now_dt: datetime | None = None) -> SessionType:
     return SessionType.CLOSED
 
 # ------------------------------------------------------------
+# 📦 交易時段 (Session) 計算
+# ------------------------------------------------------------
+def get_session_datetime_range(
+    trade_date: date,
+    session_type: SessionType = None,
+    real_time_mode: bool = True,
+    tz: ZoneInfo = TAIWAN_TZ
+) -> tuple[datetime, datetime]:
+    """
+    根據交易日、盤別與即時模式，計算出正確的 session 開始與結束時間
+    """
+    
+    # --- 1. 取得當前時間 (即時模式用) ---
+    now_dt   = datetime.now(tz)
+    now_time = now_dt.time()
+
+    if real_time_mode and session_type is None:
+        session_type = in_which_session(now_dt)
+
+    start_date = end_date = trade_date
+
+    # --- 2. 判斷日盤時段 ---
+    if session_type == SessionType.DAY or (session_type == SessionType.CLOSED and DAY_START <= now_time < NIGHT_START):
+        start_time, end_time = DAY_START, DAY_END
+    
+    # --- 3. 判斷夜盤時段 (需處理日期變換) ---
+    else:
+        start_time, end_time = NIGHT_START, NIGHT_END
+        one_day = timedelta(days=1)
+
+        if not real_time_mode:
+            # 歷史模式：夜盤結束日在 T+1
+            end_date += one_day
+        elif now_time < start_time:
+            # 即時模式 (午夜後)：夜盤開始日在 T-1
+            start_date -= one_day
+        else:
+            # 即時模式 (午夜前)：夜盤結束日在 T+1
+            end_date += one_day
+
+    # --- 4. 組合回傳 ---
+    start_dt = datetime.combine(start_date, start_time).replace(tzinfo=tz)
+    end_dt   = datetime.combine(end_date, end_time).replace(tzinfo=tz)
+    return start_dt, end_dt
+
+# ------------------------------------------------------------
 # 📦 (歷史回測) 盤別範圍
 # ------------------------------------------------------------
 def get_session_range(pick: str) -> tuple[int, int]:
@@ -175,7 +175,6 @@ def get_observation_window(df: pd.DataFrame, start: datetime) -> tuple[datetime,
     adjusted_start = start + timedelta(minutes=15 if start.time() == DAY_START else 10)
     end = df['datetime'].iloc[-1] if not df.empty else adjusted_start
     return adjusted_start, end
-
 
 def get_sliding_window(
     df: pd.DataFrame,
