@@ -9,12 +9,12 @@ from datetime import datetime, timezone, timedelta
 from confluent_kafka import TopicPartition
 
 # Local Application Imports
-from config.config import KAFKA_TOPIC, TAIWAN_TZ, NIGHT_END
+from config.config import KAFKA_TOPIC, TAIWAN_TZ
 from config.run_context import RunContext
 from config.types import DataSource, SessionType
 from src.core.session_processor import process_market_session
 from src.utils.resource_contexts import kafka_consumer
-from src.utils.session_time import in_which_session, get_next_valid_day_session_start
+from src.utils.session_time import in_which_session, is_am_night_session, get_next_valid_day_session_start
 from src.web.shared_state import shared_state
 
 
@@ -165,11 +165,9 @@ def data_loop_manager():
             # --- (D) 檢查 3: 是否為「新」的任務 ---
 
             # 1. 判斷是否為 AM 盤 (凌晨 00:00 - 05:00)
-            is_am_night_session = (now_dt.time() < NIGHT_END)
+            is_am = is_am_night_session(now_dt.time())
             # 2. 取得此 Session 應歸屬的「交易日」
-            # (如果是 AM 盤(凌晨)，歸屬 "昨天" T-1)
-            # (如果是 PM 盤，歸屬 "今天" T)
-            session_trade_date = today - timedelta(days=1) if is_am_night_session else today
+            session_trade_date = today - timedelta(days=1) if is_am else today
             # 3. 組合出標準化的 Key
             new_session_key = f"{session_trade_date}-{current_session_type.name}"
             

@@ -1,7 +1,7 @@
 # src/utils/session_time.py
 
 # Standard Library Imports
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta, time as dt_time
 from zoneinfo import ZoneInfo
 
 # Third-Party Imports
@@ -17,10 +17,20 @@ from config.config import (
 )
 from config.types import SessionType
 
+
+# ------------------------------------------------------------
+# 📦 (Helper) 判斷是否為凌晨夜盤
+# ------------------------------------------------------------
+def is_am_night_session(now_time: dt_time) -> bool:
+    """
+    判斷傳入的時間是否為「AM (凌晨) 夜盤」時段 (00:00 - 05:00)。
+    """
+    return now_time < NIGHT_END
+
 # ------------------------------------------------------------
 # 📦 (Helper) 取得下一個日盤開盤時間 
 # ------------------------------------------------------------
-def get_next_valid_day_session_start(today: date) -> datetime:
+def get_next_valid_day_session_start(now_dt: datetime) -> datetime:
     """
     (假日模式專用)
     從 'today' 開始，尋找下一個「有效交易日」的「日盤」開盤時間。
@@ -30,12 +40,9 @@ def get_next_valid_day_session_start(today: date) -> datetime:
     """
 
     # --- 1. 判斷當前時間，決定 "next_day" 的起點 ---
-    now_time = datetime.now(tz=TAIWAN_TZ).time()
-    # (判斷是否為 AM 盤 (凌晨 00:00 - 05:00))
-    is_am_night_session = (now_time < NIGHT_END)
-    # (如果是 AM 盤 (e.g., 03:00 失敗)，從 "今天" (T) 開始找)
-    # (如果是 PM 盤 (e.g., 15:00 失敗)，從 "明天" (T+1) 開始找)
-    next_day = today if is_am_night_session else today + timedelta(days=1)
+    today = now_dt.date()
+    is_am = is_am_night_session(now_dt.time())
+    next_day = today if is_am else today + timedelta(days=1)
 
     # --- 2. 迴圈直到找到週一至週五 ---
     while next_day.weekday() >= 5: # 5=Sat, 6=Sun
