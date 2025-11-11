@@ -3,13 +3,13 @@
 # Standard Library Imports
 import logging
 import time
-from datetime import datetime, timezone, timedelta, date
+from datetime import datetime, timezone, timedelta
 
 # Third-Party Imports
 from confluent_kafka import TopicPartition
 
 # Local Application Imports
-from config.config import KAFKA_TOPIC, TAIWAN_TZ
+from config.config import KAFKA_TOPIC, TAIWAN_TZ, NIGHT_END
 from config.run_context import RunContext
 from config.types import DataSource, SessionType
 from src.core.session_processor import process_market_session
@@ -163,7 +163,16 @@ def data_loop_manager():
                 continue 
 
             # --- (D) 檢查 3: 是否為「新」的任務 ---
-            new_session_key = f"{today}-{current_session_type.name}"
+
+            # 1. 判斷是否為 AM 盤 (凌晨 00:00 - 05:00)
+            is_am_night_session = (now_dt.time() < NIGHT_END)
+            # 2. 取得此 Session 應歸屬的「交易日」
+            # (如果是 AM 盤(凌晨)，歸屬 "昨天" T-1)
+            # (如果是 PM 盤，歸屬 "今天" T)
+            session_trade_date = today - timedelta(days=1) if is_am_night_session else today
+            # 3. 組合出標準化的 Key
+            new_session_key = f"{session_trade_date}-{current_session_type.name}"
+            
             if new_session_key != current_running_session_key:
                 
                 # --- (D.1) 建立新盤別的 Context ---

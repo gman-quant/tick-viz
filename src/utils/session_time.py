@@ -18,23 +18,30 @@ from config.config import (
 from config.types import SessionType
 
 # ------------------------------------------------------------
-# 📦 (Helper) 取得下一個日盤開盤時間
+# 📦 (Helper) 取得下一個日盤開盤時間 
 # ------------------------------------------------------------
-def get_next_valid_day_session_start(from_date: date) -> datetime:
+def get_next_valid_day_session_start(today: date) -> datetime:
     """
     (假日模式專用)
-    從 'from_date' 開始，尋找下一個「有效交易日」的「日盤」開盤時間。
+    從 'today' 開始，尋找下一個「有效交易日」的「日盤」開盤時間。
     
-    (e.g., from_date=Friday -> returns Monday 08:30)
-    (e.g., from_date=Monday -> returns Tuesday 08:30)
+    (e.g., today=Friday -> returns Monday 08:30)
+    (e.g., today=Monday -> returns Tuesday 08:30)
     """
-    next_day = from_date + timedelta(days=1)
-    
-    # (迴圈直到找到週一至週五)
+
+    # --- 1. 判斷當前時間，決定 "next_day" 的起點 ---
+    now_time = datetime.now(tz=TAIWAN_TZ).time()
+    # (判斷是否為 AM 盤 (凌晨 00:00 - 05:00))
+    is_am_night_session = (now_time < NIGHT_END)
+    # (如果是 AM 盤 (e.g., 03:00 失敗)，從 "今天" (T) 開始找)
+    # (如果是 PM 盤 (e.g., 15:00 失敗)，從 "明天" (T+1) 開始找)
+    next_day = today if is_am_night_session else today + timedelta(days=1)
+
+    # --- 2. 迴圈直到找到週一至週五 ---
     while next_day.weekday() >= 5: # 5=Sat, 6=Sun
         next_day += timedelta(days=1)
         
-    # (回傳該日的日盤開盤時間)
+    # --- 3. 回傳該日的日盤開盤時間 ---
     return datetime.combine(next_day, DAY_START).replace(tzinfo=TAIWAN_TZ)
 
 # ------------------------------------------------------------
