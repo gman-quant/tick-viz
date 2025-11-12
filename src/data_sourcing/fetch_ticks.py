@@ -46,7 +46,7 @@ def fetch_ticks_from_kafka(
             # --- 2. 處理閒置 (Poll 超時) ---
             # (即時模式下，無新訊息時的正常出口)
             if msg is None:
-                logging.info("✅ [T_Data] 輪詢等待逾時 (無新訊息)。")
+                logging.debug("✅ [T_Data] 輪詢等待逾時 (無新訊息)。")
                 break # (回傳 None 給上層的 process_market_session)
 
             # --- 3. 處理 Kafka 錯誤 (含 EOF) ---
@@ -57,6 +57,7 @@ def fetch_ticks_from_kafka(
                     
                     # (檢查 Offset 是否真的沒變，若無則 'continue' 以避免日誌洗版)
                     if offsets[0].offset == msg.offset():
+                        logging.debug(f"TEST 1: msg offset = {msg.offset()}")
                         continue 
                     break # (若 Offset 有變，代表有新資料，break 以回傳)
                 else:
