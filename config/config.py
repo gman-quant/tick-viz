@@ -44,8 +44,8 @@ NIGHT_END   = dt_time( 5,  0, 15) # (15 秒緩衝)
 # ------------------------------------------------------------
 # 5. 應用程式設定 (更新週期 / 輸出路徑)
 # ------------------------------------------------------------
-FETCH_INTERVAL  = 2    # [秒] consumer.poll() 的最長等待時間
-UPDATE_INTERVAL = 2    # [秒] UI (Dash) 更新週期
+FETCH_INTERVAL  = 10    # [秒] consumer.poll() 的最長等待時間
+UPDATE_INTERVAL =  5    # [秒] UI (Dash) 更新週期
 
 # (報告輸出路徑)
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"

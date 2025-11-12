@@ -19,7 +19,9 @@ from src.visualization.report_generator import generate_html_report
 def create_dash_app(shared_state):
     """建立 Dash 應用（共享狀態由主程式傳入）"""
     ctx = shared_state.context
-    app = Dash(__name__, title=ctx.report_title)
+    
+    # ('prevent_initial_callbacks' 關鍵：防止 App 啟動時自動觸發所有 Callbacks)
+    app = Dash(__name__, title=ctx.report_title, prevent_initial_callbacks=True)
 
     # --- 1. 定義 App Layout ---
     app.layout = html.Div([
@@ -53,9 +55,17 @@ def create_dash_app(shared_state):
         dcc.Graph(id="candlestick-chart"),
 
         # --- (D) 定時器 (Callbacks 用) ---
-        dcc.Interval(id="update-interval",       interval=UPDATE_INTERVAL * 1000),
-        dcc.Interval(id="reset-button-interval", interval=UPDATE_INTERVAL * 1000,
-                     n_intervals=0, disabled=False)
+        
+        # (主刷新計時器)
+        dcc.Interval(id="update-interval", interval=UPDATE_INTERVAL*1000),
+        
+        # (按鈕重置計時器，預設 'disabled=True')
+        dcc.Interval(
+            id="reset-button-interval", 
+            interval=3000, # (3 秒後回復按鈕)
+            n_intervals=0, 
+            disabled=True # (關鍵：預設為停用)
+        )
     ], style={
         "margin": 0,
         "padding": 0,
@@ -74,11 +84,12 @@ def create_dash_app(shared_state):
         [Input("update-interval", "n_intervals")]
     )
     def update_dashboard(n):
-        # --- 0. 檢查是否處於休市 ---
+        # --- 0. (高效) 檢查是否處於休市 ---
+        # (在 lock 之外檢查，避免休市時仍觸發更新)
         if shared_state.context.session_type == SessionType.CLOSED:
-            raise PreventUpdate
+            raise PreventUpdate # (停止此 Callback，不更新任何內容)
 
-        # --- 1. 從 shared_state 安全讀取資料 ---
+        # --- 1. (開盤) 從 shared_state 安全讀取資料 ---
         with shared_state.lock:            
             ctx = shared_state.context
             plot_df = shared_state.plot_df
@@ -108,8 +119,7 @@ def create_dash_app(shared_state):
     # ------------------------------------------------------------
     @app.callback(
         [Output("generate-report-btn", "children"),
-         Output("reset-button-interval", "disabled"),
-         Output("reset-button-interval", "n_intervals")],
+         Output("reset-button-interval", "disabled")], # (關鍵：控制計時器)
         [Input("generate-report-btn", "n_clicks")],
         prevent_initial_call=True
     )
@@ -126,32 +136,33 @@ def create_dash_app(shared_state):
 
         # --- 2. 檢查資料 ---
         if df is None or df.empty:
-            return "⚠️　資料不足，無法生成", False, 0
+            return "⚠️　資料不足", False # (啟用計時器)
         
         # --- 3. 生成靜態報告 ---
         stats_html = stats_table.generate_stats_html(stats_table.compute_stats(df, txf_prev_close))
         generate_html_report(
             df=df,
             stats_html=stats_html,
-            ctx=ctx,
+            ctx=ctx, # (傳入即時的 ctx)
             txf_prev_close=txf_prev_close,
             taiex_prev_close=taiex_prev_close
         )
 
-        # --- 4. 更新按鈕文字 (成功) 並重置計時器 ---
-        return "✅　已生成新報告", False, 0
+        # --- 4. 更新按鈕文字 (成功) 並「啟用」重置計時器 ---
+        return "✅　已生成新報告", False # (啟用計時器)
 
     # ------------------------------------------------------------
     # 📦 Callback 3: 自動回復 "生成報告" 按鈕文字
     # ------------------------------------------------------------
     @app.callback(
-        Output("generate-report-btn", "children", allow_duplicate=True),
-        Input("reset-button-interval", "n_intervals"),
-        prevent_initial_call="initial_duplicate"
+        [Output("generate-report-btn", "children", allow_duplicate=True),
+         Output("reset-button-interval", "disabled", allow_duplicate=True)],
+        Input("reset-button-interval", "n_intervals")
+        # (關鍵： 'prevent_initial_callbacks=True' 
+        #  已確保此 Callback 在 App 啟動時不會執行)
     )
     def reset_button_text(n):
-        if n == 0:
-            raise PreventUpdate
-        return "⬜️　點擊生成報告"
+        # --- (計時器觸發) 回復按鈕文字並「停用」計時器 ---
+        return "⬜️　點擊生成報告", True # (停用計時器)
 
     return app

@@ -46,7 +46,7 @@ def fetch_ticks_from_kafka(
             # --- 2. 處理閒置 (Poll 超時) ---
             # (即時模式下，無新訊息時的正常出口)
             if msg is None:
-                logging.debug("✅ [T_Data] 輪詢等待逾時 (無新訊息)。")
+                logging.info("✅ [T_Data] 輪詢等待逾時 (無新訊息)。")
                 break # (回傳 None 給上層的 process_market_session)
 
             # --- 3. 處理 Kafka 錯誤 (含 EOF) ---
