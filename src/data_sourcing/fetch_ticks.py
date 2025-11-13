@@ -45,7 +45,6 @@ def fetch_ticks_from_kafka(
 
     try:
         while True:
-            
             # --- 主動切斷機制 (與 UI 同步) ---
             # (防止資料流太快導致卡死，時間一到強制回傳資料以更新 UI)
             if _time() > fetch_deadline:
