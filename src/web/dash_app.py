@@ -6,7 +6,7 @@ from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 
 # Local Application Imports
-from config.config import UPDATE_INTERVAL
+from config.config import UI_UPDATE_INTERVAL
 from config.types import SessionType
 from src.visualization import candlestick_chart, main_chart, stats_table
 from src.visualization.figure_utils import BLANK_BLACK_FIGURE
@@ -58,7 +58,7 @@ def create_dash_app(shared_state):
 
         # --- (D) 定時器 (Callbacks 用) ---
         # (主刷新計時器)
-        dcc.Interval(id="update-interval", interval=UPDATE_INTERVAL*1000),
+        dcc.Interval(id="update-interval", interval=UI_UPDATE_INTERVAL*1000),
         # (按鈕重置計時器，預設 'disabled=True')
         dcc.Interval(
             id="reset-button-interval", 

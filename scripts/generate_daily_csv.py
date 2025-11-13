@@ -9,12 +9,12 @@ import polars as pl
 
 # Local Application Imports
 from src.utils.session_time import in_which_session
-from config.config import DATA_DIR
+from config.config import CACHE_DIR
 
 # ------------------------------------------------------------
 # 1. 設定 (路徑, 正規表示式)
 # ------------------------------------------------------------
-DAILY_CSV_PATH = DATA_DIR / "daily_txf.csv"
+DAILY_CSV_PATH = CACHE_DIR / "daily_txf.csv"
 
 # (用於找出 Parquet 檔中的日期)
 PARQUET_PATTERN = re.compile(r"txf-ticks_(\d{4}-\d{2}-\d{2})\.parquet")
@@ -83,7 +83,7 @@ def process_all_ticks():
 
     # --- (C) 迭代 Parquet 檔, 處理新資料 ---
     all_new_rows = []
-    for file in DATA_DIR.glob("txf-ticks_*.parquet"):
+    for file in CACHE_DIR.glob("txf-ticks_*.parquet"):
         match = PARQUET_PATTERN.match(file.name)
         if not match:
             continue
@@ -144,7 +144,7 @@ def process_all_ticks():
 
     if now < cutoff_time:
         today_str = now.strftime("%Y-%m-%d")
-        today_tick_file = DATA_DIR / f"txf-ticks_{today_str}.parquet"
+        today_tick_file = CACHE_DIR / f"txf-ticks_{today_str}.parquet"
 
         if today_tick_file.exists():
             today_tick_file.unlink()

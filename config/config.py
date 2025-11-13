@@ -44,8 +44,10 @@ NIGHT_END   = dt_time( 5,  0, 15) # (15 秒緩衝)
 # ------------------------------------------------------------
 # 5. 應用程式設定 (更新週期 / 輸出路徑)
 # ------------------------------------------------------------
-FETCH_INTERVAL  = 10    # [秒] consumer.poll() 的最長等待時間
-UPDATE_INTERVAL =  5    # [秒] UI (Dash) 更新週期
+# (後端：Kafka 沒資料時的最大等待時間)
+KAFKA_POLL_TIMEOUT  = 10
+# (前端：Dash UI 的畫面刷新週期)
+UI_UPDATE_INTERVAL  =  5    # [秒] UI (Dash) 更新週期
 
 # (報告輸出路徑)
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
@@ -54,19 +56,6 @@ OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
 # ------------------------------------------------------------
 # 6. 資料快取路徑
 # ------------------------------------------------------------
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-DATA_DIR.mkdir(exist_ok=True)  # 確保目錄存在
-
-
-'''
-[Git 開發者筆記]
-
-若需在「本地」暫時修改此 config.py (例如切換 Kafka 位址) 
-且「不想」將這些修改 commit 出去時，可使用以下指令：
-
-(1) 暫時忽略此檔案的變更 (讓 git status 看不見):
-git update-index --assume-unchanged config.py
-
-(2) 恢復追蹤此檔案的變更 (當您真的要 commit 變更時):
-git update-index --no-assume-unchanged config.py
-'''
+# (存放 Parquet 歷史資料)
+CACHE_DIR = Path(__file__).resolve().parents[1] / "data"
+CACHE_DIR.mkdir(exist_ok=True)  # 確保目錄存在

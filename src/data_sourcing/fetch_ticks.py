@@ -13,7 +13,7 @@ import shioaji as sj
 from confluent_kafka import Consumer, KafkaError, TopicPartition
 
 # Local Application Imports
-from config.config import DATA_DIR, FETCH_INTERVAL, UPDATE_INTERVAL, TAIWAN_TZ
+from config.config import CACHE_DIR, KAFKA_POLL_TIMEOUT, UI_UPDATE_INTERVAL, TAIWAN_TZ
 from config.run_context import RunContext
 from config.types import SessionType
 from src.data_sourcing.market_data import get_contract
@@ -45,7 +45,7 @@ def fetch_ticks_from_kafka(
         # --- 進入 Kafka 輪詢迴圈 ---
         while True:
             # --- 1. 抓取訊息 ---
-            msg = consumer.poll(FETCH_INTERVAL)
+            msg = consumer.poll(KAFKA_POLL_TIMEOUT)
 
             # --- 2. 處理閒置 (Poll 超時) ---
             # (即時模式下，無新訊息時的正常出口)
@@ -78,8 +78,8 @@ def fetch_ticks_from_kafka(
                     new_tick_list.append(record)
 
                     # (檢查時間限制，與 UI 同步)
-                    if (time.time() - start_fetch_ts) > UPDATE_INTERVAL:
-                        logging.info(f"⚡ [T_Data] 達到時間限制({UPDATE_INTERVAL}s)，優先回傳以更新 UI。")
+                    if (time.time() - start_fetch_ts) > UI_UPDATE_INTERVAL:
+                        logging.info(f"⚡ [T_Data] 達到時間限制({UI_UPDATE_INTERVAL}s)，優先回傳以更新 UI。")
                         break
 
                     continue # (跳過 'simtrade=True' 的時間解析)
@@ -152,8 +152,8 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         target_date_str = str(ctx.trade_date if ctx.session_type == SessionType.DAY else (ctx.trade_date + timedelta(days=1)))
         date_str = str(ctx.trade_date)
         
-        txf_file = DATA_DIR / f"txf-ticks_{target_date_str}.parquet"
-        tse_file = DATA_DIR / f"tse-ticks_{date_str}.parquet"
+        txf_file = CACHE_DIR / f"txf-ticks_{target_date_str}.parquet"
+        tse_file = CACHE_DIR / f"tse-ticks_{date_str}.parquet"
 
         # --- 2. 獲取資料 (快取優先) ---
         if not txf_file.exists() or not tse_file.exists():

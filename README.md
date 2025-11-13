@@ -37,7 +37,7 @@
     -   量價K棒圖：多週期的K線圖(1, 3, 5, 10 分)。
     -   日線K棒圖：獨立模組，支援日夜盤分段視覺化。
 -   動態儀表板 & 靜態報告：
-    -   即時模式：提供基於 Dash 的動態網頁儀表板，支援自動刷新（UPDATE_INTERVAL）。
+    -   即時模式：提供基於 Dash 的動態網頁儀表板。
     -   歷史模式：自動生成整合圖表與統計摘要的單一 HTML 報告。
 
 ---
@@ -121,8 +121,8 @@ KAFKA_TOPIC=your_topic_name
 修改 config/config.py 中的效能調校參數：
 ```python
 # config/config.py
-FETCH_INTERVAL  = 2    # [秒] consumer.poll() 的最長等待時間
-UPDATE_INTERVAL = 2    # [秒] UI 更新週期
+KAFKA_POLL_TIMEOUT  = 2    # [秒] consumer.poll() 的最長等待時間
+UI_UPDATE_INTERVAL = 2    # [秒] UI 更新週期
 ```
 
 ---
@@ -139,7 +139,7 @@ UPDATE_INTERVAL = 2    # [秒] UI 更新週期
 
 - 後端：請參考上方的 [核心架構說明](#%EF%B8%8F-核心架構-即時模式)。
 
-- 前端 (WebApp)：Dash 儀表板會定期（UPDATE_INTERVAL）讀取後端已算好的資料來更新圖表，確保 UI 流暢。
+- 前端 (WebApp)：Dash 儀表板會定期（UI_UPDATE_INTERVAL）讀取後端已算好的資料來更新圖表，確保 UI 流暢。
 
 - 靜態報告：
 
