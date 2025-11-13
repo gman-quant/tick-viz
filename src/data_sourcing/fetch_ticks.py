@@ -2,6 +2,7 @@
 
 # Standard Library Imports
 import logging
+import time
 from datetime import datetime, time as dt_time, timedelta
 from pathlib import Path
 
@@ -12,7 +13,7 @@ import shioaji as sj
 from confluent_kafka import Consumer, KafkaError, TopicPartition
 
 # Local Application Imports
-from config.config import DATA_DIR, FETCH_INTERVAL, TAIWAN_TZ
+from config.config import DATA_DIR, FETCH_INTERVAL, UPDATE_INTERVAL, TAIWAN_TZ
 from config.run_context import RunContext
 from config.types import SessionType
 from src.data_sourcing.market_data import get_contract
@@ -34,8 +35,11 @@ def fetch_ticks_from_kafka(
     (此函式由 'process_market_session' 呼叫，
      真正的「收盤」偵測 (Poll Timeout) 是由上層處理的。)
     """
+    # --- 初始化：指定讀取位置與啟動計時器 ---
     consumer.assign(offsets)
-    new_tick_list = [] 
+    new_tick_list = []
+    # (記錄開始時間，用於控制抓取時限，確保與 UI 更新同步)
+    start_fetch_ts = time.time()
 
     try:
         # --- 進入 Kafka 輪詢迴圈 ---
@@ -72,6 +76,12 @@ def fetch_ticks_from_kafka(
                 # (起始時間 'start_datetime' 已由 'offsets_for_times' 控制)
                 if not record.get('simtrade', False):
                     new_tick_list.append(record)
+
+                    # (檢查時間限制，與 UI 同步)
+                    if (time.time() - start_fetch_ts) > UPDATE_INTERVAL:
+                        logging.info(f"⚡ [T_Data] 達到時間限制({UPDATE_INTERVAL}s)，優先回傳以更新 UI。")
+                        break
+
                     continue # (跳過 'simtrade=True' 的時間解析)
 
                 # --- (B) 出口：(安全網) ---
@@ -87,16 +97,16 @@ def fetch_ticks_from_kafka(
     except KeyboardInterrupt:
         logging.info("🛑 [T_Data] 使用者手動中止 (in fetch_ticks_from_kafka)。")
         raise
+    
+    # --- 5. 更新 Offsets ---
+    # (嘗試取得最新位置，若無效則維持舊位置，防止 Offset 遺失)
+    pos = consumer.position(offsets)
+    new_offsets = pos if (pos and pos[0].offset >= 0) else offsets
 
-    # --- 5. 處理返回結果 ---
-    if not new_tick_list:
-        return None, offsets # (無新資料，回傳 None)
+    # --- 6. 處理返回結果 ---
+    result_df = pd.DataFrame(new_tick_list) if new_tick_list else None
     
-    # --- 6. 更新 Offsets ---
-    pos = consumer.position(offsets) # (取得最新位置)
-    new_offsets = pos if pos and pos[0].offset >= 0 else offsets
-    
-    return pd.DataFrame(new_tick_list), new_offsets
+    return result_df, new_offsets
 
 
 # ------------------------------------------------------------
@@ -199,4 +209,3 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
     except Exception as e:
         logging.exception(f"❌ [Main] 歷史模式 {ctx.trade_date} {ctx.session_type.name} 獲取資料失敗: {e}")
         raise # 重新引發錯誤，讓 main_process 知道此任務失敗
-
