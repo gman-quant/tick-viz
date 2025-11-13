@@ -42,20 +42,21 @@ NIGHT_START = dt_time(14, 50)
 NIGHT_END   = dt_time( 5,  0, 15) # (15 秒緩衝)
 
 # ------------------------------------------------------------
-# 5. 應用程式設定 (更新週期 / 輸出路徑)
+# 5. 應用程式時序設定 (單位：秒)
 # ------------------------------------------------------------
 # (後端：Kafka 沒資料時的最大等待時間)
-KAFKA_POLL_TIMEOUT  = 10
+KAFKA_POLL_TIMEOUT = 10 # [秒]
+
 # (前端：Dash UI 的畫面刷新週期)
-UI_UPDATE_INTERVAL  =  5    # [秒] UI (Dash) 更新週期
+UI_UPDATE_INTERVAL =  5 # [秒]
 
-# (報告輸出路徑)
+# ------------------------------------------------------------
+# 6. 檔案路徑設定 (輸出與快取)
+# ------------------------------------------------------------
+# (報告輸出路徑：存放 HTML)
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
-OUTPUT_DIR.mkdir(exist_ok=True)  # 確保目錄存在
+OUTPUT_DIR.mkdir(exist_ok=True)
 
-# ------------------------------------------------------------
-# 6. 資料快取路徑
-# ------------------------------------------------------------
-# (存放 Parquet 歷史資料)
+# (資料快取路徑：存放 Parquet)
 CACHE_DIR = Path(__file__).resolve().parents[1] / "data"
-CACHE_DIR.mkdir(exist_ok=True)  # 確保目錄存在
+CACHE_DIR.mkdir(exist_ok=True)
