@@ -5,17 +5,17 @@
 ![Shioaji](https://img.shields.io/badge/Shioaji-required-orange) 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
-本專案為一套台指期即時盤中多空分析工具。
+專為台指期 (TXF) 打造的高效能即時多空分析系統。
 
-核心架構分離「資料處理」與「UI 渲染」，確保在即時 Ticks 湧入下，儀表板介面依然保持高效流暢。
+核心採用前後端分離架構，將高頻 Tick 資料的 ETL 運算與前端 Dash UI 渲染完全解耦。此設計確保了即使在開盤暴量或快市期間，監控介面依然能維持流暢響應，實現「數據不漏、畫面不卡」的體驗。
 
-- 主要功能：即時計算關鍵多空指標（如 VWAP, Rolling VWAP, 1 分 K），並視覺化盤中多空狀態。
+**流式運算核心**：針對逐筆成交資料進行即時聚合，動態計算 VWAP、Rolling VWAP、量價累積與 1 分 K 線。
 
-- 支援模式：
+**雙模運作機制**：
 
-  - 即時：串接即時 Kafka 串流，提供 24/7 盤中監控儀表板。
+- **🟢 即時監控**：接收 Kafka 即時串流，提供 24/7 全天候、跨午夜的盤中動態儀表板。
 
-  - 歷史：支援 Shioaji API 或 Kafka 歷史資料，用於回測並生成靜態 HTML 報告。
+- **🔵 歷史回顧**：整合 Shioaji API 與 Kafka 歷史數據，快速回放盤勢並生成高解析度靜態 HTML 報告。
 
 ---
 
@@ -131,7 +131,7 @@ UPDATE_INTERVAL = 2    # [秒] UI 更新週期
 
 本專案支援兩種運行模式：
 
-### 即時模式（`real_time_mode=1`）
+### 🟢 即時模式（`real_time_mode=1`）
 
 - 用於接收來自 Kafka 串流來源的 即時 tick 資料，並啟動 24/7 儀表板。
 
@@ -154,7 +154,7 @@ python main.py --real-time-mode 1
 ```
 啟動後請開啟瀏覽器訪問 http://localhost:8080
 
-### 歷史模式（`real_time_mode=0`）
+### 🔵 歷史模式（`real_time_mode=0`）
 
 - 用於回測特定日期區間的歷史 tick 資料（可來自 Kafka 或 Shioaji）。
 
