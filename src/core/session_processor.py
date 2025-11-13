@@ -47,6 +47,8 @@ def process_market_session(
     # --- 2. 進入資料處理迴圈 ---
     # (即時模式下，此迴圈會持續執行直到收盤；歷史模式下，執行一次後 break)
     while True:
+        new_count = 0 # (初始化本輪新增筆數)
+
         try:
             # --- (A) 即時模式 / Kafka 歷史模式 ---
             if ctx.real_time_mode or ctx.data_source == DataSource.KAFKA:
@@ -64,6 +66,8 @@ def process_market_session(
                         logging.info(f"ℹ️ [T_Data] {ctx.session_type.name} 收盤時間已到，結束任務。")
                         break  # 收盤時間到，結束任務
                     continue   # 無新資料，繼續輪詢
+
+                new_count = len(new_df)
 
                 # --- 即時增量處理 ---
                 new_df['datetime'] = pd.to_datetime(new_df['datetime'], format='ISO8601')
@@ -96,7 +100,7 @@ def process_market_session(
                     tse_prev_close=taiex_prev_close
                 )
             
-            logging.info(f"📈 資料總筆數: {len(df)}")
+            logging.info(f"📈 累計：{len(df)} | 新增：{new_count}")
 
             # --- 3. 靜態報告生成 (僅歷史模式) ---
             if not ctx.real_time_mode:

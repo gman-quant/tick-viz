@@ -2,15 +2,15 @@
 
 # Standard Library Imports
 import logging
-import time
+from time import time
 from datetime import datetime, time as dt_time, timedelta
 from pathlib import Path
 
 # Third-Party Imports
-import orjson
+from orjson import loads as json_loads
 import pandas as pd
 import shioaji as sj
-from confluent_kafka import Consumer, KafkaError, TopicPartition
+from confluent_kafka import Consumer, TopicPartition
 
 # Local Application Imports
 from config.config import CACHE_DIR, KAFKA_POLL_TIMEOUT, UI_UPDATE_INTERVAL, TAIWAN_TZ
@@ -31,82 +31,83 @@ def fetch_ticks_from_kafka(
 ) -> tuple[pd.DataFrame | None, list]:
     """
     從 Kafka 擷取指定時間區間內的 tick 資料。
-    
-    (此函式由 'process_market_session' 呼叫，
-     真正的「收盤」偵測 (Poll Timeout) 是由上層處理的。)
     """
-    # --- 初始化：指定讀取位置與啟動計時器 ---
+    # --- 1. 初始化與設定 ---
     consumer.assign(offsets)
     new_tick_list = []
-    # (記錄開始時間，用於控制抓取時限，確保與 UI 更新同步)
-    start_fetch_ts = time.time()
+
+    # (優化: 區域變數綁定，加速迴圈內查找)
+    _parse = json_loads 
+    _time = time
+    
+    # (優化: 預先計算「截止時間」，迴圈內只需比大小，省去減法運算)
+    fetch_deadline = _time() + UI_UPDATE_INTERVAL
 
     try:
-        # --- 進入 Kafka 輪詢迴圈 ---
         while True:
+            
+            # --- 主動切斷機制 (與 UI 同步) ---
+            # (防止資料流太快導致卡死，時間一到強制回傳資料以更新 UI)
+            if _time() > fetch_deadline:
+                logging.debug(f"⚡ [T_Data] 累積逾 {UI_UPDATE_INTERVAL} 秒，優先回傳資料。")
+                break
+
             # --- 1. 抓取訊息 ---
             msg = consumer.poll(KAFKA_POLL_TIMEOUT)
 
-            # --- 2. 處理閒置 (Poll 超時) ---
-            # (即時模式下，無新訊息時的正常出口)
+            # --- 2. 處理閒置 ---
             if msg is None:
-                logging.info("✅ [T_Data] 輪詢等待逾時 (無新訊息)。")
-                break # (回傳 None 給上層的 process_market_session)
+                logging.info(f"💤 [T_Data] {KAFKA_POLL_TIMEOUT} 秒內無新資料，本次無回傳。")
+                break 
 
-            # --- 3. 處理 Kafka 錯誤 (含 EOF) ---
-            if msg.error():
-                if msg.error().code() == KafkaError._PARTITION_EOF:
-                    # (偵測到 EOF)
-                    logging.debug("✅ [T_Data] 讀取到 Kafka Partition 結尾 (EOF)。")
-                    
-                    # (檢查 Offset 是否真的沒變，若無則 'continue' 以避免日誌洗版)
-                    if offsets[0].offset == msg.offset():
-                        logging.debug(f"TEST 1: msg offset = {msg.offset()}")
-                        continue 
-                    break # (若 Offset 有變，代表有新資料，break 以回傳)
+            # --- 3. 資料處理 (Happy Path) ---
+            # (極致優化：直接解析，不先檢查 error。如果 msg 有錯，這裡會爆開進入 except)
+            try:
+                record = _parse(msg.value())
+
+                # (A) 篩選：非模擬單 (Hot Path)
+                # (直接 append 並 continue，跳過昂貴的時間解析)
+                if not record['simtrade']:
+                    new_tick_list.append(record)
+                    continue 
+
+                # (B) 模擬單 (Signal Path)
+                # (只有在收到模擬單時，才花費 CPU 解析時間以判斷收盤)
                 else:
-                    logging.warning(f"⚠️ [T_Data] Kafka 訊息錯誤：{msg.error()}")
+                    t_dt = parse_tick_datetime(record['datetime'])
+                    if t_dt is not None and t_dt > end_datetime:
+                        logging.debug(f"ℹ️ [T_Data] 偵測到次盤試撮 ({t_dt})，確認已收盤。")
+                        break
                     continue
 
-            # --- 4. 處理並過濾訊息 ---
-            try:
-                record = orjson.loads(msg.value())
-
-                # --- (A) 篩選：(效能) 非模擬單，直接加入 ---
-                # (起始時間 'start_datetime' 已由 'offsets_for_times' 控制)
-                if not record.get('simtrade', False):
-                    new_tick_list.append(record)
-
-                    # (檢查時間限制，與 UI 同步)
-                    if (time.time() - start_fetch_ts) > UI_UPDATE_INTERVAL:
-                        logging.info(f"⚡ [T_Data] 達到時間限制({UI_UPDATE_INTERVAL}s)，優先回傳以更新 UI。")
-                        break
-
-                    continue # (跳過 'simtrade=True' 的時間解析)
-
-                # --- (B) 出口：(安全網) ---
-                # (僅 'simtrade=True' 的 Ticks 才會執行到這裡)
-                tick_dt_taiwan = parse_tick_datetime(record.get('datetime'))
-                if tick_dt_taiwan is not None and tick_dt_taiwan > end_datetime:
-                    break
-
             except Exception as e:
-                logging.warning(f"⚠️ [T_Data] JSON 解碼錯誤: {e}")
+                # --- 4. 錯誤處理 (Unhappy Path) ---
+                # (程式執行到這裡，代表出錯了：可能是 Kafka 錯，也可能是 JSON 錯)
+                
+                # (A) 檢查是否為 Kafka 系統錯誤
+                kafka_err = msg.error()
+                if kafka_err:
+                    logging.error(f"🔥 [T_Data] Kafka 錯誤：{kafka_err}")
+                    time.sleep(1) # (冷靜一下，防止 log 塞爆)
+                    continue
+                
+                # (B) 如果不是 Kafka 錯，那就是 JSON 解析失敗
+                logging.warning(f"⚠️ [T_Data] 資料解析失敗: {e}")
                 continue
-            
+
     except KeyboardInterrupt:
-        logging.info("🛑 [T_Data] 使用者手動中止 (in fetch_ticks_from_kafka)。")
+        logging.info("🛑 [T_Data] 使用者手動中止。")
         raise
     
-    # --- 5. 更新 Offsets ---
-    # (嘗試取得最新位置，若無效則維持舊位置，防止 Offset 遺失)
+    # 5. 更新 Offsets
+    # (無論是否有資料，只要 Consumer 有移動，就必須更新 Offset)
     pos = consumer.position(offsets)
-    new_offsets = pos if (pos and pos[0].offset >= 0) else offsets
+    new_offsets = pos if pos and pos[0].offset >= 0 else offsets
 
-    # --- 6. 處理返回結果 ---
-    result_df = pd.DataFrame(new_tick_list) if new_tick_list else None
-    
-    return result_df, new_offsets
+    # 6. 回傳
+    if not new_tick_list:
+        return None, new_offsets 
+    return pd.DataFrame(new_tick_list), new_offsets
 
 
 # ------------------------------------------------------------
