@@ -57,14 +57,12 @@ def create_dash_app(shared_state):
         dcc.Graph(id="candlestick-chart", figure=BLANK_BLACK_FIGURE),
 
         # --- (D) 定時器 (Callbacks 用) ---
-        
         # (主刷新計時器)
         dcc.Interval(id="update-interval", interval=UPDATE_INTERVAL*1000),
-        
         # (按鈕重置計時器，預設 'disabled=True')
         dcc.Interval(
             id="reset-button-interval", 
-            interval=3000, # (3 秒後回復按鈕)
+            interval=1000, # (1 秒後回復按鈕)
             n_intervals=0, 
             disabled=True # (關鍵：預設為停用)
         )
