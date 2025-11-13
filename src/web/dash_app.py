@@ -51,8 +51,10 @@ def create_dash_app(shared_state):
         html.Div(id="stats-html", style={"color": "white", "paddingTop": "10px"}),
 
         # --- (C) 圖表區 ---
-        dcc.Graph(id="main-analysis-chart"),
-        dcc.Graph(id="candlestick-chart"),
+        # (在初始化時，就直接指定 figure 為全黑空白圖)
+        # (這樣重新整理時，使用者會看到黑色，而不是刺眼的白色)
+        dcc.Graph(id="main-analysis-chart", figure=BLANK_BLACK_FIGURE),
+        dcc.Graph(id="candlestick-chart", figure=BLANK_BLACK_FIGURE),
 
         # --- (D) 定時器 (Callbacks 用) ---
         
