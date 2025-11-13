@@ -40,7 +40,7 @@ def kafka_consumer():
         'bootstrap.servers': config.KAFKA_BROKER,
         'group.id': config.KAFKA_GROUP_ID,
         'enable.auto.commit': False,
-        'enable.partition.eof': True,
+        'enable.partition.eof': False,
         
         # --- 1. 擴大單次抓取上限 (配合 Producer 的 batch.size=256KB + zstd) ---
         # Producer 傳送的是高壓縮的大封包，解壓後數據量巨大。

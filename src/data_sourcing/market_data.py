@@ -151,7 +151,7 @@ def find_previous_close_from_kafka(ctx: RunContext, max_lookback: int = 15) -> t
 
             if df is not None and not df.empty:
                 txf_close, tse_close = df.iloc[-1]['close'], df.iloc[-1]['underlying_price']
-                logging.info(f"📊 從 Kafka 獲取前收資料: {pre_date} TXF={txf_close}, TSE={tse_close}")
+                logging.info(f"📉 從 Kafka 獲取前收資料: {pre_date} TXF={txf_close}, TSE={tse_close}")
                 return txf_close, tse_close
 
             pre_date -= timedelta(days=1)
