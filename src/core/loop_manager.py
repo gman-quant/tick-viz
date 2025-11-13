@@ -3,7 +3,7 @@
 # Standard Library Imports
 import logging
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 
 # Third-Party Imports
 from confluent_kafka import TopicPartition
@@ -51,28 +51,26 @@ def run_single_session_task(ctx: RunContext, api=None) -> bool:
         try:
             # --- (B.2) Kafka 消費者初始化 (含重試與休市偵測) ---
             with kafka_consumer() as consumer:
-                current_offsets = None
+                valid_start_offsets = None
                 grace_period_end = ctx.start_datetime + timedelta(minutes=20) # (20 分鐘開盤寬限期)
                 
                 # --- (迴圈：直到成功取得 Kafka Offset 或 偵測到休市) ---
-                while current_offsets is None:
+                while True:
 
                     try:
                         # --- (嘗試取得 Offset) ---
-                        logging.info(f"⏳ [T_Data] 正在取得 {ctx.session_type.name} 的 Kafka offsets...")
-                        start_dt_utc = ctx.start_datetime.astimezone(timezone.utc)
-                        timestamp_ms = int(start_dt_utc.timestamp() * 1000)
-                        metadata = consumer.list_topics(KAFKA_TOPIC)
-                        partitions = list(metadata.topics[KAFKA_TOPIC].partitions.keys())
-                        topic_partitions = [
-                            TopicPartition(KAFKA_TOPIC, p, timestamp_ms) for p in partitions
-                        ]
-                        fixed_offsets = consumer.offsets_for_times(topic_partitions)
+                        # [極致簡化] 假設只有 Partition 0 (效能優化)
+                        # 1. 設定目標時間 (毫秒)
+                        target_ts_ms = int(ctx.start_datetime.timestamp() * 1000)
+                        # 2. 建立搜尋請求 (指定 Partition 0)
+                        search_partition = TopicPartition(KAFKA_TOPIC, 0, target_ts_ms)
+                        # 3. 發送查詢，取得結果
+                        found_offsets = consumer.offsets_for_times([search_partition])
 
-                        if fixed_offsets and all(p.offset >= 0 for p in fixed_offsets):
+                        if found_offsets and all(p.offset >= 0 for p in found_offsets):
                             # --- (成功取得 Offset) ---
-                            current_offsets = fixed_offsets.copy()
-                            logging.info(f"✅ [T_Data] 成功取得 Offsets: {[p.offset for p in current_offsets]}")
+                            valid_start_offsets = found_offsets
+                            logging.info(f"✅ [T_Data] 成功取得 Offsets: {[p.offset for p in valid_start_offsets]}")
                             break # 進入B.3
 
                         else:
@@ -96,7 +94,7 @@ def run_single_session_task(ctx: RunContext, api=None) -> bool:
 
                 # --- (B.3) 進入資料處理迴圈 ---
                 logging.info("✅ [T_Data] Offsets 已鎖定，進入 process_market_session...")
-                process_market_session(consumer, current_offsets, ctx)
+                process_market_session(consumer, valid_start_offsets, ctx)
                 logging.info(f"✅ [T_Data] {ctx.session_type.name} 任務執行完畢。\n")
                 return True # (回傳 True (成功))
 
