@@ -53,7 +53,7 @@ def create_dash_app(shared_state):
                 html.Div(
                     [
                         html.Label(
-                            "設定圖表顯示範圍(分鐘)： ",
+                            "時間窗口(分鐘)：",
                             style={
                                 "color": "#ccc", 
                                 "marginRight": "15px", 
