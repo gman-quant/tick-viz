@@ -115,12 +115,12 @@ pip install -r requirements.txt
 # tick-viz/.env
 
 # -----------------------------
-# Shioaji API 憑證 (請填入您自己的金鑰)
+# Shioaji API 憑證
 # -----------------------------
 SHIOAJI_API_KEY=your_shioaji_api_key_here
 SHIOAJI_SECRET_KEY=your_shioaji_secret_key_here
 # -----------------------------
-# Kafka 伺服器設定 (請填入您自己的位址)
+# Kafka 伺服器設定
 # -----------------------------
 KAFKA_BROKER=your_kafka_address:9092
 KAFKA_TOPIC=your_topic_name
