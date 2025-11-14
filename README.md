@@ -1,11 +1,16 @@
 # 台指期即時分析儀表板 (TXF Real-time Dashboard)
 
-![Python](https://img.shields.io/badge/python-3.9%2B-blue) 
-![Apache Kafka](https://img.shields.io/badge/Kafka-required-orange) 
-![Shioaji](https://img.shields.io/badge/Shioaji-required-orange) 
+![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![Pandas](https://img.shields.io/badge/Pandas-Data_Analysis-orange)
+![orjson](https://img.shields.io/badge/orjson-Fast_JSON-ff69b4)
+![Dash](https://img.shields.io/badge/Dash-by_Plotly-blueviolet)
+![Plotly](https://img.shields.io/badge/Plotly-Charts-blue)
+![Apache Kafka](https://img.shields.io/badge/Kafka-Streaming-orange) 
+![Shioaji](https://img.shields.io/badge/Shioaji-API-orange) 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
-專為台指期 (TXF) 打造的高效能即時多空分析系統。
+
+**專為台指期 (TXF) 打造的高效能即時多空分析系統**
 
 核心採用前後端分離架構，將高頻 Tick 資料的 ETL 運算與前端 Dash UI 渲染完全解耦。此設計確保了即使在開盤暴量或快市期間，監控介面依然能維持流暢響應，實現「數據不漏、畫面不卡」的體驗。
 
@@ -117,8 +122,8 @@ pip install -r requirements.txt
 # -----------------------------
 # Shioaji API 憑證
 # -----------------------------
-SHIOAJI_API_KEY=your_shioaji_api_key_here
-SHIOAJI_SECRET_KEY=your_shioaji_secret_key_here
+SHIOAJI_API_KEY=your_shioaji_api_key
+SHIOAJI_SECRET_KEY=your_shioaji_secret_key
 # -----------------------------
 # Kafka 伺服器設定
 # -----------------------------
