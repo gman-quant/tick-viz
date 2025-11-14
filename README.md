@@ -27,6 +27,11 @@
 
 ---
 
+## 伺服器狀態預覽
+![5](docs/5.png)
+
+---
+
 ## 主要功能
 
 -   雙模式資料源：支援從 `Kafka` 即時消費 tick 資料，或透過 `Shioaji API` 抓取歷史 tick 資料進行分析。
@@ -104,25 +109,29 @@ pip install -r requirements.txt
 ```
 
 #### 4. 進行環境設定
-建立.env 檔案（可複製 .env.example），並填入以下資訊：
+建立.env 檔案（可複製 .env.example 內容），並填入以下資訊：
 
 ```python
 # tick-viz/.env
 
-# Shioaji API credentials
+# -----------------------------
+# Shioaji API 憑證 (請填入您自己的金鑰)
+# -----------------------------
 SHIOAJI_API_KEY=your_shioaji_api_key_here
 SHIOAJI_SECRET_KEY=your_shioaji_secret_key_here
-
-# Kafka broker and topic
+# -----------------------------
+# Kafka 伺服器設定 (請填入您自己的位址)
+# -----------------------------
 KAFKA_BROKER=your_kafka_address:9092
 KAFKA_TOPIC=your_topic_name
 ```
 
 修改 config/config.py 中的效能調校參數：
 ```python
-# config/config.py
-KAFKA_POLL_TIMEOUT  = 2    # [秒] consumer.poll() 的最長等待時間
-UI_UPDATE_INTERVAL = 2    # [秒] UI 更新週期
+# (後端：Kafka 沒資料時的最大等待時間)
+KAFKA_POLL_TIMEOUT = 10
+# (前端：Dash UI 的畫面刷新週期)
+UI_UPDATE_INTERVAL =  5
 ```
 
 ---
