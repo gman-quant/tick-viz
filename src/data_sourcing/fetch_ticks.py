@@ -13,7 +13,7 @@ import shioaji as sj
 from confluent_kafka import Consumer, TopicPartition
 
 # Local Application Imports
-from config.config import CACHE_DIR, KAFKA_POLL_TIMEOUT, UI_UPDATE_INTERVAL, TAIWAN_TZ
+from config.config import CACHE_DIR, KAFKA_POLL_TIMEOUT_SECONDS, UI_REFRESH_INTERVAL_SECONDS, TAIWAN_TZ
 from config.run_context import RunContext
 from config.types import SessionType
 from src.data_sourcing.market_data import get_contract
@@ -41,22 +41,22 @@ def fetch_ticks_from_kafka(
     _time = time
     
     # (優化: 預先計算「截止時間」，迴圈內只需比大小，省去減法運算)
-    fetch_deadline = _time() + UI_UPDATE_INTERVAL
+    fetch_deadline = _time() + UI_REFRESH_INTERVAL_SECONDS
 
     try:
         while True:
             # --- 主動切斷機制 (與 UI 同步) ---
             # (防止資料流太快導致卡死，時間一到強制回傳資料以更新 UI)
             if _time() > fetch_deadline:
-                logging.debug(f"⚡ [T_Data] 累積逾 {UI_UPDATE_INTERVAL} 秒，優先回傳資料。")
+                logging.debug(f"⚡ [T_Data] 累積逾 {UI_REFRESH_INTERVAL_SECONDS} 秒，優先回傳資料。")
                 break
 
             # --- 1. 抓取訊息 ---
-            msg = consumer.poll(KAFKA_POLL_TIMEOUT)
+            msg = consumer.poll(KAFKA_POLL_TIMEOUT_SECONDS)
 
             # --- 2. 處理閒置 ---
             if msg is None:
-                logging.info(f"💤 [T_Data] {KAFKA_POLL_TIMEOUT} 秒內無新資料，本次無回傳。")
+                logging.info(f"💤 [T_Data] {KAFKA_POLL_TIMEOUT_SECONDS} 秒內無新資料，本次無回傳。")
                 break 
 
             # --- 3. 資料處理 (Happy Path) ---

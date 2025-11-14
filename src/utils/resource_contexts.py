@@ -37,7 +37,7 @@ def kafka_consumer():
     Matching the high-throughput Producer settings.
     """
     consumer = Consumer({
-        'bootstrap.servers': config.KAFKA_BROKER,
+        'bootstrap.servers': config.KAFKA_BOOTSTRAP_SERVERS,
         'group.id': config.KAFKA_GROUP_ID,
         'enable.auto.commit': False,
         'enable.partition.eof': False,

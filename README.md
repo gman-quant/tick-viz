@@ -127,16 +127,16 @@ SHIOAJI_SECRET_KEY=your_shioaji_secret_key
 # -----------------------------
 # Kafka 伺服器設定
 # -----------------------------
-KAFKA_BROKER=your_kafka_address:9092
+KAFKA_BOOTSTRAP_SERVERS=your_kafka_address:9092
 KAFKA_TOPIC=your_topic_name
 ```
 
 修改 config/config.py 中的效能調校參數：
 ```python
 # (後端：Kafka 沒資料時的最大等待時間)
-KAFKA_POLL_TIMEOUT = 10
+KAFKA_POLL_TIMEOUT_SECONDS = 10
 # (前端：Dash UI 的畫面刷新週期)
-UI_UPDATE_INTERVAL =  5
+UI_REFRESH_INTERVAL_SECONDS =  5
 ```
 
 ---
@@ -153,7 +153,7 @@ UI_UPDATE_INTERVAL =  5
 
 - 後端：請參考上方的 [核心架構說明](#%EF%B8%8F-核心架構-即時模式)。
 
-- 前端 (WebApp)：Dash 儀表板會定期（UI_UPDATE_INTERVAL）讀取後端已算好的資料來更新圖表，確保 UI 流暢。
+- 前端 (WebApp)：Dash 儀表板會定期（UI_REFRESH_INTERVAL_SECONDS）讀取後端已算好的資料來更新圖表，確保 UI 流暢。
 
 - 靜態報告：
 

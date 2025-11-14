@@ -10,10 +10,11 @@ import pandas as pd
 # Local Application Imports
 from config.config import (
     TAIWAN_TZ, 
-    DAY_START, 
-    DAY_END, 
-    NIGHT_START, 
-    NIGHT_END
+    DAY_SESSION_START_TIME, 
+    DAY_SESSION_END_TIME, 
+    NIGHT_SESSION_START_TIME, 
+    NIGHT_SESSION_END_TIME,
+    DEFAULT_LOOKBACK_MINUTES
 )
 from config.types import SessionType
 
@@ -25,7 +26,7 @@ def is_am_night_session(now_time: dt_time) -> bool:
     """
     判斷傳入的時間是否為「AM (凌晨) 夜盤」時段 (00:00 - 05:00)。
     """
-    return now_time < NIGHT_END
+    return now_time < NIGHT_SESSION_END_TIME
 
 # ------------------------------------------------------------
 # 📦 (Helper) 取得下一個日盤開盤時間 
@@ -49,7 +50,7 @@ def get_next_valid_day_session_start(now_dt: datetime) -> datetime:
         next_day += timedelta(days=1)
         
     # --- 3. 回傳該日的日盤開盤時間 ---
-    return datetime.combine(next_day, DAY_START).replace(tzinfo=TAIWAN_TZ)
+    return datetime.combine(next_day, DAY_SESSION_START_TIME).replace(tzinfo=TAIWAN_TZ)
 
 # ------------------------------------------------------------
 # 📦 盤別判斷
@@ -73,11 +74,11 @@ def in_which_session(now_dt: datetime | None = None) -> SessionType:
     # --- 2. 處理週二 ~ 週五 (Day 1-4) [最常見的開盤日] ---
     if 1 <= now_weekday <= 4: # Tuesday - Friday
         # (A) 日盤 (08:30-13:45)
-        if DAY_START <= now_time < DAY_END:
+        if DAY_SESSION_START_TIME <= now_time < DAY_SESSION_END_TIME:
             return SessionType.DAY
         # (B) 夜盤 (下午 14:50-23:59 或 凌晨 0:00-5:00)
         # (此處 'or' 邏輯已包含凌晨和下午)
-        if NIGHT_START <= now_time or now_time < NIGHT_END:
+        if NIGHT_SESSION_START_TIME <= now_time or now_time < NIGHT_SESSION_END_TIME:
             return SessionType.NIGHT
         # (C) 盤中休市 (05:00-08:30, 13:45-14:50)
         return SessionType.CLOSED
@@ -85,10 +86,10 @@ def in_which_session(now_dt: datetime | None = None) -> SessionType:
     # --- 3. 處理週一 (Day 0) [邏輯特殊：沒有凌晨夜盤] ---
     if now_weekday == 0: # Monday
         # (A) 日盤 (08:30 - 13:45)
-        if DAY_START <= now_time < DAY_END:
+        if DAY_SESSION_START_TIME <= now_time < DAY_SESSION_END_TIME:
             return SessionType.DAY
         # (B) 夜盤 (下午) (14:50 - 23:59)
-        if now_time >= NIGHT_START:
+        if now_time >= NIGHT_SESSION_START_TIME:
             return SessionType.NIGHT
         # (C) 凌晨 (00:00-08:30) 或 盤中休市 (13:45-14:50)
         return SessionType.CLOSED
@@ -98,7 +99,7 @@ def in_which_session(now_dt: datetime | None = None) -> SessionType:
     
     # (A) 夜盤 (凌晨) (00:00 - 05:00)
     # (屬於週五的夜盤)
-    if now_time < NIGHT_END: 
+    if now_time < NIGHT_SESSION_END_TIME: 
         return SessionType.NIGHT
     
     # (B) 05:00 之後 (休市)
@@ -127,12 +128,12 @@ def get_session_datetime_range(
     start_date = end_date = trade_date
 
     # --- 2. 判斷日盤時段 ---
-    if session_type == SessionType.DAY or (session_type == SessionType.CLOSED and DAY_START <= now_time < NIGHT_START):
-        start_time, end_time = DAY_START, DAY_END
+    if session_type == SessionType.DAY or (session_type == SessionType.CLOSED and DAY_SESSION_START_TIME <= now_time < NIGHT_SESSION_START_TIME):
+        start_time, end_time = DAY_SESSION_START_TIME, DAY_SESSION_END_TIME
     
     # --- 3. 判斷夜盤時段 (需處理日期變換) ---
     else:
-        start_time, end_time = NIGHT_START, NIGHT_END
+        start_time, end_time = NIGHT_SESSION_START_TIME, NIGHT_SESSION_END_TIME
         one_day = timedelta(days=1)
 
         if not real_time_mode:
@@ -172,22 +173,23 @@ def get_observation_window(df: pd.DataFrame, start: datetime) -> tuple[datetime,
     (繪圖用) 計算完整的「固定」觀察視窗
     (從開盤後 N 分鐘，到最後一筆 tick)
     """
-    adjusted_start = start + timedelta(minutes=15 if start.time() == DAY_START else 10)
+    adjusted_start = start + timedelta(minutes=15 if start.time() == DAY_SESSION_START_TIME else 10)
     end = df['datetime'].iloc[-1] if not df.empty else adjusted_start
     return adjusted_start, end
 
 def get_sliding_window(
     df: pd.DataFrame,
     start: datetime,
-    lookback_minutes: int = 120,
+    lookback_minutes: int = DEFAULT_LOOKBACK_MINUTES,
 ) -> tuple[datetime, datetime]:
     """
     (繪圖用) 計算「滑動」時間視窗
     (從最後一筆 tick 往前推 N 分鐘)
     """
-    adjusted_start = start + timedelta(minutes=15 if start.time() == DAY_START else 10)
+    adjusted_start = start + timedelta(minutes=15 if start.time() == DAY_SESSION_START_TIME else 10)
     end = df['datetime'].iloc[-1] if not df.empty else adjusted_start
     
     # 確保視窗起點不會早於 adjusted_start
     window_start = max(adjusted_start, end - timedelta(minutes=lookback_minutes))
     return window_start, end
+

@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 # Local Application Imports
 from config.run_context import RunContext
 from src.utils.session_time import get_observation_window, get_sliding_window
+from src.web.shared_state import shared_state
 
 """
 存放公用的 Plotly 圖表物件、樣式字典與輔助函式。
@@ -80,7 +81,7 @@ def get_time_range(df: pd.DataFrame, ctx: RunContext) -> tuple[datetime, datetim
     """
     if ctx.real_time_mode:
         # 即時模式：顯示最後 30 分鐘的滑動視窗
-        return get_sliding_window(df, ctx.start_datetime)
+        return get_sliding_window(df, ctx.start_datetime, shared_state.ui_lookback_minutes)
     else:
         # 歷史模式：顯示開盤後的完整固定視窗
         return get_observation_window(df, ctx.start_datetime)

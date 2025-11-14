@@ -7,6 +7,7 @@ import threading
 import pandas as pd
 
 # Local Application Imports
+from config.config import DEFAULT_LOOKBACK_MINUTES
 from config.run_context import RunContext
 
 # ------------------------------------------------------------
@@ -33,6 +34,11 @@ class SharedState:
         # --- Market Data ---
         self.txf_prev_close:    float | None = None
         self.taiex_prev_close:  float | None = None
+        
+        # --- (NEW) UI 狀態 ---
+        # (這個值將由 Dash UI (滑桿) 來寫入)
+        self.ui_lookback_minutes: int = DEFAULT_LOOKBACK_MINUTES
+
 
 # --- 建立全域單例 (Singleton) ---
 shared_state = SharedState()
