@@ -3,20 +3,11 @@
 # Standard Library Imports
 import argparse
 import logging
-import threading
-from datetime import date, timedelta
+from datetime import date
 
 # Local Application Imports
-from config.run_context import RunContext
-from config.types import DataSource, SessionType
-from src.core.loop_manager import data_loop_manager, run_single_session_task
-from src.utils.misc import clear_console
-from src.utils.resource_contexts import shioaji_session
-from src.utils.session_time import get_session_range
+from src.core.orchestrator import run_backfill_mode, run_realtime_mode
 from src.utils.time_parser import parse_date
-from src.web.dash_app import create_dash_app
-from src.web.shared_state import shared_state
-
 
 # ------------------------------------------------------------
 # 主流程
@@ -26,73 +17,29 @@ def main(
     date_start: date | None = None,
     date_end:   date | None = None,
     session:     str | None = None,
+    data_source: str = "kafka",
 ):
     """
-    主執行流程，支援即時模式 (24/7 Server) 與歷史模式（多日迭代）。
+    主執行流程 (已簡化)。
+    僅負責解析參數並委派給對應的執行模式。
     """
-
+    
     if not real_time_mode:
         # --- 歷史回顧模式 ---
-        clear_console()
         logging.info("📘 執行歷史回顧模式...")
-        with shioaji_session() as api:
-            one_day = timedelta(days=1)
-            dt_st = date_start or (date.today() - one_day)
-            dt_ed = date_end or date.today()
-            pick = session or "whole"
-
-            st, ed = get_session_range(pick)
-            current = dt_st
-
-            while current <= dt_ed:
-                # 跳過週末
-                if current.weekday() >= 5:
-                    logging.info(f"⏩ 跳過週末：{current}")
-                    current += one_day
-                    continue
-
-                # 迭代處理日盤與夜盤
-                for day_session in range(st, ed - 1, -1):
-                    logging.info(f"📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
-
-                    ctx = RunContext(
-                        trade_date=current,
-                        session_type=SessionType.DAY if day_session else SessionType.NIGHT,
-                        real_time_mode=False,
-                        data_source=DataSource.SHIOAJI # 亦可用 DataSource.KAFKA 
-                    )
-                    run_single_session_task(ctx, api)
-
-                current += one_day
-                
+        run_backfill_mode(
+            date_start=date_start,
+            date_end=date_end,
+            session=session,
+            data_source=data_source
+        )
         logging.info("✅ 歷史回顧模式執行完畢。")
 
     else:
         # --- 即時 24/7 伺服器模式 ---
         logging.info("⚡ [Main] 執行 24/7 即時伺服器模式...")
-        
-        # --- 啟動背景資料處理執行緒 ---
-        logging.info("📊 [Main] 啟動 24/7 背景資料管理器 (T_Data)...")
-        data_thread = threading.Thread(
-            target=data_loop_manager,
-            args=(),
-            daemon=True
-        )
-        data_thread.start()
-
-        # --- 啟動前景 Web Server (主執行緒) ---
-        logging.info(f"🚀 [Main] 啟動 Web Server (MainThread) 於 http://localhost:8080 ...")
-        app = create_dash_app(shared_state) 
-        
-        try:
-            app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)
-        
-        except KeyboardInterrupt:
-            logging.info("\n👋 [Main] 收到使用者關閉訊號 (Ctrl+C)...")
-        except Exception as e:
-            logging.exception(f"⚠️ [Main] Dash Server 啟動失敗: {e}")
-        
-        logging.info("✅ [Main] Dash Server 已關閉，程式結束。")
+        run_realtime_mode()
+        logging.info("✅ [Main] 程式已結束。")
 
 
 # ------------------------------------------------------------
@@ -127,6 +74,9 @@ if __name__ == "__main__":
     
     parser.add_argument("--session", type=str, choices=["day", "night", "whole"],
                         help="交易時段: day=日盤, night=夜盤, whole=全部")
+    # (*** 新增 ***)
+    parser.add_argument("--data-source", type=str, choices=["kafka", "shioaji"], default="kafka",
+                        help="[歷史模式用] 資料來源: kafka (預設), shioaji (API下載)")
 
     # --- 5. 解析傳入參數 ---
     args = parser.parse_args()
@@ -137,6 +87,7 @@ if __name__ == "__main__":
         date_start=args.date_start,
         date_end=args.date_end,
         session=args.session,
+        data_source=args.data_source # (*** 新增 ***)
     )
 
 

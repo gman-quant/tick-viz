@@ -1,4 +1,4 @@
-# src/processing/main_process.py
+# src/core/session_processor.py
 
 # Standard Library Imports
 from datetime import datetime
@@ -12,7 +12,7 @@ from confluent_kafka import Consumer, TopicPartition
 # Local Application Imports
 from config.config import TAIWAN_TZ
 from config.run_context import RunContext
-from config.types import DataSource, SessionType
+from config.types import DataSource
 from src.data_sourcing.fetch_ticks import fetch_ticks_from_kafka, fetch_ticks_from_shioaji
 from src.data_sourcing.market_data import find_previous_close
 from src.processing.bars.kbars import generate_kbars
@@ -58,6 +58,7 @@ def process_market_session(
                     consumer=consumer,
                     offsets=current_offsets,
                     end_datetime=ctx.end_datetime,
+                    real_time_mode=ctx.real_time_mode
                 )
                 
                 # --- 檢查收盤或無資料 ---

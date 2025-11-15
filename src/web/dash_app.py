@@ -239,7 +239,7 @@ def create_dash_app(shared_state):
             taiex_prev_close = shared_state.taiex_prev_close
 
         if df is None or df.empty:
-            return "⚠️  S資料不足", False
+            return "⚠️ S資料不足", False
         
         stats_html = stats_table.generate_stats_html(stats_table.compute_stats(df, txf_prev_close))
         generate_html_report(

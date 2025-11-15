@@ -173,9 +173,9 @@ def get_observation_window(df: pd.DataFrame, start: datetime) -> tuple[datetime,
     (繪圖用) 計算完整的「固定」觀察視窗
     (從開盤後 N 分鐘，到最後一筆 tick)
     """
-    adjusted_start = start + timedelta(minutes=15 if start.time() == DAY_SESSION_START_TIME else 10)
+    adjusted_start = start + timedelta(minutes=14 if start.time() == DAY_SESSION_START_TIME else 9)
     end = df['datetime'].iloc[-1] if not df.empty else adjusted_start
-    return adjusted_start, end
+    return adjusted_start, end + timedelta(minutes=1)
 
 def get_sliding_window(
     df: pd.DataFrame,

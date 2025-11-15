@@ -27,7 +27,8 @@ from src.utils.time_parser import parse_tick_datetime
 def fetch_ticks_from_kafka(
     consumer: Consumer,
     offsets: list[TopicPartition], 
-    end_datetime: datetime
+    end_datetime: datetime,
+    real_time_mode: bool = False
 ) -> tuple[pd.DataFrame | None, list]:
     """
     從 Kafka 擷取指定時間區間內的 tick 資料。
@@ -47,7 +48,7 @@ def fetch_ticks_from_kafka(
         while True:
             # --- 主動切斷機制 (與 UI 同步) ---
             # (防止資料流太快導致卡死，時間一到強制回傳資料以更新 UI)
-            if _time() > fetch_deadline:
+            if real_time_mode and _time() > fetch_deadline:
                 logging.debug(f"⚡ [T_Data] 累積逾 {UI_REFRESH_INTERVAL_SECONDS} 秒，優先回傳資料。")
                 break
 
@@ -56,7 +57,7 @@ def fetch_ticks_from_kafka(
 
             # --- 2. 處理閒置 ---
             if msg is None:
-                logging.info(f"💤 [T_Data] {KAFKA_POLL_TIMEOUT_SECONDS} 秒內無新資料，本次無回傳。")
+                logging.debug(f"💤 [T_Data] {KAFKA_POLL_TIMEOUT_SECONDS} 秒內無新資料。")
                 break 
 
             # --- 3. 資料處理 (Happy Path) ---
@@ -110,7 +111,7 @@ def fetch_ticks_from_kafka(
 
 
 # ------------------------------------------------------------
-# 📦 2. (Shioaji) 抓取或載入快取
+# 📦 (Shioaji) 抓取或載入快取
 # ------------------------------------------------------------
 def _get_or_fetch_contract_ticks(
     api: sj.Shioaji, contract: sj.contracts.Contract, date: str, cache_file: Path
@@ -140,7 +141,31 @@ def _get_or_fetch_contract_ticks(
 
 
 # ------------------------------------------------------------
-# 📦 3. (Shioaji) 歷史模式主函式
+# 📦 (Shioaji) 輔助函式：統一處理使用 API 抓取或快取 Tick 資料
+# ------------------------------------------------------------
+def _load_ticks_with_api(
+    api: sj.Shioaji, 
+    target_date_str: str, 
+    date_str: str, 
+    txf_file: Path, 
+    tse_file: Path
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    輔助函式：統一處理使用 Shioaji API 抓取或快取 Tick 資料的邏輯
+    """
+    # (取得 TXF 與 TSE 契約)
+    txf_contract = get_contract(api, "txf")
+    tse_contract = get_contract(api, "tse")
+
+    # (抓取或讀取快取資料)
+    df_txf = _get_or_fetch_contract_ticks(api, txf_contract, target_date_str, txf_file)
+    df_tse = _get_or_fetch_contract_ticks(api, tse_contract, date_str, tse_file)
+
+    return df_txf, df_tse
+
+
+# ------------------------------------------------------------
+# 📦 2. 從 Shioaji 抓取 Ticks
 # ------------------------------------------------------------
 def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.DataFrame:
     """
@@ -157,18 +182,20 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
 
         # --- 2. 獲取資料 (快取優先) ---
         if not txf_file.exists() or not tse_file.exists():
+            # (沒快取才需要 API)
             if api is None:
+                # 自動管理 login / logout
                 with shioaji_session() as sj_api:
-                    txf_contract = get_contract(sj_api, "txf")
-                    tse_contract = get_contract(sj_api, "tse")
-                    df_txf = _get_or_fetch_contract_ticks(sj_api, txf_contract, target_date_str, txf_file)
-                    df_tse = _get_or_fetch_contract_ticks(sj_api, tse_contract, date_str, tse_file)
+                    df_txf, df_tse = _load_ticks_with_api(
+                        sj_api, target_date_str, date_str, txf_file, tse_file
+                    )
             else:
-                txf_contract = get_contract(api, "txf")
-                tse_contract = get_contract(api, "tse")
-                df_txf = _get_or_fetch_contract_ticks(api, txf_contract, target_date_str, txf_file)
-                df_tse = _get_or_fetch_contract_ticks(api, tse_contract, date_str, tse_file)
+                # 使用外部傳入的 API，不登出
+                df_txf, df_tse = _load_ticks_with_api(
+                    api, target_date_str, date_str, txf_file, tse_file
+                )
         else:
+            # (使用快取)
             df_txf = pd.read_parquet(txf_file)
             df_tse = pd.read_parquet(tse_file)
 

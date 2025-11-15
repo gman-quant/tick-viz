@@ -1,4 +1,4 @@
-# src/service.py
+# src/core/loop_manager.py
 
 # Standard Library Imports
 import logging
