@@ -41,8 +41,8 @@ def get_next_valid_day_session_start(now_dt: datetime) -> datetime:
 
     # --- 1. 判斷當前時間，決定 "next_day" 的起點 ---
     today = now_dt.date()
-    is_am = is_am_night_session(now_dt.time())
-    next_day = today if is_am else today + timedelta(days=1)
+    before_day_session = now_dt.time() < DAY_SESSION_START_TIME
+    next_day = today if before_day_session else today + timedelta(days=1)
 
     # --- 2. 迴圈直到找到週一至週五 ---
     while next_day.weekday() >= 5: # 5=Sat, 6=Sun

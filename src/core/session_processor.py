@@ -64,7 +64,7 @@ def process_market_session(
                 # --- 檢查收盤或無資料 ---
                 if new_df is None:
                     if datetime.now(TAIWAN_TZ) >= ctx.end_datetime:
-                        logging.info(f"ℹ️ [T_Data] {ctx.session_type.name} 收盤時間已到，結束任務。")
+                        logging.info(f"🔔 [T_Data] {ctx.session_type.name} 收盤時間已到，結束任務。")
                         break  # 收盤時間到，結束任務
                     continue   # 無新資料，繼續輪詢
 

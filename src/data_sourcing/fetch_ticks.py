@@ -76,7 +76,7 @@ def fetch_ticks_from_kafka(
                 else:
                     t_dt = parse_tick_datetime(record['datetime'])
                     if t_dt is not None and t_dt > end_datetime:
-                        logging.debug(f"ℹ️ [T_Data] 偵測到次盤試撮 ({t_dt})，確認已收盤。")
+                        logging.debug(f"🔔 [T_Data] 偵測到次盤試撮 ({t_dt})，確認已收盤。")
                         break
                     continue
 

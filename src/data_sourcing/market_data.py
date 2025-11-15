@@ -62,7 +62,7 @@ def load_or_fetch_kbars(api, query_date: date, symbol: str) -> pd.DataFrame:
         return df
 
     # --- 4. 若快取讀取失敗，從 API 抓取 ---
-    logging.info(f"ℹ️ Fetching {symbol.upper()} kbars from API for {query_date}...")
+    logging.info(f"🔔 Fetching {symbol.upper()} kbars from API for {query_date}...")
 
     contract = get_contract(api, symbol)
     kbars = api.kbars(
