@@ -88,7 +88,7 @@ python main.py --real-time-mode 1
 ```bash
 cd Projects/tick-viz
 source venv/bin/activate
-python main.py --real-time-mode 0 --date-start 2025-11-06 --date-end 2025-11-07 --session whole
+python main.py --real-time-mode 0 --date-start 2025-11-06 --date-end 2025-11-07 --session whole --data_source shioaji
 ```
 
 ### 3.3. 執行靜態圖表腳本

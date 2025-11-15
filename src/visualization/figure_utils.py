@@ -1,23 +1,24 @@
 # src/visualization/figure_utils.py
 
 # Standard Library Imports
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Third-Party Imports
 import pandas as pd
 import plotly.graph_objects as go
 
 # Local Application Imports
+from config.config import DAY_SESSION_START_TIME, DEFAULT_LOOKBACK_MINUTES
 from config.run_context import RunContext
-from src.utils.session_time import get_observation_window, get_sliding_window
 from src.web.shared_state import shared_state
+
 
 """
 存放公用的 Plotly 圖表物件、樣式字典與輔助函式。
 """
 
 # ------------------------------------------------------------
-# 1. 共用顏色
+# 📦 1. 共用顏色
 # ------------------------------------------------------------
 COLOR_BG = 'black'
 COLOR_INCREASING = 'green'
@@ -25,7 +26,7 @@ COLOR_DECREASING = 'red'
 COLOR_CANDLE_VOL_DAY = 'yellow'
 
 # ------------------------------------------------------------
-# 2. 共用圖表物件 (空白圖)
+# 📦 2. 共用圖表物件 (空白圖)
 # ------------------------------------------------------------
 BLANK_BLACK_FIGURE = go.Figure(
     layout=go.Layout(
@@ -37,7 +38,7 @@ BLANK_BLACK_FIGURE = go.Figure(
 )
 
 # ------------------------------------------------------------
-# 3. 共用樣式字典 (Layouts)
+# 📦 3. 共用樣式字典 (Layouts)
 # ------------------------------------------------------------
 
 # --- (A) 主要 Layout (K線圖、主圖) ---
@@ -72,16 +73,47 @@ VOLUME_YAXIS_SETTINGS = dict(
 )
 
 # ------------------------------------------------------------
-# 4. 共用輔助函式 (X 軸時間範圍)
+# 📦 4. 輔助函式 (X 軸時間範圍)
 # ------------------------------------------------------------
 
 def get_time_range(df: pd.DataFrame, ctx: RunContext) -> tuple[datetime, datetime]:
     """
+    (主要介面)
     根據即時或歷史模式，取得正確的圖表 X 軸時間範圍。
     """
     if ctx.real_time_mode:
-        # 即時模式：顯示最後 30 分鐘的滑動視窗
-        return get_sliding_window(df, ctx.start_datetime, shared_state.ui_lookback_minutes)
+        # 即時模式：顯示最後 N 分鐘的滑動視窗
+        return _get_sliding_window(df, ctx.start_datetime, shared_state.ui_lookback_minutes)
     else:
         # 歷史模式：顯示開盤後的完整固定視窗
-        return get_observation_window(df, ctx.start_datetime)
+        return _get_observation_window(df, ctx.start_datetime)
+    
+
+# --- (內部輔助函式) ---
+
+def _get_observation_window(df: pd.DataFrame, start: datetime) -> tuple[datetime, datetime]:
+    """
+    (繪圖用) 計算完整的「固定」觀察視窗
+    (從開盤後 N 分鐘，到最後一筆 tick)
+    """
+    # (日盤 8:30 + 14 = 8:44; 夜盤 14:50 + 9 = 14:59)
+    adjusted_start = start + timedelta(minutes=14 if start.time() == DAY_SESSION_START_TIME else 9)
+    end = df['datetime'].iloc[-1] if not df.empty else adjusted_start
+    return adjusted_start, end + timedelta(minutes=1)
+
+def _get_sliding_window(
+    df: pd.DataFrame,
+    start: datetime,
+    lookback_minutes: int = DEFAULT_LOOKBACK_MINUTES,
+) -> tuple[datetime, datetime]:
+    """
+    (繪圖用) 計算「滑動」時間視窗
+    (從最後一筆 tick 往前推 N 分鐘)
+    """
+    # (日盤 8:30 + 15 = 8:45; 夜盤 14:50 + 10 = 15:00)
+    adjusted_start = start + timedelta(minutes=15 if start.time() == DAY_SESSION_START_TIME else 10)
+    end = df['datetime'].iloc[-1] if not df.empty else adjusted_start
+    
+    # 確保視窗起點不會早於 adjusted_start (開盤前15分鐘)
+    window_start = max(adjusted_start, end - timedelta(minutes=lookback_minutes))
+    return window_start, end

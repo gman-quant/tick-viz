@@ -8,6 +8,7 @@ import dash
 
 # Local Application Imports
 from config.config import UI_REFRESH_INTERVAL_SECONDS
+import config.strings as s
 from config.types import SessionType
 from src.visualization import candlestick_chart, main_chart, stats_table
 from src.visualization.figure_utils import BLANK_BLACK_FIGURE
@@ -31,7 +32,7 @@ def create_dash_app(shared_state):
             [
                 # --- (A.1) 左上角報告生成按鈕 ---
                 html.Button(
-                    "⬜️ 點擊生成報告",
+                    s.BTN_REPORT_INIT,
                     id="generate-report-btn",
                     n_clicks=0,
                     style={
@@ -53,7 +54,7 @@ def create_dash_app(shared_state):
                 html.Div(
                     [
                         html.Label(
-                            "顯示最近（分鐘）：",
+                            s.LABEL_LOOKBACK_MINUTES,
                             style={
                                 "color": "#ccc", 
                                 "marginRight": "15px", 
@@ -239,7 +240,7 @@ def create_dash_app(shared_state):
             taiex_prev_close = shared_state.taiex_prev_close
 
         if df is None or df.empty:
-            return "⚠️ S資料不足", False
+            return s.BTN_REPORT_FAIL, False
         
         stats_html = stats_table.generate_stats_html(stats_table.compute_stats(df, txf_prev_close))
         generate_html_report(
@@ -250,7 +251,7 @@ def create_dash_app(shared_state):
             taiex_prev_close=taiex_prev_close
         )
 
-        return "✅ 已生成新報告", False
+        return s.BTN_REPORT_SUCCESS, False
 
     # ------------------------------------------------------------
     # 📦 Callback 3: 自動回復 "生成報告" 按鈕文字
@@ -261,6 +262,6 @@ def create_dash_app(shared_state):
         Input("reset-button-interval", "n_intervals")
     )
     def reset_button_text(n):
-        return "⬜️ 點擊生成報告", True
+        return s.BTN_REPORT_INIT, True
 
     return app

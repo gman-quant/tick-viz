@@ -74,7 +74,7 @@ if __name__ == "__main__":
     
     parser.add_argument("--session", type=str, choices=["day", "night", "whole"],
                         help="交易時段: day=日盤, night=夜盤, whole=全部")
-    # (*** 新增 ***)
+    
     parser.add_argument("--data-source", type=str, choices=["kafka", "shioaji"], default="kafka",
                         help="[歷史模式用] 資料來源: kafka (預設), shioaji (API下載)")
 
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         date_start=args.date_start,
         date_end=args.date_end,
         session=args.session,
-        data_source=args.data_source # (*** 新增 ***)
+        data_source=args.data_source
     )
 
 
@@ -99,7 +99,7 @@ python main.py --real-time-mode 1
 
 🔵 歷史回顧模式
 cd Projects/tick-viz && source venv/bin/activate
-python main.py --real-time-mode 0 --date-start 2025-11-06 --date-end 2025-11-07 --session whole
+python main.py --real-time-mode 0 --date-start 2025-11-06 --date-end 2025-11-07 --session whole --data-source shioaji
 
  📅 日線圖更新
 cd Projects/tick-viz && source venv/bin/activate

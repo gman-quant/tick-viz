@@ -14,7 +14,6 @@ from config.config import (
     DAY_SESSION_END_TIME, 
     NIGHT_SESSION_START_TIME, 
     NIGHT_SESSION_END_TIME,
-    DEFAULT_LOOKBACK_MINUTES
 )
 from config.types import SessionType
 
@@ -164,32 +163,4 @@ def get_session_range(pick: str) -> tuple[int, int]:
         'whole': (1, 0),
     }
     return mapping.get(pick.lower(), (0, 1))
-
-# ------------------------------------------------------------
-# 📦 繪圖時間視窗計算
-# ------------------------------------------------------------
-def get_observation_window(df: pd.DataFrame, start: datetime) -> tuple[datetime, datetime]:
-    """
-    (繪圖用) 計算完整的「固定」觀察視窗
-    (從開盤後 N 分鐘，到最後一筆 tick)
-    """
-    adjusted_start = start + timedelta(minutes=14 if start.time() == DAY_SESSION_START_TIME else 9)
-    end = df['datetime'].iloc[-1] if not df.empty else adjusted_start
-    return adjusted_start, end + timedelta(minutes=1)
-
-def get_sliding_window(
-    df: pd.DataFrame,
-    start: datetime,
-    lookback_minutes: int = DEFAULT_LOOKBACK_MINUTES,
-) -> tuple[datetime, datetime]:
-    """
-    (繪圖用) 計算「滑動」時間視窗
-    (從最後一筆 tick 往前推 N 分鐘)
-    """
-    adjusted_start = start + timedelta(minutes=15 if start.time() == DAY_SESSION_START_TIME else 10)
-    end = df['datetime'].iloc[-1] if not df.empty else adjusted_start
-    
-    # 確保視窗起點不會早於 adjusted_start
-    window_start = max(adjusted_start, end - timedelta(minutes=lookback_minutes))
-    return window_start, end
 

@@ -52,32 +52,6 @@
 
 ---
 
-## 核心架構 (即時模式)
-
-本專案的後端 T_Data 服務採用「狀態機」與「任務執行者」分離的設計，確保 24/7 穩定運行與盤別切換的強固性。
-
-1. data_loop_manager (狀態機 & 服務管理器)：
-
-    - src/service.py 中的 24/7 迴圈，負責偵測當前時段（日盤、夜盤、休市）。
-
-    - 職責：判斷是否應啟動新盤別，建立 RunContext，並呼叫 run_single_session_task。
-
-2. run_single_session_task (盤別生命週期管理器)：
-
-    - src/service.py 中的函式，負責「單一盤別」（例如今日日盤）的完整生命週期。
-
-    - 職責：清除舊狀態、使用 offsets_for_times 精確初始化 Kafka offset，然後呼叫並等待 process_market_session 執行完畢。
-
-3. process_market_session (增量資料處理迴圈)：
-
-    - src/processing/main_process.py 中的核心迴圈，負責「盤中」的持續運算。
-
-    - 職責：不斷從 Kafka 獲取新資料、進行增量計算（如 RVWAP）、並將結果更新至 shared_state 供前端使用。
-
-    - 此迴圈結束（例如偵測到收盤）後，控制權交還給 run_single_session_task，後者隨之結束，data_loop_manager 再次進入偵測狀態。
-
----
-
 ## 使用技術
 
 -   **核心語言**: Python 3.9+
@@ -151,12 +125,6 @@ DEFAULT_LOOKBACK_MINUTES    = 120
 
 - 用於接收來自 Kafka 串流來源的 即時 tick 資料，並啟動 24/7 儀表板。
 
-- 啟動：同時啟動「後端資料服務 (T_Data)」與「前端 Dash 伺服器 (WebApp)」。
-
-- 後端：請參考上方的 [核心架構說明](#%EF%B8%8F-核心架構-即時模式)。
-
-- 前端 (WebApp)：Dash 儀表板會定期（UI_REFRESH_INTERVAL_SECONDS）讀取後端已算好的資料來更新圖表，確保 UI 流暢。
-
 - 靜態報告：
 
   - 左上角「⬜️ 點擊生成報告」按鈕。
@@ -180,7 +148,7 @@ python main.py --real-time-mode 1
 
   - 可分別產出日盤與夜盤報告（--session）。
 
-  - 自動略過台股例假日。
+  - 資料來源選擇（--data-source）。
 
   - 此模式**不啟動**即時儀表板。
 
@@ -189,7 +157,7 @@ python main.py --real-time-mode 1
 - 啟動方式：
 ```bash
 source venv/bin/activate
-python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 --session whole
+python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 --session whole --data-source shioaji
 # --session 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
 ```
 
@@ -221,6 +189,7 @@ TICK-VIZ/
 ├── config/                       # 📂 專案設定與型別
 │   ├── config.py                 # ├─ 全域常數 (API 金鑰, Kafka 主題, 交易時間定義等)
 │   ├── run_context.py            # ├─ 執行上下文 (RunContext 資料類別)
+│   ├── strings.py                # ├─ UI 介面字串 (Dash App 專用)
 │   └── types.py                  # └─ 自定型別與列舉 (SessionType, DataSource)
 │
 ├── data/                         # 📂 本地快取資料 (存放 Parquet/CSV 供回測用)
@@ -233,8 +202,9 @@ TICK-VIZ/
 │
 ├── src/                          # 📂 核心原始碼 (所有應用程式邏輯)
 │   ├── core/                     # ├─ 📂 【應用核心】(負責協調、狀態和流程控制)
-│   │   ├── loop_manager.py       # │  ├─ 【外層核心】24/7 服務管理器
-│   │   └── session_processor.py  # │  └─ 【內層核心】「單一盤別」資料處理迴圈
+│   │   ├── orchestrator.py       # │  ├─ 頂層調度器 (啟動即時/歷史模式)
+│   │   ├── loop_manager.py       # │  ├─ 【任務核心】24/7 即時管理器、單一任務執行
+│   │   └── session_processor.py  # │  └─ 【處理核心】「單一盤別」資料處理迴圈
 │   │                               │
 │   ├── data_sourcing/            # ├─ 📂 資料獲取 (從 Kafka/Shioaji 取得資料)
 │   │   ├── fetch_ticks.py        # │  ├─ 獲取 Tick
@@ -249,10 +219,11 @@ TICK-VIZ/
 │   ├── utils/                    # ├─ 📂 共用工具模組 (時間、資源管理等)
 │   │   ├── misc.py               # │  ├─ 雜項工具
 │   │   ├── resource_contexts.py  # │  ├─ 資源管理器 (Shioaji/Kafka context)
-│   │   ├── session_time.py       # │  ├─ 交易時間計算
+│   │   ├── session_time.py       # │  ├─ 交易時間計算 (不含 pandas)
 │   │   └── time_parser.py        # │  └─ CLI 日期解析
 │   │                               │
 │   ├── visualization/            # ├─ 📂 圖表與報告產出
+│   │   ├── figure_utils.py       # │  ├─ 【新增】Plotly 共用樣式與繪圖輔助
 │   │   ├── stats_table.py        # │  ├─ 統計表格生成
 │   │   ├── main_chart.py         # │  ├─ 主分析圖
 │   │   ├── candlestick_chart.py  # │  ├─ K 棒圖
@@ -265,7 +236,7 @@ TICK-VIZ/
 │
 ├── tests/                        # 📂 【自動化測試】(確保邏輯正確性)
 │
-├── main.py                       # 📜 【專案主入口】解析 CLI 參數、啟動 Dash 與核心服務
+├── main.py                       # 📜 【專案主入口】解析 CLI 參數、委派任務給 Orchestrator
 ├── requirements.txt              # 📋 Python 套件依賴清單
 ├── .env.example                  # 🔑 環境變數範例 (API Key/Secret)
 ├── LICENSE                       # 📄 專案授權
