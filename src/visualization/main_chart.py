@@ -189,7 +189,7 @@ def _configure_layout(fig: go.Figure, df: pd.DataFrame, ctx: RunContext):
     # --- 套用共用設定 (X 軸) ---
     fig.update_xaxes(
         range=fig_utils.get_time_range(df, ctx),
-        autorange=False,
+        autorange=False if ctx.real_time_mode else True,
         **fig_utils.COMMON_XAXIS_SETTINGS
     )
 

@@ -141,7 +141,7 @@ def plot_candlestick(df: pd.DataFrame, period: str, ctx: RunContext):
     fig.update_yaxes(**fig_utils.VOLUME_YAXIS_SETTINGS, row=2, col=1)
     fig.update_xaxes(
         range=fig_utils.get_time_range(df, ctx),
-        autorange=False,
+        autorange=False if ctx.real_time_mode else True,
         **fig_utils.COMMON_XAXIS_SETTINGS
     )
 

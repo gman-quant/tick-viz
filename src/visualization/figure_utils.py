@@ -76,7 +76,7 @@ VOLUME_YAXIS_SETTINGS = dict(
 # 📦 4. 輔助函式 (X 軸時間範圍)
 # ------------------------------------------------------------
 
-def get_time_range(df: pd.DataFrame, ctx: RunContext) -> tuple[datetime, datetime]:
+def get_time_range(df: pd.DataFrame, ctx: RunContext) -> tuple[datetime, datetime] | None:
     """
     (主要介面)
     根據即時或歷史模式，取得正確的圖表 X 軸時間範圍。
@@ -85,21 +85,11 @@ def get_time_range(df: pd.DataFrame, ctx: RunContext) -> tuple[datetime, datetim
         # 即時模式：顯示最後 N 分鐘的滑動視窗
         return _get_sliding_window(df, ctx.start_datetime, shared_state.ui_lookback_minutes)
     else:
-        # 歷史模式：顯示開盤後的完整固定視窗
-        return _get_observation_window(df, ctx.start_datetime)
+        # 歷史模式：交給 autorange 處理
+        return None
     
 
 # --- (內部輔助函式) ---
-
-def _get_observation_window(df: pd.DataFrame, start: datetime) -> tuple[datetime, datetime]:
-    """
-    (繪圖用) 計算完整的「固定」觀察視窗
-    (從開盤後 N 分鐘，到最後一筆 tick)
-    """
-    # (日盤 8:30 + 14 = 8:44; 夜盤 14:50 + 9 = 14:59)
-    adjusted_start = start + timedelta(minutes=14 if start.time() == DAY_SESSION_START_TIME else 9)
-    end = df['datetime'].iloc[-1] if not df.empty else adjusted_start
-    return adjusted_start, end + timedelta(minutes=1)
 
 def _get_sliding_window(
     df: pd.DataFrame,
