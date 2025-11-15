@@ -55,11 +55,11 @@ NIGHT_SESSION_START_TIME = dt_time(14, 50)
 NIGHT_SESSION_END_TIME   = dt_time( 5,  0, 15) # (15 秒緩衝)
 
 # ------------------------------------------------------------
-# 5. 應用程式行為 (效能調校)
+# 5. 應用程式行為
 # ------------------------------------------------------------
 # (後端：Kafka 沒資料時的最大等待時間)
 KAFKA_POLL_TIMEOUT_SECONDS  = 10
 # (前端：Dash UI 的畫面刷新週期)
 UI_REFRESH_INTERVAL_SECONDS = 5
-# (圖表顯示時間範圍)
+# (預設時間窗口，可於 UI 動態調整)
 DEFAULT_LOOKBACK_MINUTES    = 120

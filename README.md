@@ -131,12 +131,14 @@ KAFKA_BOOTSTRAP_SERVERS=your_kafka_address:9092
 KAFKA_TOPIC=your_topic_name
 ```
 
-修改 config/config.py 中的效能調校參數：
+修改 config/config.py 中的應用程式行為參數：
 ```python
 # (後端：Kafka 沒資料時的最大等待時間)
-KAFKA_POLL_TIMEOUT_SECONDS = 10
+KAFKA_POLL_TIMEOUT_SECONDS  = 10
 # (前端：Dash UI 的畫面刷新週期)
-UI_REFRESH_INTERVAL_SECONDS =  5
+UI_REFRESH_INTERVAL_SECONDS = 5
+# (預設時間窗口，可於 UI 動態調整)
+DEFAULT_LOOKBACK_MINUTES    = 120
 ```
 
 ---
