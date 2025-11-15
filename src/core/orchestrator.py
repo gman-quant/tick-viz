@@ -97,7 +97,7 @@ def run_realtime_mode():
     data_thread.start()
 
     # --- 啟動前景 Web Server (主執行緒) ---
-    logging.info(f"🚀 [Main] 啟動 Web Server (MainThread) 於 http://localhost:8080 ...")
+    logging.info(f"🚀 [Main] 啟動 Web Server 於 http://localhost:8080 ...")
     app = create_dash_app(shared_state) 
     
     try:

@@ -101,7 +101,7 @@ def process_market_session(
                     tse_prev_close=taiex_prev_close
                 )
             
-            logging.info(f"📈 累計：{len(df)} ｜ 新增：{new_count}")
+            logging.info(f"📈 累計：{len(df):>6,} ｜ 新增：{new_count:>6,}")
 
             # --- 3. 靜態報告生成 (僅歷史模式) ---
             if not ctx.real_time_mode:

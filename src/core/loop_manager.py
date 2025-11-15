@@ -132,7 +132,7 @@ def data_loop_manager():
             if holiday_sleep_until is not None:
                 if now_dt < holiday_sleep_until:
                     # (仍在休眠期)
-                    logging.info(f"💤 [T_Data] 今天假日，將休眠至 {holiday_sleep_until.strftime("%Y-%m-%d %H:%M")}... 60 秒後檢查。")
+                    logging.info(f"💤 [T_Data] 今日休市，暫停至 {holiday_sleep_until.strftime("%Y-%m-%d %H:%M")} ； 60 秒後檢查。")
                     time.sleep(60)
                     continue
                 else:
@@ -202,7 +202,7 @@ def data_loop_manager():
                     
                     # (3. 計算「下一個日盤」開盤時間，並設為「休眠直到」的時間戳)
                     holiday_sleep_until = get_next_valid_day_session_start(now_dt)
-                    logging.info(f"🔔 判定今天假日，將休眠至 {holiday_sleep_until.strftime("%Y-%m-%d %H:%M")}... 60 秒後檢查。")
+                    logging.info(f"🔔 判定今日休市，暫停至 {holiday_sleep_until.strftime("%Y-%m-%d %H:%M")} ； 60 秒後檢查。")
                     time.sleep(60)
             
         except Exception as e:
