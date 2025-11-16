@@ -143,7 +143,7 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
         name='Day Volume',
         width=bar_width,
         marker_color='rgba(255, 255, 0, 1.0)',
-        opacity=0.6,
+        opacity=0.8,
         hovertext=df_day['display_time'],
         hoverinfo='text+y'
     ), row=2, col=1)
@@ -155,7 +155,7 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
         name='Night Volume',
         width=bar_width,
         marker_color='rgba(127, 127, 0, 1.0)',
-        opacity=0.4,
+        opacity=0.5,
         hovertext=df_night['display_time'],
         hoverinfo='text+y'
     ), row=2, col=1)
@@ -175,6 +175,8 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
         ticktext=[''] * len(df), # 隱藏 X 軸標籤 (避免雜亂)
         tickangle=45,
         showspikes=True,
+        showgrid=True,
+        gridwidth=0.5,
         spikemode='across',
         spikesnap='cursor',
         showline=True
@@ -184,14 +186,12 @@ def plot_candlestick_with_volume(df: pd.DataFrame, html_output_path=f"{OUTPUT_DI
         tickformat=".0f",
         showgrid=True,
         gridwidth=0.5,
-        gridcolor='gray',
         row=1, col=1
     )
     fig.update_yaxes(
         title_text="Volume",
         showgrid=True,
         gridwidth=0.5,
-        gridcolor='gray',
         row=2, col=1
     )
 
