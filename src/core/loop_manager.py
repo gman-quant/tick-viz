@@ -14,20 +14,26 @@ from config.run_context import RunContext
 from config.types import DataSource, SessionType
 from src.core.session_processor import process_market_session
 from src.utils.resource_contexts import kafka_consumer
-from src.utils.session_time import in_which_session, is_am_night_session, get_next_valid_day_session_start
+from src.utils.session_time import (
+    get_next_valid_day_session_start,
+    in_which_session, 
+    is_am_night_session, 
+    is_weekend_market_close
+)
 from src.web.shared_state import shared_state
 
 
 # ------------------------------------------------------------
 # 📦 1. 單一盤別的資料處理任務
 # ------------------------------------------------------------
-def run_single_session_task(ctx: RunContext, api=None) -> bool:
+def run_single_session_task(ctx: RunContext, api=None) -> bool | None:
     """
     執行「單一盤別」的資料處理。
     
     回傳值:
-    - True  = 成功取得 Offset 並進入資料迴圈。
-    - False = 偵測到休市 (例如假日) 或發生致命錯誤而終止。
+    - True  = 任務正常執行完畢 (例如收盤)。
+    - False = 啟動失敗，判定為休市 (例如假日)。
+    - None  = 任務執行中發生非預期錯誤 (崩潰)。
     """
     
     # --- (A) 歷史模式 (Shioaji) ---
@@ -85,7 +91,6 @@ def run_single_session_task(ctx: RunContext, api=None) -> bool:
                     # --- (檢查: 假日/休市 "Fail Fast") ---
                     if datetime.now(TAIWAN_TZ) > grace_period_end:
                         logging.warning(f"⚠️ [T_Data] 已超過開盤寬限期 {grace_period_end} 且仍無 offset。")
-                        logging.warning("     判斷為假日休市，自動終止此任務。")
                         return False # (回傳 False (失敗訊號))
                     # --- (在寬限期內，重試) ---
                     else:
@@ -100,7 +105,7 @@ def run_single_session_task(ctx: RunContext, api=None) -> bool:
 
         except Exception as e:
             logging.exception(f"🔥 [T_Data] run_single_session_task 發生致命錯誤: {e}")
-            return False # (回傳 False (失敗訊號))
+            return None # (回傳 None (崩潰訊號))
 
 
 # ------------------------------------------------------------
@@ -116,10 +121,12 @@ def data_loop_manager():
     
     # "當前運行的任務" ID (e.g., "2025-11-10-DAY")
     current_running_session_key = None
-    
     # "假日休眠" 模式的「解除時間」
-    # (如果偵測到假日，設定此時間戳，系統將休眠直到下一個日盤開盤，完美跳過所有累贅的夜盤檢查。)
-    holiday_sleep_until = get_next_valid_day_session_start(datetime.now(TAIWAN_TZ))
+    # (如果偵測到假日，設定此時間戳，系統將休眠直到下一個日盤開盤，完美跳過所有累贅的檢查。)
+    holiday_sleep_until = get_next_valid_day_session_start() if is_weekend_market_close() else None
+
+    # (共用日誌旗標，防止休眠時洗版)
+    is_sleep_log_printed = False
     
     # --- 24/7 監控迴圈 ---
     while True:
@@ -132,12 +139,16 @@ def data_loop_manager():
             if holiday_sleep_until is not None:
                 if now_dt < holiday_sleep_until:
                     # (仍在休眠期)
-                    logging.info(f"💤 [T_Data] 今日休市，暫停至 {holiday_sleep_until.strftime("%Y-%m-%d %H:%M")} ； 60 秒後檢查。")
+                    if not is_sleep_log_printed:
+                        logging.info(f"💤 [T_Data] 今日休市，暫停至 {holiday_sleep_until.strftime("%Y-%m-%d %H:%M")}")
+                        is_sleep_log_printed = True
+
                     time.sleep(60)
                     continue
                 else:
                     # (休眠期結束)
                     logging.info(f"🔔 [T_Data] 假日休市模式結束，恢復正常檢查。")
+                    is_sleep_log_printed = False
                     holiday_sleep_until = None # (解除休眠)
             
             # --- (C) 檢查 2: 是否為正常休市 ---
@@ -147,6 +158,7 @@ def data_loop_manager():
                     # (剛收盤)
                     logging.info(f"🔔 [T_Data] {current_running_session_key} 已收盤。")
                     logging.info("     畫面將保留最後狀態。等待下一交易時段...")
+                    is_sleep_log_printed = False
                     current_running_session_key = None # (重設「運行中」標記)
                     with shared_state.lock:
                         shared_state.context = RunContext(
@@ -155,14 +167,16 @@ def data_loop_manager():
                         )
                 else:
                     # (處於休市)
-                    logging.info(f"💤 [T_Data] 休市中... 每 60 秒檢查一次。")
+                    if not is_sleep_log_printed:
+                        logging.info(f"💤 [T_Data] 休市中... 每 60 秒檢查一次。")
+                        is_sleep_log_printed = True
                 
                 time.sleep(60) # (正常休市 sleep)
                 continue 
 
             # --- (D) 檢查 3: 是否為「新」的任務 ---
 
-            # 1. 判斷是否為 AM 盤 (凌晨 00:00 - 05:00)
+            # 1. 判斷是否為 AM 夜盤 (凌晨 00:00 - 05:00)
             is_am = is_am_night_session(now_dt.time())
             # 2. 取得此 Session 應歸屬的「交易日」
             session_trade_date = today - timedelta(days=1) if is_am else today
@@ -173,6 +187,7 @@ def data_loop_manager():
                 
                 # --- (D.1) 建立新盤別的 Context ---
                 logging.info(f"🚀 [T_Data] 偵測到新交易時段: {new_session_key} SESSION")
+                is_sleep_log_printed = False
                 current_running_session_key = new_session_key 
                 
                 with shared_state.lock:
@@ -182,28 +197,44 @@ def data_loop_manager():
                     )
                 
                 # --- (D.2) 啟動任務 (並檢查回傳值) ---
-                task_success = run_single_session_task(shared_state.context, api=None)
+                # True  = 任務正常結束 (收盤)
+                # False = 啟動失敗 (判定休市)
+                # None  = 執行中崩潰
+                task_result = run_single_session_task(shared_state.context, api=None)
                 
-                # --- (D.3) 處理假日/休市終止 ---
-                if not task_success:
+                # --- (D.3) 處理任務結果 (成功/假日/崩潰) ---
 
-                     # (任務回傳 False，判斷為休市)
+                if task_result is True:
+                    # --- (狀況 1: 任務正常結束) ---
+                    # (管理器會自動在下個迴圈進入 (C) 休市檢查，無需額外處理)
+                    logging.debug(f"✅ [T_Data] {new_session_key} 任務已正常結束。")
+
+                elif task_result is False: 
+                    # --- (狀況 2: 判定為假日/休市) ---
                     logging.warning(f"⚠️ [T_Data] {new_session_key} 開盤後未收到 Tick Data。")
 
-                    # (1. 重設 "運行中" 標記)
-                    current_running_session_key = None
-                    
-                    # (2. 更新儀表板為 CLOSED)
+                    # (更新儀表板為 CLOSED)
                     with shared_state.lock:
                         shared_state.context = RunContext(
                             trade_date=today,
                             session_type=SessionType.CLOSED
                         )
                     
-                    # (3. 計算「下一個日盤」開盤時間，並設為「休眠直到」的時間戳)
+                    # (計算「下一個日盤」開盤時間，並設為「休眠直到」的時間戳)
                     holiday_sleep_until = get_next_valid_day_session_start(now_dt)
-                    logging.info(f"🔔 判定今日休市，暫停至 {holiday_sleep_until.strftime("%Y-%m-%d %H:%M")} ； 60 秒後檢查。")
-                    time.sleep(60)
+                    logging.info(f"🔔 判定今日休市，暫停至 {holiday_sleep_until.strftime("%Y-%m-%d %H:%M")}")
+                    is_sleep_log_printed = True
+                    current_running_session_key = None
+
+                elif task_result is None:
+                    # --- (狀況 3: 任務執行中崩潰) ---
+                    logging.error(f"🔥 [T_Data] {new_session_key} 任務執行時發生致命錯誤。")
+                    logging.info("     正在重設任務鎖，30 秒後將嘗試重啟...")
+
+                    # (重設「運行中」標記，這樣下一個迴圈才能重新觸發 (D) 檢查)
+                    current_running_session_key = None
+                    # (提供一個緩衝時間，避免系統因連續崩潰而耗盡資源)
+                    time.sleep(30)
             
         except Exception as e:
             # --- (E) 管理器例外處理 ---

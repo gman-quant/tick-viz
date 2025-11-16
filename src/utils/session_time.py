@@ -18,6 +18,33 @@ from config.config import (
 from config.types import SessionType
 
 
+
+# ------------------------------------------------------------
+# 📦 (Helper) 檢查是否為週末長休市
+# ------------------------------------------------------------
+def is_weekend_market_close(now_dt: datetime | None = None) -> bool:
+    """
+    快速檢查目前是否處於「週末長休市」時段。
+    (指 週六 05:00 ~ 週一 08:30 之間的時段)
+    """
+    if now_dt is None:
+        now_dt = datetime.now(tz=TAIWAN_TZ)
+    now_time    = now_dt.time()
+    now_weekday = now_dt.weekday() # 0=Mon, 1=Tue, ..., 5=Sat, 6=Sun
+    # --- 1. 檢查週日 (Day 6) ---
+    if now_weekday == 6: # Sunday
+        return True
+    # --- 2. 檢查週六 (Day 5) ---
+    # (週六 05:00 (NIGHT_END) 之後)
+    if now_weekday == 5 and now_time >= NIGHT_SESSION_END_TIME:
+        return True
+    # --- 3. 檢查週一 (Day 0) ---
+    # (週一 08:30 (DAY_START) 之前)
+    if now_weekday == 0 and now_time < DAY_SESSION_START_TIME:
+        return True
+    # --- 4. 其他 (盤中或盤間休息) ---
+    return False
+
 # ------------------------------------------------------------
 # 📦 (Helper) 判斷是否為凌晨夜盤
 # ------------------------------------------------------------
@@ -30,7 +57,7 @@ def is_am_night_session(now_time: dt_time) -> bool:
 # ------------------------------------------------------------
 # 📦 (Helper) 取得下一個日盤開盤時間 
 # ------------------------------------------------------------
-def get_next_valid_day_session_start(now_dt: datetime) -> datetime:
+def get_next_valid_day_session_start(now_dt: datetime = None) -> datetime:
     """
     (假日模式專用)
     從 'today' 開始，尋找下一個「有效交易日」的「日盤」開盤時間。
@@ -38,6 +65,8 @@ def get_next_valid_day_session_start(now_dt: datetime) -> datetime:
     (e.g., today=Friday -> returns Monday 08:30)
     (e.g., today=Monday -> returns Tuesday 08:30)
     """
+    if now_dt is None:
+        now_dt = datetime.now(TAIWAN_TZ)
 
     # --- 1. 判斷當前時間，決定 "next_day" 的起點 ---
     today = now_dt.date()
@@ -63,15 +92,15 @@ def in_which_session(now_dt: datetime | None = None) -> SessionType:
     if now_dt is None:
         now_dt = datetime.now(tz=TAIWAN_TZ)
 
+    # --- 1. 處理週末 [週六 05:00 ~ 週一 08:30 之間的時段]---
+    if is_weekend_market_close(now_dt):
+        return SessionType.CLOSED
+
     now_time    = now_dt.time()
     now_weekday = now_dt.weekday() # 0=Mon, 1=Tue, ..., 5=Sat, 6=Sun
 
-    # --- 1. 處理週日 (Day 6) [最快的休市出口] ---
-    if now_weekday == 6: # Sunday
-        return SessionType.CLOSED
-
-    # --- 2. 處理週二 ~ 週五 (Day 1-4) [最常見的開盤日] ---
-    if 1 <= now_weekday <= 4: # Tuesday - Friday
+    # --- 2. 處理週一 ~ 週五 (Day 0-4) [最常見的開盤日] ---
+    if 0 <= now_weekday <= 4: # Monday - Friday
         # (A) 日盤 (08:30-13:45)
         if DAY_SESSION_START_TIME <= now_time < DAY_SESSION_END_TIME:
             return SessionType.DAY
@@ -82,26 +111,17 @@ def in_which_session(now_dt: datetime | None = None) -> SessionType:
         # (C) 盤中休市 (05:00-08:30, 13:45-14:50)
         return SessionType.CLOSED
     
-    # --- 3. 處理週一 (Day 0) [邏輯特殊：沒有凌晨夜盤] ---
-    if now_weekday == 0: # Monday
-        # (A) 日盤 (08:30 - 13:45)
-        if DAY_SESSION_START_TIME <= now_time < DAY_SESSION_END_TIME:
-            return SessionType.DAY
-        # (B) 夜盤 (下午) (14:50 - 23:59)
-        if now_time >= NIGHT_SESSION_START_TIME:
-            return SessionType.NIGHT
-        # (C) 凌晨 (00:00-08:30) 或 盤中休市 (13:45-14:50)
-        return SessionType.CLOSED
-
-    # --- 4. 處理週六 (Day 5) [邏輯特殊：只有凌晨夜盤] ---
+    # --- 3. 處理週六 (Day 5) [邏輯特殊：只有凌晨夜盤] ---
     # (如果執行到這裡，now_weekday 必定是 5)
-    
-    # (A) 夜盤 (凌晨) (00:00 - 05:00)
+    # 凌晨夜盤 (00:00 - 05:00)
     # (屬於週五的夜盤)
-    if now_time < NIGHT_SESSION_END_TIME: 
+    if is_am_night_session(now_time): 
         return SessionType.NIGHT
     
-    # (B) 05:00 之後 (休市)
+    # --- 4. 最終防線 (Fallback) ---
+    # (理論上，執行到此處的只有 "週六 05:00 之後" 的時段)
+    # (但這些時段已在 (1) 被 is_weekend_market_close 攔截)
+    # (此處 return 確保函式簽章的強固性)
     return SessionType.CLOSED
 
 # ------------------------------------------------------------
