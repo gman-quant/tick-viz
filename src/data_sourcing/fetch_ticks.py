@@ -219,9 +219,9 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         ).set_index('datetime')
 
         # --- 4. 篩選盤別時間並計算指標 ---
-        df_window = df_merged.loc[ctx.start_datetime : ctx.end_datetime].copy().reset_index()
+        df_window = df_merged.loc[ctx.start_datetime : ctx.end_datetime].copy()
 
-        window_size = 300
+        window_size, window_size2 = 180, '180s'
         return df_window.rename(columns={'close_TSE': 'underlying_price'}).assign(
             bid_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 1, 0).cumsum(),
             ask_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 2, 0).cumsum(),
@@ -229,9 +229,13 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
             high=lambda x: x['close'].cummax(),
             low=lambda x: x['close'].cummin(),
             avg_price=lambda x: (x['close'] * x['volume']).cumsum() / x['volume'].cumsum(),
-            rvwap=lambda x: (x['close'] * x['volume']).rolling(window_size, min_periods=1).sum() /
-                          x['volume'].rolling(window_size, min_periods=1).sum()
-        )
+            # rvwap=lambda x: (x['close'] * x['volume']).rolling(window_size, min_periods=1).sum() /
+            #               x['volume'].rolling(window_size, min_periods=1).sum(),
+            sma = lambda x: x['close'].rolling(window_size, min_periods=1).mean(),
+            sma2 = lambda x: x['close'].rolling(window_size2, min_periods=1).mean(),
+
+            
+        ).reset_index()
     
     except Exception as e:
         logging.exception(f"❌ [Main] 歷史模式 {ctx.trade_date} {ctx.session_type.name} 獲取資料失敗: {e}")

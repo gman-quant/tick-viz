@@ -214,7 +214,7 @@ TICK-VIZ/
 │   │   ├── bars/                 # │  ├─ 📂 K 棒合成
 │   │   │   ├── time_bars.py      # │  │  ├─ 時間型 K 棒
 │   │   │   └── volume_bars.py    # │  │  └─ 成交量型 K 棒
-│   │   └── metrics.py            # │  └─ 計算技術指標 (如 RVWAP) 並準備繪圖用 DF
+│   │   └── metrics.py            # │  └─ 計算技術指標並準備繪圖用 DF
 │   │                               │
 │   ├── utils/                    # ├─ 📂 共用工具模組 (時間、資源管理等)
 │   │   ├── misc.py               # │  ├─ 雜項工具

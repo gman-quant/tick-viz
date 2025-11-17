@@ -18,7 +18,8 @@ def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close:
         "high",
         "low",
         "avg_price",
-        "rvwap"
+        "sma",
+        "sma2"
     ]
     
     # 檢查所有必要欄位是否存在
@@ -61,10 +62,10 @@ def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close:
     )
     
     # rvwap 相關指標
-    processed_df['rvwap_to_vwap_premium'] = processed_df['rvwap'] - processed_df['avg_price']
-    processed_df['rvwap-rrp_rh'] = processed_df['rvwap'] - processed_df['rrp_rhigh']
-    processed_df['rvwap-rrp_rl'] = processed_df['rvwap'] - processed_df['rrp_rlow']
-    processed_df['rrp_rh-rrp_rl'] = processed_df['rrp_rhigh'] - processed_df['rrp_rlow']
-    processed_df['close-rvwap'] = processed_df['close'] - processed_df['rvwap']
+    # processed_df['rvwap_to_vwap_premium'] = processed_df['rvwap'] - processed_df['avg_price']
+    # processed_df['rvwap-rrp_rh'] = processed_df['rvwap'] - processed_df['rrp_rhigh']
+    # processed_df['rvwap-rrp_rl'] = processed_df['rvwap'] - processed_df['rrp_rlow']
+    # processed_df['rrp_rh-rrp_rl'] = processed_df['rrp_rhigh'] - processed_df['rrp_rlow']
+    # processed_df['close-rvwap'] = processed_df['close'] - processed_df['rvwap']
     
     return processed_df

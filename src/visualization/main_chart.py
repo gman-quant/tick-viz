@@ -21,8 +21,9 @@ def _add_price_traces(fig: go.Figure, df: pd.DataFrame):
     row, col = 1, 1
     
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["close"], name="[期貨] TXF", line=dict(color="rgba(255, 255, 255, 0.5)", width=1)), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rvwap"], name="RVWAP", line=dict(color="yellow", dash="solid", width=1)), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["avg_price"], name="VWAP", line=dict(color="orange", dash="solid", width=1)), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["sma"], name="SMA", line=dict(color="yellow", dash="solid", width=1)), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["sma2"], name="SMA2", line=dict(color="orange", dash="solid", width=1)), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["avg_price"], name="VWAP", line=dict(color='rgb(179, 89, 0)', dash="solid", width=1)), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rrp_rhigh"], name="[期貨] 參考價", line=dict(color='rgba(144, 238, 144, 0.3)', width=1), visible=True), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rrp_rlow"], name="[期貨] 參考價", line=dict(color='rgba(255, 192, 203, 0.3)', width=1), visible=True), row=row, col=col)
     fig.add_trace(go.Scattergl(x=df["datetime"], y=df["high"], name="High", line=dict(color=fig_utils.COLOR_INCREASING, dash="dash", width=1)), row=row, col=col)

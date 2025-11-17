@@ -73,14 +73,25 @@ def process_market_session(
                 # --- 即時增量處理 ---
                 new_df['datetime'] = pd.to_datetime(new_df['datetime'], format='ISO8601')
                 main_df = pd.concat([main_df, new_df], ignore_index=True)
-                main_df.drop_duplicates(inplace=True) # 確保唯一性
+                # main_df.drop_duplicates(inplace=True) # 確保唯一性
                 
                 # --- 計算指標 ---
-                window_size = 300
-                main_df['rvwap'] = (
-                    (main_df['close'] * main_df['volume']).rolling(window_size, min_periods=1).sum()
-                    / main_df['volume'].rolling(window_size, min_periods=1).sum()
-                )
+                window_size, window_size2 = 180, '180s'
+                # main_df['rvwap'] = (
+                #     (main_df['close'] * main_df['volume']).rolling(window_size, min_periods=1).sum()
+                #     / main_df['volume'].rolling(window_size, min_periods=1).sum()
+                # )
+                main_df['sma'] = main_df.rolling(
+                    window_size, 
+                    on='datetime', 
+                    min_periods=1
+                )['close'].mean()
+                main_df['sma2'] = main_df.rolling(
+                    window_size2, 
+                    on='datetime', 
+                    min_periods=1
+                )['close'].mean()
+                
                 
                 df = main_df # 將處理完的 main_df 指派給 df
                 
