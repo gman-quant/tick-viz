@@ -76,18 +76,19 @@ def process_market_session(
                 # main_df.drop_duplicates(inplace=True) # 確保唯一性
                 
                 # --- 計算指標 ---
-                window_size, window_size2 = 180, '180s'
+                tick_sma_window = shared_state.param_tick_window
+                time_sma_window = shared_state.param_time_window
                 # main_df['rvwap'] = (
-                #     (main_df['close'] * main_df['volume']).rolling(window_size, min_periods=1).sum()
-                #     / main_df['volume'].rolling(window_size, min_periods=1).sum()
+                #     (main_df['close'] * main_df['volume']).rolling(tick_sma_window, min_periods=1).sum()
+                #     / main_df['volume'].rolling(tick_sma_window, min_periods=1).sum()
                 # )
                 main_df['sma'] = main_df.rolling(
-                    window_size, 
+                    tick_sma_window, 
                     on='datetime', 
                     min_periods=1
                 )['close'].mean()
                 main_df['sma2'] = main_df.rolling(
-                    window_size2, 
+                    time_sma_window, 
                     on='datetime', 
                     min_periods=1
                 )['close'].mean()

@@ -1,5 +1,7 @@
 # src/processing/metrics.py
 
+from datetime import timedelta
+
 import pandas as pd
 
 def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close: float) -> pd.DataFrame:
@@ -49,6 +51,41 @@ def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close:
     # 買賣力指標
     processed_df['cumu_net_agg_vol'] = processed_df['bid_side_total_vol'] - processed_df['ask_side_total_vol']
     
+    # ---------------------------------------------------------
+    # 🚀 [優化] 買賣力變化 (改為 Time-based Shift)
+    # ---------------------------------------------------------
+    
+    # # 1. 計算「目標回溯時間」 (現在時間 - 180秒)
+    # # (假設 datetime 是欄位，如果是 index 請先 reset_index)
+    # time_window = 300
+    # lookup_times = processed_df['datetime'] - timedelta(seconds=time_window)
+    
+    # # 2. 建立查詢表 (左表)
+    # target_df = pd.DataFrame({'lookup_time': lookup_times})
+    
+    # # 3. 使用 merge_asof 進行「模糊匹配」
+    # # (去 processed_df 裡找，時間最接近且小於等於 lookup_time 的那一筆)
+    # prev_values = pd.merge_asof(
+    #     target_df,
+    #     processed_df[['datetime', 'bid_side_total_vol', 'ask_side_total_vol']],
+    #     left_on='lookup_time',
+    #     right_on='datetime',
+    #     direction='backward' # 往前找最近的一筆
+    # )
+    
+    # # 4. 計算動能 (現在累積量 - N秒前累積量)
+    # # (注意：prev_values 的 index 會跟 processed_df 對齊)
+    # processed_df['bid_side_volume_change'] = (
+    #     processed_df['bid_side_total_vol'] - prev_values['bid_side_total_vol']
+    # )
+    # processed_df['ask_side_volume_change'] = (
+    #     processed_df['ask_side_total_vol'] - prev_values['ask_side_total_vol']
+    # )
+
+    # # (填補可能的 NaN，例如剛開盤前 180 秒)
+    # processed_df['bid_side_volume_change'] = processed_df['bid_side_volume_change'].fillna(0)
+    # processed_df['ask_side_volume_change'] = processed_df['ask_side_volume_change'].fillna(0)
+
     # 買賣力變化 (動能)
     processed_df['bid_side_volume_change'] = (
         processed_df['bid_side_total_vol'] - processed_df['bid_side_total_vol'].shift(window_size2)
@@ -60,6 +97,10 @@ def prepare_plot_data(df: pd.DataFrame, txf_prev_close: float, taiex_prev_close:
         (processed_df['bid_side_volume_change'] - processed_df['ask_side_volume_change']) / 
         (processed_df['bid_side_volume_change'] + processed_df['ask_side_volume_change'])
     )
+
+    # sma 相關指標
+    processed_df['dif'] = processed_df['sma'] - processed_df['sma2']
+
     
     # rvwap 相關指標
     # processed_df['rvwap_to_vwap_premium'] = processed_df['rvwap'] - processed_df['avg_price']

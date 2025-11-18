@@ -7,7 +7,7 @@ import threading
 import pandas as pd
 
 # Local Application Imports
-from config.config import DEFAULT_LOOKBACK_MINUTES
+from config.config import DEFAULT_LOOKBACK_MINUTES, DEFAULT_TICK_WINDOW, DEFAULT_TIME_WINDOW
 from config.run_context import RunContext
 
 # ------------------------------------------------------------
@@ -38,6 +38,10 @@ class SharedState:
         # --- (NEW) UI 狀態 ---
         # (這個值將由 Dash UI (滑桿) 來寫入)
         self.ui_lookback_minutes: int = DEFAULT_LOOKBACK_MINUTES
+
+        # (可由 UI 動態調整的策略參數)
+        self.param_tick_window: int = DEFAULT_TICK_WINDOW
+        self.param_time_window: str = DEFAULT_TIME_WINDOW
 
 
 # --- 建立全域單例 (Singleton) ---

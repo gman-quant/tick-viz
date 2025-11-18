@@ -86,7 +86,7 @@ def get_time_range(df: pd.DataFrame, ctx: RunContext) -> tuple[datetime, datetim
         return _get_sliding_window(df, ctx.start_datetime, shared_state.ui_lookback_minutes)
     else:
         # 歷史模式：交給 autorange 處理
-        return None
+        return df["datetime"].iloc[0], df["datetime"].iloc[-1]
     
 
 # --- (內部輔助函式) ---

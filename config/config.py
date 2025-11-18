@@ -63,3 +63,9 @@ KAFKA_POLL_TIMEOUT_SECONDS  = 10
 UI_REFRESH_INTERVAL_SECONDS = 5
 # (預設時間窗口，可於 UI 動態調整)
 DEFAULT_LOOKBACK_MINUTES    = 120
+
+# ------------------------------------------------------------
+# 6. 預設策略參數
+# ------------------------------------------------------------
+DEFAULT_TICK_WINDOW = 60      # 預設 60 筆
+DEFAULT_TIME_WINDOW = '180s'  # 預設 180 秒

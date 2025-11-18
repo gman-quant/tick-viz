@@ -19,6 +19,7 @@ from config.types import SessionType
 from src.data_sourcing.market_data import get_contract
 from src.utils.resource_contexts import shioaji_session
 from src.utils.time_parser import parse_tick_datetime
+from src.web.shared_state import shared_state
 
 
 # ------------------------------------------------------------
@@ -221,7 +222,9 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
         # --- 4. 篩選盤別時間並計算指標 ---
         df_window = df_merged.loc[ctx.start_datetime : ctx.end_datetime].copy()
 
-        window_size, window_size2 = 180, '180s'
+        tick_sma_window = shared_state.param_tick_window
+        time_sma_window = shared_state.param_time_window
+        
         return df_window.rename(columns={'close_TSE': 'underlying_price'}).assign(
             bid_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 1, 0).cumsum(),
             ask_side_total_vol=lambda x: x['volume'].where(x['tick_type'] == 2, 0).cumsum(),
@@ -229,10 +232,10 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
             high=lambda x: x['close'].cummax(),
             low=lambda x: x['close'].cummin(),
             avg_price=lambda x: (x['close'] * x['volume']).cumsum() / x['volume'].cumsum(),
-            # rvwap=lambda x: (x['close'] * x['volume']).rolling(window_size, min_periods=1).sum() /
-            #               x['volume'].rolling(window_size, min_periods=1).sum(),
-            sma = lambda x: x['close'].rolling(window_size, min_periods=1).mean(),
-            sma2 = lambda x: x['close'].rolling(window_size2, min_periods=1).mean(),
+            # rvwap=lambda x: (x['close'] * x['volume']).rolling(tick_sma_window, min_periods=1).sum() /
+            #               x['volume'].rolling(tick_sma_window, min_periods=1).sum(),
+            sma = lambda x: x['close'].rolling(tick_sma_window, min_periods=1).mean(),
+            sma2 = lambda x: x['close'].rolling(time_sma_window, min_periods=1).mean(),
 
             
         ).reset_index()
