@@ -123,7 +123,7 @@ DEFAULT_LOOKBACK_MINUTES    = 120
 
 ## 使用方式
 
-記得每次都要先進入專案目錄起動虛擬環境：
+先進入專案目錄啟動虛擬環境：
 ```bash
 cd Projects/tick-viz
 source venv/bin/activate

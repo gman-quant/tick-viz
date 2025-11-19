@@ -76,7 +76,7 @@ git update-index --no-assume-unchanged config/config.py
 
 ## 3. 專案手動執行指令
 
-先進入專案目錄請動虛擬環境
+先進入專案目錄啟動虛擬環境
 ```bash
 cd Projects/tick-viz
 source venv/bin/activate
