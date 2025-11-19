@@ -95,7 +95,7 @@ if __name__ == "__main__":
 
 🟢 即時更新模式
 cd Projects/tick-viz && source venv/bin/activate
-python main.py --real-time-mode 1
+python main.py
 
 🔵 歷史回顧模式
 cd Projects/tick-viz && source venv/bin/activate

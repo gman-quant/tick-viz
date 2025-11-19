@@ -68,6 +68,9 @@
 #### 1. 複製本專案
 ```bash
 git clone https://github.com/gman-quant/tick-viz.git
+```
+```bash
+# 進入專案目錄
 cd tick-viz
 ```
 
@@ -76,7 +79,8 @@ cd tick-viz
 # macOS / Linux
 python -m venv venv
 source venv/bin/activate
-
+```
+```bash
 # Windows (Git Bash)
 python -m venv venv
 source venv/Scripts/activate
@@ -119,6 +123,12 @@ DEFAULT_LOOKBACK_MINUTES    = 120
 
 ## 使用方式
 
+記得每次都要先進入專案目錄起動虛擬環境：
+```bash
+cd Projects/tick-viz
+source venv/bin/activate
+```
+
 本專案支援兩種運行模式：
 
 ### 🟢 即時模式（`real_time_mode=1`）
@@ -132,9 +142,10 @@ DEFAULT_LOOKBACK_MINUTES    = 120
   - 功能：將目前儀表板的圖表與統計資料，生成一份靜態 HTML 報告，存至 output/TXF-Charts-Live-Static.html。
 
 - 啟動方式：
+  
+  如未指定 --real-time-mode，預設值為 1。因此一般使用只需：
 ```bash
-source venv/bin/activate
-python main.py --real-time-mode 1
+python main.py
 ```
 啟動後請開啟瀏覽器訪問 http://localhost:8080
 
@@ -156,7 +167,6 @@ python main.py --real-time-mode 1
 
 - 啟動方式：
 ```bash
-source venv/bin/activate
 python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 --session whole --data-source shioaji
 # --session 可選 'day'（日盤）、'night'（夜盤）、或 'whole'（日+夜）
 ```
@@ -173,8 +183,9 @@ python main.py --real-time-mode 0 --date-start 2025-10-01 --date-end 2025-10-31 
 
 - 啟動方式：
 ```bash
-source venv/bin/activate
+# (1) 先將 Parquet 轉為 K 線 CSV
 python -m scripts.generate_daily_csv
+# (2) 再將 K 線 CSV 繪製成 HTML
 python -m scripts.plot_txf_kbar
 ```
 

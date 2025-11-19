@@ -76,26 +76,26 @@ git update-index --no-assume-unchanged config/config.py
 
 ## 3. 專案手動執行指令
 
-### 3.1. 啟動 24/7 即時伺服器
-(必須先執行 launchctl bootout ... 確保 8080 埠未被佔用)
+先進入專案目錄請動虛擬環境
 ```bash
 cd Projects/tick-viz
 source venv/bin/activate
-python main.py --real-time-mode 1
+```
+
+### 3.1. 啟動 24/7 即時伺服器
+(必須先執行 launchctl bootout ... 確保 8080 埠未被佔用)
+
+```bash
+python main.py
 ```
 
 ### 3.2. 執行歷史回測模式
 ```bash
-cd Projects/tick-viz
-source venv/bin/activate
 python main.py --real-time-mode 0 --date-start 2025-11-17 --date-end 2025-11-17 --session day --data-source shioaji
 ```
 
 ### 3.3. 執行靜態圖表腳本
 ```bash
-cd Projects/tick-viz
-source venv/bin/activate
-
 # (1) 先將 Parquet 轉為 K 線 CSV
 python -m scripts.generate_daily_csv
 
