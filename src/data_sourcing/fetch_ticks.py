@@ -16,7 +16,7 @@ from confluent_kafka import Consumer, TopicPartition
 from config.config import CACHE_DIR, KAFKA_POLL_TIMEOUT_SECONDS, UI_REFRESH_INTERVAL_SECONDS, TAIWAN_TZ
 from config.run_context import RunContext
 from config.types import SessionType
-from src.data_sourcing.market_data import get_contract
+from src.utils.misc import get_contract
 from src.utils.resource_contexts import shioaji_session
 from src.utils.time_parser import parse_tick_datetime
 from src.web.shared_state import shared_state
@@ -114,7 +114,7 @@ def fetch_ticks_from_kafka(
 # ------------------------------------------------------------
 # 📦 (Shioaji) 抓取或載入快取
 # ------------------------------------------------------------
-def _get_or_fetch_contract_ticks(
+def get_or_fetch_contract_ticks(
     api: sj.Shioaji, contract: sj.contracts.Contract, date: str, cache_file: Path
 ) -> pd.DataFrame:
     """
@@ -131,7 +131,8 @@ def _get_or_fetch_contract_ticks(
     logging.info(f"💾 [Main] Cache not found for {cache_file.name}. Fetching from API...")
     ticks = api.ticks(contract=contract, date=date)
     if not ticks['ts']:
-        raise ValueError(f"No tick data found for {contract.code} on {date}.")
+        logging.warning(f"⚠️ [T_Data] Shioaji API 查無資料: {contract.code} on {date} (可能為休市)")
+        return pd.DataFrame()
 
     # --- 3. 處理並儲存快取 ---
     df = pd.DataFrame({**ticks})
@@ -159,8 +160,8 @@ def _load_ticks_with_api(
     tse_contract = get_contract(api, "tse")
 
     # (抓取或讀取快取資料)
-    df_txf = _get_or_fetch_contract_ticks(api, txf_contract, target_date_str, txf_file)
-    df_tse = _get_or_fetch_contract_ticks(api, tse_contract, date_str, tse_file)
+    df_txf = get_or_fetch_contract_ticks(api, txf_contract, target_date_str, txf_file)
+    df_tse = get_or_fetch_contract_ticks(api, tse_contract, date_str, tse_file)
 
     return df_txf, df_tse
 
@@ -199,6 +200,14 @@ def fetch_ticks_from_shioaji(ctx: RunContext, api, tse_prev_close: float) -> pd.
             # (使用快取)
             df_txf = pd.read_parquet(txf_file)
             df_tse = pd.read_parquet(tse_file)
+
+        # -------------------------------------------------------
+        # 🛑 防呆檢查：防止處理空資料導致崩潰
+        # -------------------------------------------------------
+        # 如果任一資料表為空 (例如休市日)，直接回傳，避免 iloc[0] 報錯
+        if df_txf.empty or df_tse.empty:
+             logging.warning(f"⚠️ [T_Data] 資料不足 (TXF: {len(df_txf)}, TSE: {len(df_tse)})，跳過此時段。")
+             return pd.DataFrame()
 
         # --- 3. 處理與合併 (TXF & TSE) ---
         first_row_df = pd.DataFrame([df_tse.iloc[0].copy()])

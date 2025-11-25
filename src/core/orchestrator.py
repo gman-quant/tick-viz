@@ -49,7 +49,7 @@ def run_backfill_mode(
 
         while current <= dt_ed:
             if current.weekday() >= 5:
-                logging.info(f"⏩ 跳過週末：{current}")
+                logging.info(f"⏩ 跳過週末：{current}\n")
                 current += one_day
                 continue
 

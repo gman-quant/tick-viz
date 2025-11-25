@@ -118,7 +118,7 @@ def process_market_session(
             # --- 3. 靜態報告生成 (僅歷史模式) ---
             if not ctx.real_time_mode:
                 if df is None or df.empty:
-                     logging.warning("⚠️ 沒有新資料，請確認時間或來源。")
+                     logging.warning("⚠️ 沒有新資料，跳過報告生成。\n")
                 else:
                     logging.info("📊 資料獲取完畢，準備生成靜態報告...")
                     stats_html = stats_table.generate_stats_html(
