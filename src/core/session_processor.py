@@ -98,12 +98,12 @@ def process_market_session(
                 
                 # --- 更新共用狀態 (Web/Dash) ---
                 plot_df = prepare_plot_data(df, txf_prev_close, taiex_prev_close)
-                df_kbars_1min = generate_kbars(df, period="1min", ctx=ctx)
+                active_kbars_df = generate_kbars(df, period="3min", ctx=ctx)
 
                 with shared_state.lock:
                     shared_state.latest_df = df
                     shared_state.plot_df = plot_df
-                    shared_state.kbars_1min = df_kbars_1min
+                    shared_state.active_kbars_df = active_kbars_df
             
             # --- (B) Shioaji 歷史模式 ---
             else:

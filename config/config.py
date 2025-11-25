@@ -62,7 +62,7 @@ KAFKA_POLL_TIMEOUT_SECONDS  = 5
 # (前端：Dash UI 的畫面刷新週期)
 UI_REFRESH_INTERVAL_SECONDS = 5
 # (預設時間窗口，可於 UI 動態調整)
-DEFAULT_LOOKBACK_MINUTES    = 120
+DEFAULT_LOOKBACK_MINUTES    = 300
 
 # ------------------------------------------------------------
 # 6. 預設策略參數

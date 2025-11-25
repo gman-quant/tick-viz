@@ -27,9 +27,9 @@ class SharedState:
         self.context:      RunContext = RunContext()
         
         # --- Dataframes ---
-        self.latest_df:  pd.DataFrame | None = None # 原始 Tick DataFrame
-        self.plot_df:    pd.DataFrame | None = None # 包含衍生指標的 DataFrame
-        self.kbars_1min: pd.DataFrame | None = None # 1 分 K
+        self.latest_df:       pd.DataFrame | None = None # 原始 Tick DataFrame
+        self.plot_df:         pd.DataFrame | None = None # 包含衍生指標的 DataFrame
+        self.active_kbars_df: pd.DataFrame | None = None
         
         # --- Market Data ---
         self.txf_prev_close:    float | None = None

@@ -90,7 +90,7 @@ import src.visualization.figure_utils as fig_utils
 # ------------------------------------------------------------
 # 📦 繪製 Time-based K 線圖
 # ------------------------------------------------------------
-def plot_candlestick(df: pd.DataFrame, period: str, ctx: RunContext):
+def plot_candlestick(df: pd.DataFrame, period: int, ctx: RunContext):
     """
     繪製單純的 K 線圖 (Candlestick) 與成交量。
     """

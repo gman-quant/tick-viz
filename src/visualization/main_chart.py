@@ -16,18 +16,31 @@ import src.visualization.figure_utils as fig_utils
 # ------------------------------------------------------------
 # 📦 (Subplot 1) 價格相關走勢圖
 # ------------------------------------------------------------
-def _add_price_traces(fig: go.Figure, df: pd.DataFrame):
+def _add_price_traces(fig: go.Figure, df: pd.DataFrame, ctx: RunContext):
     """在 fig 的第1列新增價格相關走勢圖。"""
     row, col = 1, 1
-    
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rrp_rhigh"], name="[期貨] 參考價", legendrank=0, line=dict(color='rgba(144, 238, 144, 0.3)', width=1), visible='legendonly'), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["rrp_rlow"], name="[期貨] 參考價", legendrank=1, line=dict(color='rgba(255, 192, 203, 0.3)', width=1), visible='legendonly'), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["high"], name="High", legendrank=2, line=dict(color=fig_utils.COLOR_INCREASING, dash="dash", width=1)), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["close"], name="[期貨] TXF", legendrank=3, line=dict(color="rgba(255, 255, 255, 0.5)", width=1)), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["sma"], name="SMA", legendrank=4, line=dict(color="yellow", dash="solid", width=1)), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["sma2"], name="SMA2", legendrank=5, line=dict(color="orange", dash="solid", width=1)), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["avg_price"], name="VWAP", legendrank=6, line=dict(color='rgb(179, 89, 0)', dash="solid", width=1)), row=row, col=col)
-    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["low"], name="Low", legendrank=7, line=dict(color=fig_utils.COLOR_DECREASING, dash="dash", width=1)), row=row, col=col)
+    visible_in_report = not ctx.real_time_mode # 'legendonly'
+    fig.add_trace(go.Scattergl(
+        x=df["datetime"], y=df["underlying_price"], name="TAIEX", legendrank=0, 
+        line=dict(color='rgba(144, 114, 238, 0.3)', width=1), 
+        visible=visible_in_report), 
+        row=row, col=col)
+    fig.add_trace(go.Scattergl(
+        x=df["datetime"], y=df["rrp_rhigh"], name="SIF Upper", legendrank=1, 
+        line=dict(color='rgba(144, 238, 144, 0.3)', width=1), 
+        visible=visible_in_report),
+        row=row, col=col)
+    fig.add_trace(go.Scattergl(
+        x=df["datetime"], y=df["rrp_rlow"], name="SIF Lower", legendrank=2, 
+        line=dict(color='rgba(255, 192, 203, 0.3)', width=1), 
+        visible=visible_in_report),
+        row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["high"], name="TXF High", legendrank=3, line=dict(color=fig_utils.COLOR_INCREASING, dash="dash", width=1)), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["close"], name="TXF", legendrank=4, line=dict(color="rgba(255, 255, 255, 0.5)", width=1)), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["sma"], name="Fast SMA", legendrank=5, line=dict(color="yellow", dash="solid", width=1)), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["sma2"], name="Slow SMA", legendrank=6, line=dict(color="orange", dash="solid", width=1)), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["avg_price"], name="VWAP", legendrank=7, line=dict(color='rgb(179, 89, 0)', dash="solid", width=1)), row=row, col=col)
+    fig.add_trace(go.Scattergl(x=df["datetime"], y=df["low"], name="TXF Low", legendrank=8, line=dict(color=fig_utils.COLOR_DECREASING, dash="dash", width=1)), row=row, col=col)
 
     # --- 套用共用 Y 軸設定 ---
     fig.update_yaxes(**fig_utils.PRICE_YAXIS_SETTINGS, row=row, col=col)
@@ -226,7 +239,7 @@ def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
 
     # --- Y 軸設定 ---
     fig.update_yaxes(
-        title_text="淨成交強度",
+        title_text="Net Trade Intensity",
         tickformat=".2f",
         row=row,
         col=col,
@@ -318,7 +331,7 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
     
     # --- Y 軸設定 (雙軸) ---
     fig.update_yaxes(
-        title_text="淨主動成交量", 
+        title_text="Net Aggressive Volume", 
         tickformat=".0f", 
         row=row, col=col, 
         autorange=True, 
@@ -326,7 +339,7 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
         showgrid=True,
     )
     fig.update_yaxes(
-        title_text="累計成交量", 
+        title_text="Total Volume", 
         tickformat=".0f",
         autorange=True,
         showgrid=False,
@@ -379,11 +392,11 @@ def create_tick_analysis_figure(plot_df: pd.DataFrame, txf_prev_close: float, ta
         row_heights=[0.4, 0.2, 0.2, 0.2], # 價格(50%), 動能(25%), 累計(25%)
         vertical_spacing=0.05,
         specs=[[{}], [{}], [{}], [{"secondary_y": True}]], # 第3列使用雙Y軸
-        subplot_titles=("逐筆成交價", "DIF(SMA - SMA2)", "淨成交強度指標", "成交量")
+        subplot_titles=("逐筆成交價", "快慢線差", "淨成交強度指標", "成交量")
     )
 
     # --- 2. 依序繪製各個子圖 ---
-    _add_price_traces(fig, plot_df)
+    _add_price_traces(fig, plot_df, ctx)
     _add_dif(fig, plot_df)
     _add_volume_change_traces(fig, plot_df)
     _add_net_volume_traces(fig, plot_df)

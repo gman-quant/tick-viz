@@ -52,7 +52,7 @@ def run_single_session_task(ctx: RunContext, api=None) -> bool | None:
             shared_state.txf_prev_close = None
             shared_state.taiex_prev_close = None
             shared_state.plot_df = None
-            shared_state.kbars_1min = None
+            shared_state.active_kbars_df = None
         
         try:
             # --- (B.2) Kafka 消費者初始化 (含重試與休市偵測) ---

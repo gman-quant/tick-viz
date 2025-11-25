@@ -166,7 +166,7 @@ def create_dash_app(shared_state):
         with shared_state.lock:            
             ctx = shared_state.context
             plot_df = shared_state.plot_df
-            df_kbars = shared_state.kbars_1min
+            df_kbars = shared_state.active_kbars_df
             txf_prev_close = shared_state.txf_prev_close
             taiex_prev_close = shared_state.taiex_prev_close
             latest_df = shared_state.latest_df
@@ -179,7 +179,7 @@ def create_dash_app(shared_state):
         fig_main = main_chart.create_tick_analysis_figure(
             plot_df, txf_prev_close, taiex_prev_close, ctx
         )
-        fig_candle = candlestick_chart.plot_candlestick(df_kbars, period='1min', ctx=ctx)
+        fig_candle = candlestick_chart.plot_candlestick(df_kbars, period='3', ctx=ctx)
         
         # --- 4. 計算統計 ---
         stats = stats_table.compute_stats(latest_df, txf_prev_close)

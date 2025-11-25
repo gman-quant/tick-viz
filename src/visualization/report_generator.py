@@ -39,8 +39,8 @@ def _generate_figures(df, ctx, txf_prev_close, taiex_prev_close):
     ]
 
     # --- (D) 生成各週期 K 線圖 (使用 'report_ctx') ---
-    for period in ['1min', '3min', '5min', '10min']:
-        df_kbars = generate_kbars(df, period=period, ctx=report_ctx)
+    for period in [1, 3, 5, 10]:
+        df_kbars = generate_kbars(df, period=f"{period}min", ctx=report_ctx)
         figures.append(candlestick_chart.plot_candlestick(df_kbars, period=period, ctx=report_ctx)) 
 
     logging.debug(f"✅ 成功生成 {len(figures)} 張圖表。")
