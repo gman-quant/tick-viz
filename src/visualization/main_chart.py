@@ -26,12 +26,12 @@ def _add_price_traces(fig: go.Figure, df: pd.DataFrame, ctx: RunContext):
         visible=visible_in_report), 
         row=row, col=col)
     fig.add_trace(go.Scattergl(
-        x=df["datetime"], y=df["rrp_rhigh"], name="SIF Upper", legendrank=1, 
+        x=df["datetime"], y=df["SIF_rolling_high"], name="SIF Upper", legendrank=1, 
         line=dict(color='rgba(144, 238, 144, 0.3)', width=1), 
         visible=visible_in_report),
         row=row, col=col)
     fig.add_trace(go.Scattergl(
-        x=df["datetime"], y=df["rrp_rlow"], name="SIF Lower", legendrank=2, 
+        x=df["datetime"], y=df["SIF_rolling_low"], name="SIF Lower", legendrank=2, 
         line=dict(color='rgba(255, 192, 203, 0.3)', width=1), 
         visible=visible_in_report),
         row=row, col=col)
@@ -60,7 +60,7 @@ def _add_dif(fig: go.Figure, df: pd.DataFrame):
     fig.add_trace(go.Scatter(
         x=df["datetime"],
         y=df["dif"].where(df['dif'] > 0),
-        name="+dif",
+        name="DIF > 0",
         legendrank=20, 
         mode="lines",
         line=dict(color=fig_utils.COLOR_INCREASING, width=1),
@@ -70,7 +70,7 @@ def _add_dif(fig: go.Figure, df: pd.DataFrame):
     fig.add_trace(go.Scatter(
         x=df["datetime"],
         y=df["dif"].where(df['dif'] < 0),
-        name="-dif",
+        name="DIF < 0",
         legendrank=21, 
         mode="lines",
         line=dict(color=fig_utils.COLOR_DECREASING, width=1),
@@ -214,8 +214,8 @@ def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
     # --- 繪製多方強度 (正值) ---
     fig.add_trace(go.Scatter(
         x=df["datetime"],
-        y=df["net_agg_vol_change"].where(df["net_agg_vol_change"] > 0),
-        name="淨成交強度指標",
+        y=df["OFI"].where(df["OFI"] > 0),
+        name="OFI > 0",
         legendrank=30, 
         mode="lines",
         line=dict(color=fig_utils.COLOR_INCREASING, width=1),
@@ -227,8 +227,8 @@ def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
     # --- 繪製空方強度 (負值) ---
     fig.add_trace(go.Scatter(
         x=df["datetime"],
-        y=df["net_agg_vol_change"].where(df["net_agg_vol_change"] < 0), 
-        name="淨成交強度指標",
+        y=df["OFI"].where(df["OFI"] < 0), 
+        name="OFI < 0",
         legendrank=31, 
         mode="lines",
         line=dict(color=fig_utils.COLOR_DECREASING, width=1),
@@ -239,47 +239,12 @@ def _add_volume_change_traces(fig: go.Figure, df: pd.DataFrame):
 
     # --- Y 軸設定 ---
     fig.update_yaxes(
-        title_text="Net Trade Intensity",
+        title_text="Normalized OFI",
         tickformat=".2f",
         row=row,
         col=col,
         showgrid=True,
     )
-
-# ------------------------------------------------------------
-# 📦 (已停用) 折溢價圖
-# ------------------------------------------------------------
-# def _add_premium_traces(fig: go.Figure, df: pd.DataFrame):
-#     """在 fig 的第3列新增折溢價圖。(此函式中圖表較特殊，暫不套用共用Y軸)"""
-#     row, col = 3, 1
-#     
-#     fig.add_trace(go.Scatter(x=df["datetime"], y=df["close-rvwap"], name="Close - RVWAP", line=dict(color="gray", width=1)), row=row, col=col, secondary_y=False)
-#     fig.add_trace(go.Scatter(x=df["datetime"], y=df["rvwap_to_vwap_premium"], name="RVWAP - VWAP", line=dict(color="yellow", width=1.5)), row=row, col=col, secondary_y=True)
-#     
-#     # 左軸
-#     fig.update_yaxes(
-#         title_text="折溢價 (Close - RVWAP)",
-#         tickformat=".0f",
-#         autorange=True,
-#         matches=None,
-#         nticks=10,
-#         row=row, col=col,
-#         secondary_y=False,
-#         showgrid=True,
-#     )
-#     # 右軸
-#     fig.update_yaxes(
-#         title_text="折溢價 (RVWAP - VWAP)",
-#         tickformat=".0f",
-#         showgrid=True,
-#         autorange=True,
-#         zeroline=False,
-#         matches=None,
-#         nticks=10,
-#         ticks="outside",
-#         row=row, col=col,
-#         secondary_y=True
-#     )
 
 # ------------------------------------------------------------
 # 📦 (Subplot 3) 淨主動成交量 (累計)
@@ -292,7 +257,7 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
     fig.add_trace(go.Scatter(
         x=df["datetime"], 
         y=df["total_volume"], 
-        name="累計成交量", 
+        name="Total Volume", 
         legendrank=40, 
         mode="lines", 
         line=dict(color="rgba(255, 255, 0, 0.4)"), 
@@ -303,8 +268,8 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
     # --- 左軸 (淨主動成交 - 多方) ---
     fig.add_trace(go.Scatter(
         x=df["datetime"], 
-        y=df["cumu_net_agg_vol"].where(df["cumu_net_agg_vol"] > 0), 
-        name="淨主動成交量(多方)",
+        y=df["cumu_vol_delta"].where(df["cumu_vol_delta"] >= 0), 
+        name="CVD > 0",
         legendrank=41, 
         mode="lines", 
         line=dict(color=fig_utils.COLOR_INCREASING),
@@ -317,8 +282,8 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
     # --- 左軸 (淨主動成交 - 空方) ---
     fig.add_trace(go.Scatter(
         x=df["datetime"], 
-        y=df["cumu_net_agg_vol"].where(df["cumu_net_agg_vol"] < 0), 
-        name="淨主動成交量(空方)", 
+        y=df["cumu_vol_delta"].where(df["cumu_vol_delta"] < 0), 
+        name="CVD < 0", 
         legendrank=42, 
         mode="lines", 
         line=dict(color=fig_utils.COLOR_DECREASING),
@@ -331,7 +296,7 @@ def _add_net_volume_traces(fig: go.Figure, df: pd.DataFrame):
     
     # --- Y 軸設定 (雙軸) ---
     fig.update_yaxes(
-        title_text="Net Aggressive Volume", 
+        title_text="Cumulative Volume Delta", 
         tickformat=".0f", 
         row=row, col=col, 
         autorange=True, 
