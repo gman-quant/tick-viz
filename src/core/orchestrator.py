@@ -26,7 +26,6 @@ def run_backfill_mode(
 ):
     """
     執行歷史回顧模式的完整邏輯。
-    (此函數即為您原本 main.py 中的 _run_backfill_loop 及其外層邏輯)
     """
     
     # 1. 決定資料來源
@@ -47,25 +46,33 @@ def run_backfill_mode(
         st, ed = get_session_range(pick)
         current = dt_st
 
-        while current <= dt_ed:
-            if current.weekday() >= 5:
-                logging.info(f"⏩ 跳過週末：{current}\n")
+        # (!! 關鍵修正：加入 try-except 捕獲 Ctrl+C !!)
+        try:
+            while current <= dt_ed:
+                if current.weekday() >= 5:
+                    logging.info(f"⏩ 跳過週末：{current}\n")
+                    current += one_day
+                    continue
+
+                for day_session in range(st, ed - 1, -1):
+                    logging.info(f"📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
+
+                    ctx = RunContext(
+                        trade_date=current,
+                        session_type=SessionType.DAY if day_session else SessionType.NIGHT,
+                        real_time_mode=False,
+                        data_source=selected_data_source
+                    )
+                    
+                    # (如果這下面收到中斷訊號，會往上拋到這裡)
+                    run_single_session_task(ctx, api_instance) 
+
                 current += one_day
-                continue
-
-            for day_session in range(st, ed - 1, -1):
-                logging.info(f"📅 處理日期：{current} - {'日盤' if day_session else '夜盤'}")
-
-                ctx = RunContext(
-                    trade_date=current,
-                    session_type=SessionType.DAY if day_session else SessionType.NIGHT,
-                    real_time_mode=False,
-                    data_source=selected_data_source
-                )
-                # (*** 呼叫 loop_manager.py 中的函數 ***)
-                run_single_session_task(ctx, api_instance) 
-
-            current += one_day
+        
+        except KeyboardInterrupt:
+            # (捕獲訊號，停止迴圈，優雅退出)
+            logging.warning("🛑 [Main] 歷史回測由使用者強制中止，停止執行。")
+            return
 
     # 3. 根據資料來源決定是否登入
     clear_console()
@@ -84,13 +91,12 @@ def run_backfill_mode(
 def run_realtime_mode():
     """
     執行 24/7 即時伺服器模式的完整邏輯。
-    (此函數即為您原本 main.py 中的 else 區塊)
     """
     
     # --- 啟動背景資料處理執行緒 ---
     logging.info("📊 [Main] 啟動 24/7 背景資料管理器 (T_Data)...")
     data_thread = threading.Thread(
-        target=data_loop_manager, # (*** 呼叫 loop_manager.py 中的函數 ***)
+        target=data_loop_manager, 
         args=(),
         daemon=True
     )
@@ -104,7 +110,7 @@ def run_realtime_mode():
         app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)
     
     except KeyboardInterrupt:
-        logging.info("\n👋 [Main] 收到使用者關閉訊號 (Ctrl+C)...")
+        logging.info("👋 [Main] 收到使用者關閉訊號 (Ctrl+C)...")
     except Exception as e:
         logging.exception(f"⚠️ [Main] Dash Server 啟動失敗: {e}")
     

@@ -1,5 +1,6 @@
 # src/data_sourcing/market_data.py
 
+# ------------------------------------------------------------
 # Standard Library Imports
 import logging
 from datetime import date, timedelta
@@ -15,136 +16,150 @@ from src.data_sourcing.fetch_ticks import get_or_fetch_contract_ticks
 from src.utils.misc import get_contract
 from src.utils.resource_contexts import shioaji_session
 
+# ------------------------------------------------------------
+# 📦 Persistent DuckDB Connection (效能最佳化)
+# ------------------------------------------------------------
+# (全域連線：避免每次查詢都重新連線，大幅提升回測速度)
+_duck = duckdb.connect()
 
+
+# ------------------------------------------------------------
+# 🟦 (Helper) 取得某一天 13:46 前最後一筆 close
+# ------------------------------------------------------------
 def _get_last_close(api, query_date: date, symbol: str) -> float | None:
-    """(輔助) 從指定合約與日期抓日盤收盤價（若無資料回傳 None）"""
-    # --- 0. 設定快取路徑 ---
+    """
+    從快取或 API 取出某日某商品的「日盤最後一筆 close」。
+    回傳 None 表示該日無資料或查詢失敗。
+    """
+
+    # --- 1. 設定快取路徑 ---
     file_name = f"{symbol.lower()}-ticks_{query_date}.parquet"
     output_file = CACHE_DIR / file_name
 
-    # --- 1. 確保檔案存在 (若無則下載) ---
+    # --- 2. 若無 parquet → 嘗試下載 ---
     if not output_file.exists():
-        # (修正：若無 API Session，無法下載，直接回傳 None)
         if api is None:
             return None
-            
-        logging.info(f"📥 [MarketData] {symbol} {query_date} 無快取，開始下載補檔...")
-        # (這裡假設 get_or_fetch_contract_ticks 會處理下載並回傳 DF)
-        # (若下載回來是空的，代表當天休市，也直接回傳 None)
+
+        logging.info(f"[MarketData] {symbol} {query_date} 無快取 → 下載中...")
         df = get_or_fetch_contract_ticks(
-            api=api, 
+            api=api,
             contract=get_contract(api, symbol),
-            date=str(query_date), 
+            date=str(query_date),
             cache_file=output_file
         )
-        if df.empty:
-            return None
 
-    # --- 2. 使用 DuckDB 查詢 (統一入口) ---
+        # (防呆：如果下載回來是空的，代表當天休市)
+        if df.empty:
+            logging.warning(f"[MarketData] {symbol} {query_date} 無資料，無法取得收盤價。")
+            return None
+        else:
+            logging.info(f"[MarketData] {symbol} {query_date} 下載完成，已快取至 {output_file}。")
+    
+    # --- 3. 有 parquet 檔案，使用 DuckDB 查詢 ---
+    # (SQL 邏輯：轉換時區後篩選 13:46 以前，取最後一筆)
+    limit_ts = f"{query_date} 13:46:00+08:00"
+    
     try:
-        # (SQL 邏輯：只讀取 close 欄位，篩選 13:46 以前，取最後一筆)
         query = f"""
-            SELECT close 
-            FROM '{output_file}'
-            WHERE strftime(datetime, '%H:%M:%S') < '13:46:00'
-            ORDER BY datetime DESC 
+            SELECT close
+            FROM read_parquet('{output_file}')
+            WHERE (datetime AT TIME ZONE 'Asia/Taipei') < TIMESTAMPTZ '{limit_ts}'
+            ORDER BY datetime DESC
             LIMIT 1
         """
-        result = duckdb.query(query).fetchone()
-        
-        if result:
-            close_price = result[0]
-            # (優化：改為 debug，避免洗版)
-            logging.debug(f"🦆 [DuckDB] 讀取 {symbol} {query_date} 收盤價: {close_price}")
-            return close_price
-        
-        return None 
+
+        row = _duck.execute(query).fetchone()
+        return row[0] if row else None
 
     except Exception as e:
-        logging.error(f"🔥 [DuckDB] 查詢 Parquet 失敗: {e}")
+        logging.error(f"🔥 DuckDB 查詢失敗: {e}")
         return None
 
 
 # ------------------------------------------------------------
-# 📦 (Helper) 嘗試取得特定日期的收盤價
+# 🟦 (Helper) 取得 TXF + TSE 收盤組合（快取 → API）
 # ------------------------------------------------------------
-def _attempt_fetch_close_prices(
-    api, 
-    query_date: date, 
+def _fetch_pair_close(
+    api,
+    query_date: date,
     prefix: str
 ) -> tuple[float, float] | None:
     """
-    (輔助) 嘗試取得指定日期的 TXF 與 TSE 收盤價。
-    先試本地快取 (DuckDB)，失敗再試 API。
+    嘗試取得當天 TXF / TSE 日盤收盤價。
+    分兩階段：
+      1. 優先讀取本地快取 (api=None)
+      2. 若缺資料且有 API，則重新下載
     """
-    if query_date.weekday() >= 5: # 跳過週末
-        return None
 
-    # --- 1. 策略 A: 僅嘗試本地快取 (傳入 api=None) ---
-    txf_local = _get_last_close(None, query_date, symbol="txf")
-    tse_local = _get_last_close(None, query_date, symbol="tse")
-    
-    if txf_local is not None and tse_local is not None:
-        logging.info(f"📂 {prefix} 本地資料: {query_date} TXF={txf_local}, TSE={tse_local}")
-        return txf_local, tse_local
+    # ---- 1. 先試本地快取 (只查 DB，不下載) ----
+    txf = _get_last_close(None, query_date, "txf")
+    tse = _get_last_close(None, query_date, "tse")
 
-    # --- 2. 策略 B: 若快取失敗且有 API，嘗試 API 下載 ---
+    if txf is not None and tse is not None:
+        logging.info(f"📂 {prefix} 本地: {query_date} TXF={txf}, TSE={tse}")
+        return txf, tse
+
+    # ---- 2. 若需要下載且有 API ----
     if api is not None:
-        txf_api = _get_last_close(api, query_date, symbol="txf")
-        tse_api = _get_last_close(api, query_date, symbol="tse")
-        
-        if txf_api is not None and tse_api is not None:
-            logging.info(f"🌐 {prefix} API 資料: {query_date} TXF={txf_api}, TSE={tse_api}")
-            return txf_api, tse_api
+        txf = _get_last_close(api, query_date, "txf")
+        tse = _get_last_close(api, query_date, "tse")
+
+        if txf is not None and tse is not None:
+            logging.info(f"🌐 {prefix} API: {query_date} TXF={txf}, TSE={tse}")
+            return txf, tse
 
     return None
 
 
 # ------------------------------------------------------------
-# 📦 尋找前日收盤 (主函式)
+# 🟥 尋找上一交易日收盤（主函式）
 # ------------------------------------------------------------
-def find_previous_close(ctx: RunContext, api=None, max_lookback: int = 15) -> tuple[float, float]:
+def find_previous_close(
+    ctx: RunContext,
+    api=None,
+    max_lookback: int = 15
+) -> tuple[float, float]:
     """
-    回溯最多 max_lookback 天，尋找最近一個交易日的台指期與加權指數日盤收盤價。
+    回溯最多 max_lookback 天，尋找最近一個交易日的
+    台指期 TXF 與加權 TSE 的日盤收盤價。
+
+    - 日盤 → 從前一天 (T-1) 開始找
+    - 夜盤 → 從當天 (T) 開始找
     """
+
     prefix = "[T_Data]" if ctx.real_time_mode else "[Main]"
 
-    # --- (A) 決定回溯起始日期 ---
-    current_date = ctx.trade_date
-    # (日盤從 T-1 開始找；夜盤從 T 開始找)
-    start_date = current_date - timedelta(days=1) if ctx.session_type == SessionType.DAY else current_date
+    # ---- 1. 決定起始搜尋位置 ----
+    current = ctx.trade_date
+    search_date = (
+        current - timedelta(days=1)
+        if ctx.session_type == SessionType.DAY
+        else current
+    )
 
-    # --- (B) 準備 API Session ---
-    # (如果外部沒給 API，就自己建立一個臨時的 Context Manager)
-    # (如果外部有給，就直接用外部的)
-    session_manager = shioaji_session() if api is None else None
-    local_api = api
-    
-    # 進入 Context (如果需要)
-    if session_manager:
-        local_api = session_manager.__enter__()
+    # ---- 2. API Session 管理 (若外部無提供則自建) ----
+    session_mgr = shioaji_session() if api is None else None
+    local_api = api or session_mgr.__enter__()
 
     try:
-        # --- (C) 執行回溯迴圈 ---
-        search_date = start_date
-        
+        # ---- 3. 回溯 max_lookback 天 ----
         for _ in range(max_lookback):
-            # 呼叫外部輔助函式
-            result = _attempt_fetch_close_prices(local_api, search_date, prefix)
-            
-            if result:
-                return result # 找到了！直接回傳
-            
-            # 沒找到，往前推一天
+
+            # 跳過週末 (簡單過濾，詳細由 _get_last_close 判斷)
+            if search_date.weekday() < 5:
+                result = _fetch_pair_close(local_api, search_date, prefix)
+                if result:
+                    return result
+
             search_date -= timedelta(days=1)
 
-        # --- (D) 若都找不到 ---
-        error_msg = f"❌ {prefix} 在過去 {max_lookback} 天内找不到 TXF / TSE 收盤價。"
-        logging.error(error_msg)
-        raise FileNotFoundError(error_msg)
+        # ---- 4. 若都找不到 ----
+        msg = f"❌ {prefix} 過去 {max_lookback} 天無 TXF / TSE 收盤資料."
+        logging.error(msg)
+        raise FileNotFoundError(msg)
 
     finally:
-        # --- (E) 資源清理 ---
-        # 離開 Context (如果是由我們建立的)
-        if session_manager:
-            session_manager.__exit__(None, None, None)
+        # 確保自建的 Session 被關閉
+        if session_mgr:
+            session_mgr.__exit__(None, None, None)

@@ -99,7 +99,7 @@ python main.py
 
 🔵 歷史回顧模式
 cd Projects/tick-viz && source venv/bin/activate
-python main.py --real-time-mode 0 --date-start 2025-11-06 --date-end 2025-11-07 --session whole --data-source shioaji
+python main.py --real-time-mode 0 --date-start 2025-11-24 --date-end 2025-11-24 --session whole --data-source shioaji
 
  📅 日線圖更新
 cd Projects/tick-viz && source venv/bin/activate

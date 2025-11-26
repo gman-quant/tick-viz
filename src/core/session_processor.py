@@ -134,8 +134,8 @@ def process_market_session(
                 break # 歷史模式只跑一次
 
         except KeyboardInterrupt:
-            logging.info("\n🛑 收到使用者中斷 (Ctrl+C)，正在結束 process_market_session...")
-            break 
+            logging.info("🛑 收到使用者中斷 (Ctrl+C)，正在結束 process_market_session...")
+            raise 
         
         except Exception as e:
             logging.exception(f"❌ [T_Data] process_market_session 迴圈發生未預期錯誤: {e}")

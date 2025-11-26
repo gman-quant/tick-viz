@@ -13,7 +13,12 @@ import shioaji as sj
 from confluent_kafka import Consumer, TopicPartition
 
 # Local Application Imports
-from config.config import CACHE_DIR, KAFKA_POLL_TIMEOUT_SECONDS, UI_REFRESH_INTERVAL_SECONDS, TAIWAN_TZ
+from config.config import (
+    CACHE_DIR,
+    TAIWAN_TZ,
+    KAFKA_POLL_TIMEOUT_SECONDS, 
+    UI_REFRESH_INTERVAL_SECONDS, 
+)
 from config.run_context import RunContext
 from config.types import SessionType
 from src.utils.misc import get_contract
@@ -133,12 +138,14 @@ def get_or_fetch_contract_ticks(
     if not ticks['ts']:
         logging.warning(f"⚠️ [T_Data] Shioaji API 查無資料: {contract.code} on {date} (可能為休市)")
         return pd.DataFrame()
-
+    
     # --- 3. 處理並儲存快取 ---
+    logging.info(f"✅ [T_Data] 成功從 Shioaji API 抓取 {len(ticks['ts'])} 筆資料。")
     df = pd.DataFrame({**ticks})
     df['ts'] = pd.to_datetime(df['ts']).dt.tz_localize(TAIWAN_TZ)
     df.rename(columns={'ts': 'datetime'}, inplace=True)
     df.to_parquet(cache_file)
+
     return df
 
 
