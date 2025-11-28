@@ -27,7 +27,13 @@ def convert_tick_to_daily(df_tick: pl.DataFrame, file_date: str) -> pl.DataFrame
     將單一 Parquet 檔案的 Tick 資料，轉換為日盤/夜盤的 K 線 summary。
     """
     
-    # --- (A) 欄位前處理 ---
+    # --- (A) 資料清洗 (防止 OverflowError) ---
+    # (過濾掉異常年份，避免 map_elements 轉換 datetime 時崩潰)
+    df_tick = df_tick.filter(
+        pl.col("datetime").dt.year().is_between(2000, 2099)
+    )
+
+    # --- (B) 欄位前處理 ---
     df = df_tick.with_columns([
         pl.col("close").alias("price"),
         # (判斷 Tick 屬於日盤、夜盤或休市)
@@ -38,7 +44,7 @@ def convert_tick_to_daily(df_tick: pl.DataFrame, file_date: str) -> pl.DataFrame
         (pl.col("close") * pl.col("volume")).alias("pv")  # (為了計算 VWAP)
     ])
     
-    # --- (B) 依盤別 (session) 分組 ---
+    # --- (C) 依盤別 (session) 分組 ---
     df_daily = df.group_by("session").agg([
         pl.first("datetime").dt.date().alias("date"),
         pl.first("price").alias("open"),
@@ -51,7 +57,7 @@ def convert_tick_to_daily(df_tick: pl.DataFrame, file_date: str) -> pl.DataFrame
         pl.lit(file_date).alias("file_date") # (標記來源 Parquet 檔案日期)
     ])
 
-    # --- (C) 整理欄位順序 ---
+    # --- (D) 整理欄位順序 ---
     return df_daily.select(["file_date", "date", "session", "open", "high", "low", "close", "vwap", "volume"])
 
 
@@ -60,7 +66,7 @@ def convert_tick_to_daily(df_tick: pl.DataFrame, file_date: str) -> pl.DataFrame
 # ------------------------------------------------------------
 def process_all_ticks():
     """
-    讀取所有 Tick Parquet 檔案，並將其增量更新至
+    讀取所有 Tick Parquet 檔案，並將其增量更新至 CSV
     """
     
     # --- (A) 讀取已存在的日線 CSV ---
@@ -103,7 +109,12 @@ def process_all_ticks():
         print("✅ 沒有新資料需要處理")
         return
 
-    # --- (D) 合併、排序、存回 CSV ---
+    # --- (D) 準備合併前，清理舊資料中的「今日」紀錄 ---
+    # (重要：若不先刪除舊的今日資料，unique 會保留舊的紀錄導致更新失敗)
+    if "file_date" in df_existing.columns:
+        df_existing = df_existing.filter(pl.col("file_date") != today_str)
+
+    # --- (E) 合併、排序、存回 CSV ---
     df_new = pl.DataFrame(all_new_rows)
     
     # (確保新舊 DF 的 date 欄位都是 Date 型別)
@@ -133,11 +144,11 @@ def process_all_ticks():
         .drop("session_order")
     )
 
-    # --- (E) 存回 CSV ---
+    # --- (F) 存回 CSV ---
     df_sorted.write_csv(DAILY_CSV_PATH)
-    print(f"✅ 新增並排序後，共有 {df_sorted.height}  B資料寫入 {DAILY_CSV_PATH}")
+    print(f"✅ 新增並排序後，共有 {df_sorted.height} 筆資料寫入 {DAILY_CSV_PATH}")
 
-    # --- (F) (清理機制) 刪除今日不完整的 Tick 檔 ---
+    # --- (G) (清理機制) 刪除今日不完整的 Tick 檔 ---
     # (若在 13:45 日盤收盤前執行，則今日的 Tick 檔不完整，應刪除)
     now = datetime.now()
     cutoff_time = now.replace(hour=13, minute=45, second=0, microsecond=0)
@@ -156,7 +167,3 @@ def process_all_ticks():
 # ------------------------------------------------------------
 if __name__ == "__main__":
     process_all_ticks()
-
-'''
-python -m scripts.generate_daily_csv
-'''

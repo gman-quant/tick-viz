@@ -91,15 +91,12 @@ python main.py
 
 ### 3.2. 執行歷史回測模式
 ```bash
-python main.py --real-time-mode 0 --date-start 2025-11-17 --date-end 2025-11-17 --session day --data-source shioaji
+python main.py --real-time-mode 0 --date-start 2025-11-27 --date-end 2025-11-27 --session night --data-source shioaji
 ```
 
 ### 3.3. 執行靜態圖表腳本
 ```bash
-# (1) 先將 Parquet 轉為 K 線 CSV
 python -m scripts.generate_daily_csv
-
-# (2) 再將 K 線 CSV 繪製成 HTML
 python -m scripts.plot_txf_kbar
 ```
 
