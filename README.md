@@ -37,7 +37,7 @@
 
 ---
 
-## 進階版
+## 進階版(要交流請來信：gtai.quant@gmail.com)
 ![6](docs/6.png)
 ![7](docs/7.png)
 
